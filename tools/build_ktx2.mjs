@@ -40,8 +40,9 @@ const SETS = {
   fabric_royal: ['fabric', 'quatrefoil_jacquard_fabric_1k', 'quatrefoil_jacquard_fabric'], fabric_gold: ['fabric', 'crepe_satin_1k', 'crepe_satin'], fabric_linen: ['fabric', 'rough_linen_1k', 'rough_linen'],
 };
 const GLBS = ['characters/hero.glb', 'characters/knight.glb', 'characters/hollow.glb', 'characters/archer.glb', 'characters/ghost.glb', 'characters/lastcrown.glb',
-  // session 9 monsters (goblin retargeted in Blender; bat / widow / lamia are source copies)
-  'characters/goblin.glb', 'characters/bat.glb', 'characters/widow.glb', 'characters/lamia.glb',
+  // session 9 monsters (goblin retargeted in Blender; bat / widow are source copies); session 11: the Creature Pack
+  // Mutant (the Maw, tools/blender/build_mutant.py) replaced the lamia
+  'characters/goblin.glb', 'characters/bat.glb', 'characters/widow.glb', 'characters/mutant.glb',
   'vegetation/low_poly_grass.glb', 'vegetation/low_poly_grass_pack.glb', 'vegetation/low_poly_glowing_flower.glb'];
 /** per-GLB texture cap (px): the Widow's nine 1024² maps are more than a 2 m creature needs on screen */
 const GLB_MAX = { 'characters/widow.glb': 512 };

@@ -136,6 +136,17 @@ export class HUD {
     el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
     this.giftTimer = seconds;
   }
+  /**
+   * Leaving a floor: the reveal and the tip belong to the floor that granted them. The HUD outlives the in-place
+   * transition, so a reveal still on screen (or the Crownbreaker's HOLD HEAVY tip) was carried onto the next floor and
+   * stood there on arrival (Floor 3 opened with the Floor 2 reward until its own reveal replaced it).
+   */
+  clearAbility() {
+    this.giftTimer = 0;
+    this.giftEl.classList.remove('on');
+    this.giftTipKey = '';
+    this.giftTipEl.classList.remove('on');
+  }
   /** Compact persistent tip ("HOLD HEAVY — …") until the move is tried; null hides it. */
   abilityTip(input: string | null, text = '') {
     const key = input ? input + '|' + text : '';
@@ -238,13 +249,15 @@ export class HUD {
     this.vignette.style.boxShadow = low ? 'inset 0 0 200px rgba(140,0,0,0.55)' : 'inset 0 0 180px rgba(0,0,0,0.35)';
   }
 
-  setCharge(charge: number, perShift: number, state: TimeState) {
+  /** `trickle`: the passive refill is running (the filling segment shimmers softly) */
+  setCharge(charge: number, perShift: number, state: TimeState, trickle = false) {
     const col = state === 'PAST' ? '#f0a54a' : '#7fc4ff';
     for (let i = 0; i < this.segs.length; i++) {
       const f = Math.max(0, Math.min(1, (charge - i * perShift) / perShift));
       this.segFill[i].style.width = f * 100 + '%';
       this.segFill[i].style.background = f >= 1 ? col : 'rgba(200,200,220,0.55)';
       this.segs[i].classList.toggle('full', f >= 1);
+      this.segs[i].classList.toggle('trickle', trickle && f > 0 && f < 1);
     }
   }
 

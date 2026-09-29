@@ -94,7 +94,7 @@ function canShift() {
 export async function route() {
   const legs = [
     ['PRESENT', [0, 12, 0]], ['PRESENT', [0, 27, 0]], ['shift'], ['PAST', [0, 46, 0]], ['shift'], ['PRESENT', [0, 60, 0]],
-    ['PRESENT', [0, 70, 0]], ['PRESENT', [-2.2, 76.8, 0]], ['shift'], ['PAST', [-10, 85, 0]], ['shift'], ['PRESENT', [10, 86.5, 0]],
+    ['PRESENT', [0, 70, 0]], ['PRESENT', [-2.2, 76.8, 0]], ['shift'], ['PAST', [-10, 85, 0]], ['shift'], ['PRESENT', [-7.6, 86, 0]], ['PRESENT', [10, 86.5, 0]],
     ['PRESENT', [10, 99, 0]], ['PRESENT', [10, 104, 0]], ['PRESENT', [3.5, 109, 0]], ['PRESENT', [3.5, 117, 0]], ['PRESENT', [10, 121.5, 0]], ['shift'], ['PAST', [10, 130, 0]],
     ['PAST', ramp(-60)], ['PAST', ramp(10)], ['PAST', ramp(90)], ['PAST', ramp(180)], ['PAST', ramp(210)], ['shift'],
     ['PRESENT', ramp(270)], ['PRESENT', ramp(359)], ['PRESENT', [24, 148, -16]], ['PRESENT', [34, 148, -16]], ['PRESENT', [46, 148, -16]],

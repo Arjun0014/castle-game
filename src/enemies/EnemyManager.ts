@@ -61,7 +61,7 @@ const BOSS_SUB: Record<string, string> = {
   last_crown: "Aldren's imprint, wearing the Queen's face",
   goblin_king: 'Scavenger lord of the fallen floors',
   widow_mother: 'She nests where the Queen once wept',
-  lamia_maw: 'What the Crownheart grew in the dark',
+  maw: 'What the Crownheart grew in the blood font',
 };
 /** first sight of a new monster (session 9): how to face it */
 const BESTIARY: Record<string, string> = {
@@ -69,7 +69,7 @@ const BESTIARY: Record<string, string> = {
   goblin: 'RUIN GOBLINS — they leap in from range and dart away. Close the gap; they shy from a heavy swing.',
   widow: 'THE WIDOW — its web slows you. Guard the spit, break its line of sight, punish the pounce.',
   widowling: 'THE BROOD — small and quick. Sweeping blows clear them.',
-  lamia: 'CROWNHEART LAMIA — jump or dodge the tail sweep. Its coil turns frontal blows: circle it, or kick through.',
+  crown_brute: 'CROWN BRUTE — its sweep breaks a guard: dodge through it. Parry the hook and it reels.',
 };
 
 /** Free a skeleton clone that owns its materials (statues, imprints): materials + bone textures, not geometry. */
@@ -266,8 +266,10 @@ export class EnemyManager {
     const model = skeletonClone(a.scene);
     const wrap = new THREE.Group();
     wrap.add(model);
-    // Sketchfab sources normalised at load (ghost, bat, widow, lamia: GameAssets NORMALISE)
+    // Sketchfab sources normalised at load (ghost, bat, widow: GameAssets NORMALISE); feet measured (goblin, widow)
     if (!a.norm.equals(IDENTITY)) model.applyMatrix4(a.norm);
+    // rigs levelled on their feet at load (GameAssets LEVEL): where the front / back legs meet the floor
+    if (a.contacts) wrap.userData.contacts = a.contacts;
     return { model: wrap, clips: a.clips };
   }
 
@@ -361,6 +363,20 @@ export class EnemyManager {
   isCleared(id: string) { return this.encounters.get(id)?.cleared ?? false; }
 
   /** An engaged (triggered, living, visible) enemy of the current memory within r m — Blood Sigils refuse then. */
+  /**
+   * The Maw's fight holds the memory (session 11): while it lives and its fight has her, the shift fails — the Past
+   * would be a way round the mini-boss (its north door stands open there). Lifted the moment it falls.
+   */
+  memoryHeld(): boolean {
+    const p = this.g.player.pos;
+    for (const e of this.enemies) {
+      if (e.arch.id !== 'maw' || !e.alive || !e.triggered) continue;
+      const enc = this.encounters.get(e.encounter);
+      if (enc && !enc.cleared && enc.box.clone().expandByScalar(4).containsPoint(p)) return true;
+    }
+    return false;
+  }
+
   engagedNear(p: THREE.Vector3, r: number) {
     const st = this.g.time.state;
     // melee Echoes on another level (below a gallery, behind a locked stair) are no threat; archers and wraiths
@@ -473,7 +489,7 @@ export class EnemyManager {
     for (const e of this.enemies) {
       if (!e.isFlying || e.opts.fromHeart || e.arch.boss) continue;
       const enc = this.encounters.get(e.encounter);
-      if (!enc || enc.enemies.some((x) => x.arch.id === 'lamia_maw')) continue;
+      if (!enc || enc.enemies.some((x) => x.arch.id === 'maw')) continue;
       const st: TimeState = e.owner === 'BOTH' ? 'PRESENT' : e.owner;
       const walkers = enc.enemies.filter((x) => !x.isFlying && !x.opts.perch && (x.owner === st || x.owner === 'BOTH'));
       if (!walkers.length) continue;
@@ -741,7 +757,8 @@ export class EnemyManager {
       this.presentEnemy(e, dt);
       active++;
       if (e.triggered && e.alive && d < 22) combat = true;
-      if (e.alive && (g.level.collision.inVoid(e.pos, st) || e.pos.y < -30)) { e.die(); this.onKill(e, true); }
+      // (a body in a scripted leap — the Maw arcing over the font — is in the air, not in the void)
+      if (e.alive && !e.passThrough && (g.level.collision.inVoid(e.pos, st) || e.pos.y < -30)) { e.die(); this.onKill(e, true); }
     }
     this.separate();
     this.updateTracers(st);
@@ -780,7 +797,7 @@ export class EnemyManager {
           if (asset === 'goblin') au.play('goblin_snarl', { pos: at, rate: e.arch.scale > 1.2 ? 0.75 : 1.1 });
           else if (asset === 'bat') au.play('bat_screech', { pos: at, vol: 0.7 });
           else if (asset === 'widow') au.play('widow_hiss', { pos: at, rate: e.arch.scale < 0.8 ? 1.6 : e.arch.scale > 1.2 ? 0.75 : 1 });
-          else if (asset === 'lamia') au.play('serpent_hiss', { pos: at, rate: e.arch.scale > 1.2 ? 0.75 : 0.95 });
+          else if (asset === 'mutant') au.play('maw_snarl', { pos: at, rate: e.arch.scale > 1.5 ? 0.7 : 0.9 });
           else if (asset === 'hollow') au.play('hollow_growl', { pos: at, rate: e.arch.scale < 1 ? 1.15 : 1 });
           else if (asset === 'ghost') au.play('wraith_moan', { pos: at });
           else if (asset === 'knight') au.play('armor_rattle', { pos: at });
@@ -813,7 +830,7 @@ export class EnemyManager {
           break;
         case 'shatter':
           // the Echo breaks: the body comes apart into what it was made of
-          g.fx.shatter(e.root, asset === 'hollow' || asset === 'goblin' || asset === 'widow' || asset === 'lamia' ? 'ash' : asset === 'ghost' || asset === 'bat' ? 'smoke' : 'ember', asset === 'ghost' || asset === 'bat' ? 120 : 280);
+          g.fx.shatter(e.root, asset === 'hollow' || asset === 'goblin' || asset === 'widow' || asset === 'mutant' ? 'ash' : asset === 'ghost' || asset === 'bat' ? 'smoke' : 'ember', asset === 'ghost' || asset === 'bat' ? 120 : 280);
           au.play('resonance', { pos: at, rate: 0.8, vol: 0.8 });
           au.play('echo_shatter', { pos: at, rate: asset === 'ghost' ? 1.15 : asset === 'knight' ? 0.9 : 1 });
           break;
@@ -825,7 +842,7 @@ export class EnemyManager {
     if (e.alive && !e.isFlying && e.root.visible && dp < 16 * 16 && e.grounded) {
       const moved = Math.hypot(e.pos.x - e.lastSeen.x, e.pos.z - e.lastSeen.z);
       if (moved < 1) e.stepAcc += moved * 0.62;
-      if (e.stepAcc > 1) { e.stepAcc -= 1; if (asset !== 'lamia' && asset !== 'widow') au.enemyStep(e.pos, asset === 'knight'); }
+      if (e.stepAcc > 1) { e.stepAcc -= 1; if (asset !== 'mutant' && asset !== 'widow') au.enemyStep(e.pos, asset === 'knight'); }
     }
     if (e.isFlying && asset === 'ghost' && e.alive && e.triggered && dp < 24 * 24) {
       e.voiceT -= dt;

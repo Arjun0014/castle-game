@@ -1,10 +1,10 @@
 import { HERO_CLIPS } from '../data/animationManifest';
 
-export type AssetId = 'knight' | 'hollow' | 'archer' | 'ghost' | 'lastcrown' | 'goblin' | 'bat' | 'widow' | 'lamia';
+export type AssetId = 'knight' | 'hollow' | 'archer' | 'ghost' | 'lastcrown' | 'goblin' | 'bat' | 'widow' | 'mutant';
 /** echo: pale drifting motes · muster: faint gold dust · elite: rising embers · corrupt: ash · dread: boss embers */
 export type AuraKind = 'echo' | 'muster' | 'elite' | 'corrupt' | 'dread';
 export type ArchetypeId = 'kingsguard' | 'guard' | 'muster' | 'royal_warden' | 'hollow' | 'hollow_warden' | 'wraith' | 'archer' | 'echo_archer' | 'gate_warden' | 'remnant' | 'remnant_guard' | 'last_crown'
-  | 'goblin' | 'goblin_king' | 'bat' | 'widow' | 'widowling' | 'widow_mother' | 'lamia' | 'lamia_maw';
+  | 'goblin' | 'goblin_king' | 'bat' | 'widow' | 'widowling' | 'widow_mother' | 'maw' | 'crown_brute';
 
 export interface EnemyAttack {
   clip: string; speed: number; start: number;
@@ -34,14 +34,14 @@ export interface Archetype {
   slotCost: number;       // how many melee attack slots it occupies
   boss?: boolean;
   /** which cinematic finishers can take it (combat/Finishers.ts): humanoid rigs (default) every variant,
-   *  beasts only the stab + passing cut, 'none' never (flyers, the serpent, bosses) */
+   *  beasts only the stab + passing cut, 'none' never (flyers, bosses) */
   finisher?: 'humanoid' | 'beast' | 'none';
   /** blood colour of its wounds (default: dark red; Hollows darker) */
   blood?: number;
   /** titled mini-boss: a boss bar with this name while its fight runs (not a floor boss) */
   miniBoss?: string;
   /** a monster brain of its own (enemies/Monsters.ts) */
-  brain?: 'goblin' | 'bat' | 'widow' | 'lamia';
+  brain?: 'goblin' | 'bat' | 'widow' | 'maw';
 }
 
 /**
@@ -52,9 +52,9 @@ export interface Archetype {
 export const PAST_COUNTERPART: Partial<Record<ArchetypeId, ArchetypeId>> = {
   hollow: 'guard', remnant: 'remnant_guard', hollow_warden: 'royal_warden', wraith: 'remnant_guard', echo_archer: 'archer',
   goblin: 'guard', goblin_king: 'royal_warden', bat: 'remnant_guard', widow: 'archer', widowling: 'remnant_guard', widow_mother: 'royal_warden',
-  lamia: 'royal_warden', lamia_maw: 'kingsguard',
+  maw: 'kingsguard', crown_brute: 'royal_warden',
 };
-export const MONSTER_RIGS = new Set<AssetId>(['hollow', 'ghost', 'goblin', 'bat', 'widow', 'lamia']);
+export const MONSTER_RIGS = new Set<AssetId>(['hollow', 'ghost', 'goblin', 'bat', 'widow', 'mutant']);
 
 /** Hit window from the hero manifest's measured sword peak (same clip, retargeted). */
 function win(clipId: string, i = 0, pad0 = 0.06, pad1 = 0.06): [number, number] {
@@ -73,7 +73,8 @@ const GOBLIN_CLIPS = { idle: 'idle_combat', walk: 'walk_fwd', run: 'run_fwd', st
 /** the procedural monsters have one clip each (renamed at load, GameAssets.prepareEnemy); deaths are procedural */
 const BAT_CLIPS = { idle: 'flap', walk: 'flap', run: 'flap', hitL: 'flap', hitH: 'flap', death: ['flap'] };
 const WIDOW_CLIPS = { idle: 'crawl', walk: 'crawl', run: 'crawl', hitL: 'crawl', hitH: 'crawl', death: ['crawl'], rise: 'crawl' };
-const LAMIA_CLIPS = { idle: 'sway', walk: 'sway', run: 'sway', hitL: 'sway', hitH: 'sway', death: ['sway'], rise: 'sway' };
+/** the Creature Pack Mutant (tools/blender/build_mutant.py): its own 16 clips; reactions are its stumble (enemies/Maw.ts) */
+const MUTANT_CLIPS = { idle: 'idle', walk: 'walk', run: 'run', hitL: 'idle', hitH: 'idle', death: ['death'], rise: 'roar' };
 const ARCHER_CLIPS = { idle: 'a_idle', walk: 'a_walk_fwd', run: 'a_walk_fwd', strafeL: 'a_walk_left', strafeR: 'a_walk_right', back: 'a_walk_back', hitL: 'hit_light', hitH: 'hit_heavy', death: ['death_back', 'death_kneel'], rise: 'crouch_exit', kneel: 'crouch_idle' };
 
 /** the goblin's own blows: the hero's one-handed cuts, quicker and lighter (retargeted clips, same timings) */
@@ -255,29 +256,36 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     ],
     clips: WIDOW_CLIPS, slotCost: 2, boss: true, finisher: 'none',
   },
-  /** Crownheart lamia (Floor 3): a woman's body on serpent coils, a toothed maw in its belly. Slow and heavy: a 360°
-   *  tail sweep at ankle height (jump or dodge it), a lunging bite that breaks guards, a coiled guard against
-   *  frontal blows (circle it, or kick / heavy through the coil). attacks = [sweep, lunge, lash]. */
-  lamia: {
-    id: 'lamia', asset: 'lamia', scale: 1.0, brain: 'lamia', blood: 0x28300c, aura: 'corrupt',
-    hp: 240, poise: 120, runSpeed: 3.0, walkSpeed: 1.8, radius: 0.72, height: 2.35, reward: 80, blockChance: 0, aggroRange: 15, turnRate: 3.2,
+  /**
+   * THE MAW OF THE CROWNHEART (Floor 3 mini-boss, session 11): the Creature Pack Mutant ×1.8, a hunched brute with
+   * crystal blades for forearms, grown in the blood font. Moveset from its clips (enemies/Maw.ts): crushing hook,
+   * rending sweep, hook → sweep chains, the leap slam (Crownfall) and its turning variant, the floor pound (Quake:
+   * a ring to jump), a hop back, the roar (calls the gloom bats out of the font), the flex (enrage at 35 %).
+   * attacks = [hook, sweep, slam (direct), slam ring, quake ring, roar blast] — timings live in Maw.ts.
+   */
+  maw: {
+    id: 'maw', asset: 'mutant', scale: 1.8, brain: 'maw', blood: 0x3a0a14, aura: 'dread', miniBoss: 'THE MAW OF THE CROWNHEART',
+    // radius is scaled by `scale` (0.52 → 0.94 m); height is in metres (the hunched body, its shoulders ~2.2 m)
+    hp: 1150, poise: 300, runSpeed: 4.0, walkSpeed: 2.2, radius: 0.52, height: 2.7, reward: 200, blockChance: 0, aggroRange: 30, turnRate: 2.6,
     attacks: [
-      { clip: '', speed: 1, start: 0, window: [0, 1], damage: 22, range: 4.3, arc: 360, knock: 5, heavy: true, weight: 1, cooldown: [3.0, 4.2], rootScale: 1, telegraph: 0.85 },
-      { clip: '', speed: 1, start: 0, window: [0, 1], damage: 26, range: 1.9, arc: 70, knock: 6, heavy: true, guardBreak: true, weight: 1, cooldown: [3.5, 5.0], rootScale: 1, telegraph: 0.7 },
-      { clip: '', speed: 1, start: 0, window: [0, 1], damage: 14, range: 3.2, arc: 150, knock: 3, weight: 1, cooldown: [1.4, 2.2], rootScale: 1, telegraph: 0.25 },
+      { clip: 'punch', speed: 1, start: 0, window: [0.24, 0.4], damage: 20, range: 2.0, arc: 100, knock: 3, weight: 1, cooldown: [1.2, 2.0], rootScale: 1, telegraph: 0.35, hyperArmor: true },
+      { clip: 'swipe', speed: 1.1, start: 0, window: [1.12, 1.4], damage: 32, range: 2.9, arc: 230, knock: 6, heavy: true, guardBreak: true, weight: 1, cooldown: [2.0, 2.8], rootScale: 1, telegraph: 0.9, hyperArmor: true },
+      { clip: 'leap_slam', speed: 1, start: 0, window: [1.62, 1.72], damage: 34, range: 2.5, arc: 360, knock: 8, heavy: true, guardBreak: true, weight: 0, cooldown: [6, 8], rootScale: 1, telegraph: 1.0, hyperArmor: true, aoe: true },
+      { clip: 'leap_slam', speed: 1, start: 0, window: [1.62, 1.72], damage: 18, range: 4.8, arc: 360, knock: 6, heavy: true, weight: 0, cooldown: [6, 8], rootScale: 1, aoe: true, unblockable: true },
+      { clip: 'pound', speed: 1, start: 0, window: [1.85, 1.95], damage: 20, range: 9, arc: 360, knock: 5, heavy: true, weight: 0, cooldown: [10, 14], rootScale: 1, aoe: true, unblockable: true },
+      { clip: 'roar', speed: 1, start: 0, window: [1.35, 1.45], damage: 6, range: 5.5, arc: 360, knock: 7, weight: 0, cooldown: [0, 0], rootScale: 1, aoe: true, unblockable: true },
     ],
-    clips: LAMIA_CLIPS, slotCost: 2, finisher: 'none',
+    clips: MUTANT_CLIPS, slotCost: 3, boss: true, finisher: 'none',
   },
-  /** Mini-boss (Floor 3): the Maw of the Crownheart, a greater lamia; its belly-maw looses gloom bats. */
-  lamia_maw: {
-    id: 'lamia_maw', asset: 'lamia', scale: 1.4, brain: 'lamia', blood: 0x28300c, aura: 'dread', miniBoss: 'THE MAW OF THE CROWNHEART',
-    hp: 900, poise: 260, runSpeed: 3.2, walkSpeed: 1.9, radius: 0.75, height: 3.3, reward: 200, blockChance: 0, aggroRange: 30, turnRate: 3.0,
+  /** Crown brute (Floor 3, the deepest fight E8): a lesser Mutant ×1.3 — hook, sweep, hop; no leaps, no phases. */
+  crown_brute: {
+    id: 'crown_brute', asset: 'mutant', scale: 1.3, brain: 'maw', blood: 0x3a0a14, aura: 'corrupt',
+    hp: 360, poise: 150, runSpeed: 3.6, walkSpeed: 1.8, radius: 0.5, height: 2.0, reward: 90, blockChance: 0, aggroRange: 16, turnRate: 3.4,
     attacks: [
-      { clip: '', speed: 1, start: 0, window: [0, 1], damage: 28, range: 5.6, arc: 360, knock: 6, heavy: true, weight: 1, cooldown: [2.6, 3.6], rootScale: 1, telegraph: 0.8 },
-      { clip: '', speed: 1, start: 0, window: [0, 1], damage: 34, range: 2.5, arc: 70, knock: 7, heavy: true, guardBreak: true, weight: 1, cooldown: [3.0, 4.2], rootScale: 1, telegraph: 0.65 },
-      { clip: '', speed: 1, start: 0, window: [0, 1], damage: 18, range: 4.2, arc: 150, knock: 4, weight: 1, cooldown: [1.2, 2.0], rootScale: 1, telegraph: 0.25 },
+      { clip: 'punch', speed: 1.05, start: 0, window: [0.24, 0.4], damage: 16, range: 1.5, arc: 100, knock: 2.5, weight: 1, cooldown: [1.3, 2.2], rootScale: 1, telegraph: 0.3, hyperArmor: true },
+      { clip: 'swipe', speed: 1.15, start: 0, window: [1.12, 1.4], damage: 24, range: 2.2, arc: 220, knock: 5, heavy: true, guardBreak: true, weight: 1, cooldown: [2.2, 3.2], rootScale: 1, telegraph: 0.9, hyperArmor: true },
     ],
-    clips: LAMIA_CLIPS, slotCost: 3, boss: true, finisher: 'none',
+    clips: MUTANT_CLIPS, slotCost: 2, finisher: 'beast',
   },
   wraith: {
     id: 'wraith', asset: 'ghost', scale: 1.0, aura: 'echo',

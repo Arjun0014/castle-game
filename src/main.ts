@@ -7,6 +7,7 @@ import { Platform } from './platform/Platform';
 import { applyDevStart, devFloor } from './game/DevStart';
 import { Settings } from './game/Settings';
 import { Save, type Guidance, type SaveData } from './game/Save';
+import { Net } from './assets/AssetManager';
 
 const stage = document.getElementById('stage')!;
 // portrait stage + input mode first: the renderer sizes itself from the stage
@@ -36,6 +37,9 @@ const floorId = dev ?? 1;
 const floor = FLOORS[floorId];
 const carry = takeCarry();
 (window as any).__loader = loader;
+// a request that failed for want of a connection is retried (AssetManager.fetchBytes): the card says so
+Net.onRetry = (_url, attempt, wait) => loader.connection(attempt, wait);
+Net.onRecover = () => loader.connection(0);
 
 // ------------------------------------------------------------------ settings, progress
 const settings = new Settings(!automated);
@@ -103,7 +107,8 @@ game.boot(floorId, (f, label) => loader.progress(f, label)).then(() => {
   void loadIntro();
 }).catch((err) => {
   console.error(err);
-  loader.error('Failed to load: ' + (err?.message ?? err));
+  // nothing is playable yet: TRY AGAIN reloads the page
+  loader.error('Failed to load: ' + (err?.message ?? err), () => location.reload());
   (window as any).__loadError = String(err?.stack ?? err);
 });
 
@@ -154,8 +159,12 @@ async function continueGame(s: SaveData) {
   menu?.hide();
   game.menuScene(false);
   document.documentElement.classList.remove('menu-on');
+  loader.showTransition(FLOORS[s.floor]);
+  await resumeContinue(s);
+}
+/** Continue's load (also its TRY AGAIN after a failed download: the transition resumes where it stopped). */
+async function resumeContinue(s: SaveData) {
   const def = FLOORS[s.floor];
-  loader.showTransition(def);
   try {
     await game.transitionTo(s.floor, (f, label) => loader.progress(f, label));
     Object.assign(game.learned, s.learned);
@@ -172,7 +181,8 @@ async function continueGame(s: SaveData) {
     game.hud.message(def.title, def.subtitle, 3.5);
   } catch (err: any) {
     console.error(err);
-    loader.error('Failed to load: ' + (err?.message ?? err));
+    // the saved floor's files did not arrive: TRY AGAIN resumes the same load (Game.transitionTo)
+    loader.error('Failed to load: ' + (err?.message ?? err), () => { loader.showTransition(def); void resumeContinue(s); });
   }
 }
 
@@ -192,7 +202,9 @@ game.onNextFloor = async (next) => {
     if (!game.autopilot) game.hud.message(def.title, def.subtitle, 3.5);
   } catch (err: any) {
     console.error(err);
-    loader.error('Failed to load: ' + (err?.message ?? err));
+    // the next floor's files did not arrive (no connection): TRY AGAIN resumes the transition in place, HP and
+    // resonance kept; only the files that failed are requested again
+    loader.error('Failed to load: ' + (err?.message ?? err), () => { void game.onNextFloor?.(next); });
     (window as any).__loadError = String(err?.stack ?? err);
   }
 };

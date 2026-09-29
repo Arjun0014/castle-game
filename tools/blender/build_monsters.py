@@ -3,7 +3,7 @@
 Run (headless, after build_hero.py):
   blender --background --factory-startup --python tools/blender/build_monsters.py
 
-The other three new monsters (bat, widow, lamia) keep their own single clip and are animated procedurally at
+The other new monsters (bat, widow) keep their own single clip and are animated procedurally at
 runtime (src/enemies/Monsters.ts), so their GLBs ship as byte copies of the sources (COPIES below; GameAssets
 normalises scale/orientation/materials at load, like the ghost).
 
@@ -40,7 +40,8 @@ GOBLIN_MAP = {
 
 
 # unmodified runtime copies (Sketchfab, all CC-BY-4.0; credits in src/ui/Menu.ts CREDITS)
-COPIES = {"bat_dark_bad_cartoon_monster.glb": "bat.glb", "ragno_monster.glb": "widow.glb", "monster-_module_xb1011.glb": "lamia.glb"}
+# (session 11: the lamia copy of monster-_module_xb1011.glb is gone — the Maw is the Creature Pack Mutant, build_mutant.py)
+COPIES = {"bat_dark_bad_cartoon_monster.glb": "bat.glb", "ragno_monster.glb": "widow.glb"}
 
 
 def import_goblin(path):

@@ -269,7 +269,9 @@ def build_ossuary(B):
             disc(B, px, py, r, Z, "stone_block", segs=20)
             B.prism(px, py, -14, Z - 0.8, r * 0.55, 10, "rock")                     # the rock pillar under it
         B.slab(P3[0] - 1.5, P3[0] + 1.5, P3[1] + P3[2] - 0.4, cy1 + 2, Z - 0.8, Z, "stone_block")
-        sigil(B, "CP2", (P3[0] + 1.6, P3[1] - 1.8, Z), yaw=0.0)
+        # CP2 (session 11: moved from P3 to the bridge's end): the last sigil before the Maw, at the cistern passage — a
+        # death in the fight costs a few steps, not the ossuary
+        sigil(B, "CP2", (P3[0], CAV[3] - 1.4, Z), yaw=0.0)
         fissure(B, "F3", (P2[0] - 1.8, P2[1] + 1.2, Z))
         encounter(B, "E3", "PRESENT", (P1[0] - 6, P1[0] + 6, P1[1] - 7, P1[1] + 6, Z - 1, Z + 6))
         encounter(B, "E4", "PAST", (P2[0] - 5.5, P2[0] + 5.5, P2[1] - 5.5, P2[1] + 5.5, Z - 1, Z + 6))
@@ -360,13 +362,12 @@ def build_cistern(B):
             x, y, _ = pol(cx, cy, r - 1.2, a, 0)
             shard(B, x, y, Z, 3.2, 0.5, 0.35, math.radians(a))
         light(B, (cx, cy, Z + 3), "crown", "ff4a1a", 3.0, 14.0, "PRESENT")
-        # E5: THE MAW — its belly looses gloom bats at 65 %; goblins drop from the dome at 35 %
-        enemy(B, "lamia_maw", (cx, cy + 7.5, Z), "E5", "PRESENT", yaw=math.pi)
+        # E5: THE MAW OF THE CROWNHEART (session 11: the Creature Pack Mutant, enemies/Maw.ts). It roars at 65 % and the
+        # gloom bats rise out of the font (wave 2); at 35 % it enrages (no more adds: the fight is the Maw)
+        enemy(B, "maw", (cx, cy + 7.5, Z), "E5", "PRESENT", yaw=math.pi)
         enemy(B, "bat", (cx - 2, cy + 7, Z + 2.5), "E5", "PRESENT", rise=True, wave=2)
         enemy(B, "bat", (cx + 2, cy + 7, Z + 2.5), "E5", "PRESENT", rise=True, wave=2)
         enemy(B, "bat", (cx, cy + 6, Z + 2.8), "E5", "PRESENT", rise=True, wave=2)
-        enemy(B, "goblin", (cx - 7, cy + 2, Z), "E5", "PRESENT", yaw=0.0, rise=True, wave=3)
-        enemy(B, "goblin", (cx + 7, cy + 2, Z), "E5", "PRESENT", yaw=math.pi, rise=True, wave=3)
 
 
 # ============================================================================== C5 the great descent
@@ -388,6 +389,9 @@ def build_descent(B):
         B.slab(cx - 3, cx + 3, CIS[1] + CIS[2] + 1.8, cy - SP_ROUT + 0.5, Z - 0.5, Z, "marble")
         B.wall(cx - 4, cx - 3, CIS[1] + CIS[2] + 1.8, cy - SP_ROUT + 1, Z - 0.6, 7, axis="y")
         B.wall(cx + 3, cx + 4, CIS[1] + CIS[2] + 1.8, cy - SP_ROUT + 1, Z - 0.6, 7, axis="y")
+        # CP2B (session 11): the first sigil after the Maw — beyond the far door (reached through the Past), before the
+        # Great Descent; a death on the ramp no longer sends her back through the cistern
+        sigil(B, "CP2B", (cx, CIS[1] + CIS[2] + 5.2, Z), yaw=0.0)
         a = SP_A0
         while a < SP_A0 + SP_SWEEP - 1e-6:
             a1 = a + seg
@@ -489,8 +493,8 @@ def build_descent(B):
         enemy(B, "bat", pol(cx, cy, 10.5, 15, ramp_z(15) + 3), "E6", "PRESENT")
         enemy(B, "goblin", pol(cx, cy, 10, 20, ramp_z(20)), "E6", "PRESENT", yaw=math.radians(200), rise=True, wave=2)
         enemy(B, "goblin", pol(cx, cy, 10, -30, ramp_z(-30)), "E6", "PRESENT", yaw=math.radians(150), rise=True, wave=2)
-        # E8: the deepest fight — a lamia, Widows from the dark, the Crownheart's Remnants
-        enemy(B, "lamia", pol(cx, cy, 9.8, 300, ramp_z(300)), "E8", "PRESENT", yaw=math.radians(120))
+        # E8: the deepest fight — a crown brute (a lesser Maw), Widows from the dark, the Crownheart's Remnants
+        enemy(B, "crown_brute", pol(cx, cy, 9.8, 300, ramp_z(300)), "E8", "PRESENT", yaw=math.radians(120))
         enemy(B, "widow", pol(cx, cy, 10, 275, ramp_z(275)), "E8", "PRESENT", yaw=math.radians(95), rise=True, ceiling=True)
         enemy(B, "goblin", pol(cx, cy, 10.5, 325, ramp_z(325)), "E8", "PRESENT", yaw=math.radians(150))
         enemy(B, "widow", pol(cx, cy, 10, 330, ramp_z(330)), "E8", "PRESENT", yaw=math.radians(150), rise=True, ceiling=True, wave=2)
@@ -663,7 +667,7 @@ SECTIONS = {
     "C6_HEART": {"bounds": (22, 88, 112, 180), "neighbors": ["C5_DESCENT"]},
 }
 
-EXPECTED = {"sigils": ["CP1", "CP2", "CP3"], "fissures": ["F1", "F2", "F3", "F4", "F5"]}
+EXPECTED = {"sigils": ["CP1", "CP2", "CP2B", "CP3"], "fissures": ["F1", "F2", "F3", "F4", "F5"]}
 
 # Blender QA renders (build_floor03.py): the top-down plan and perspective views
 PLAN_CAM = {"center": (20, 88), "scale": 190, "height": 120, "cut": 22}

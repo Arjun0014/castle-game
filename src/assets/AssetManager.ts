@@ -22,6 +22,8 @@ export interface AssetDef<T = unknown> {
   dispose(value: T): void;
   /** estimated resident memory of the loaded value */
   memory?(value: T): { gpu: number; cpu: number };
+  /** the files it is built from (prefetch: their bytes can be fetched before the asset is needed) */
+  urls?: string[];
 }
 
 interface Entry {
@@ -112,6 +114,33 @@ export class AssetManager {
     } finally {
       if (timer) clearInterval(timer);
     }
+  }
+
+  /**
+   * Fetch the raw bytes of `keys` that are not resident yet into Net.cache (three at a time), so a later acquire
+   * decodes them without touching the network: the next floor downloads while the hero rides down to it. Failures
+   * are left to the real load (which retries and reports them). Resolves with the bytes fetched.
+   */
+  async prefetch(keys: string[], capBytes = 96e6): Promise<number> {
+    const urls: string[] = [];
+    for (const k of keys) {
+      if (this.entries.has(k)) continue;
+      for (const u of this.defs.get(k)?.urls ?? []) if (!Net.cache.has(u) && !urls.includes(u)) urls.push(u);
+    }
+    let bytes = 0;
+    for (const b of Net.cache.values()) bytes += b.byteLength;
+    let got = 0;
+    const next = async (): Promise<void> => {
+      const u = urls.shift();
+      if (!u || bytes > capBytes) return;
+      try {
+        const res = await fetch(u);
+        if (res.ok) { const b = await res.arrayBuffer(); Net.cache.set(u, b); bytes += b.byteLength; got += b.byteLength; }
+      } catch { /* the real load retries and reports */ }
+      return next();
+    };
+    await Promise.all([next(), next(), next()]);
+    return got;
   }
 
   /** Dispose one entry now regardless of scopes (resources consumed by their user, e.g. a floor's level GLB). */
@@ -241,10 +270,52 @@ export function objectMemory(root: THREE.Object3D) {
 }
 
 // ------------------------------------------------------------------------------------------------ loaders
-/** fetch with streamed progress (Content-Length or the expected size). */
+/**
+ * Network status for the loading screen (session 11). Floors stream their assets when they are entered, so a dropped
+ * connection (a phone losing signal, or — the Floor 2 → 3 report — the dev server that served the page having been
+ * stopped) used to fail the whole floor on the first refused request. Transient failures are now retried with a
+ * backoff; `onRetry` lets the chapter card say so, `onRecover` that the way is open again.
+ */
+export const Net = {
+  onRetry: null as null | ((url: string, attempt: number, waitMs: number, reason: string) => void),
+  onRecover: null as null | (() => void),
+  /** waits between attempts (ms): ~26 s in all before a load is declared failed */
+  backoff: [600, 1400, 3000, 6000, 8000, 8000],
+  /** bytes fetched ahead of need (Game.prefetchFloor): url → buffer, consumed once by fetchBytes */
+  cache: new Map<string, ArrayBuffer>(),
+  failures: 0,
+};
+/** worth retrying: no response at all (refused / reset / offline), or the server said "later" */
+const transient = (status: number) => status === 0 || status === 408 || status === 429 || status >= 500;
+
+/** fetch with streamed progress (Content-Length or the expected size); transient network failures are retried. */
 export async function fetchBytes(url: string, expected: number, onProgress: (f: number) => void): Promise<ArrayBuffer> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
+  const pre = Net.cache.get(url);
+  if (pre) { Net.cache.delete(url); onProgress(1); return pre; }
+  for (let attempt = 0; ; attempt++) {
+    let reason: string;
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const buf = await readBody(res, expected, onProgress);  // a connection dropped mid-body throws a TypeError too
+        if (attempt) Net.onRecover?.();
+        return buf;
+      }
+      if (!transient(res.status)) throw new Error(`${url} → HTTP ${res.status}`); // a missing / broken asset: never hidden
+      reason = 'HTTP ' + res.status;
+    } catch (err) {
+      if (!(err instanceof TypeError)) throw err;  // fetch / body reads reject with a TypeError only for network failures
+      reason = err.message;
+    }
+    Net.failures++;
+    const wait = Net.backoff[attempt];
+    if (wait === undefined) throw new Error(`${url} → ${reason} (no connection after ${attempt + 1} attempts)`);
+    Net.onRetry?.(url, attempt + 1, wait, reason);
+    await new Promise((r) => setTimeout(r, wait));
+  }
+}
+
+async function readBody(res: Response, expected: number, onProgress: (f: number) => void): Promise<ArrayBuffer> {
   const total = Number(res.headers.get('content-length')) || expected || 0;
   if (!res.body || !total) { const b = await res.arrayBuffer(); onProgress(1); return b; }
   const reader = res.body.getReader();

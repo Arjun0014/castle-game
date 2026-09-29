@@ -69,8 +69,8 @@ CC0, so the bow release is composed from CC0 parts; `Dark Ambience Loop` (qubodu
 | `widow_spit` | 3 | 80 CC0 creature SFX spit_01-03 (CC0), 0.8x | Widow web spit. |
 | `web_hit` | 3 | 80 CC0 RPG SFX creature_slime_01-03 (CC0) | A web glob bursting. |
 | `widow_death` | 2 | 80 CC0 creature SFX alien_05, scream_01 (CC0), slowed | Widow death screech. |
-| `serpent_hiss` | 4 | Monster Sound Pack Vol. 1 Monster-2/5/6, monster-11 (Ogrebane, CC0), 0.75x | Crownheart lamia hiss / coil. |
-| `serpent_roar` | 2 | 80 CC0 creature SFX roar_02/03 (CC0), 0.62x | The Maw's bellow. |
+| `maw_snarl` | 4 | Monster Sound Pack Vol. 1 Monster-2/5/6, monster-11 (Ogrebane, CC0), 0.68x | The Maw / crown brutes: snarls, wind-ups, stagger (session 11; was `serpent_hiss`). |
+| `maw_roar` | 2 | 80 CC0 creature SFX roar_02/03 (CC0), 0.56x | The Maw's roar: entrance, 65 %, flex, death (was `serpent_roar`). |
 | `bow_draw` | 3 | Kenney RPG Audio creak/handleSmallLeather (CC0) | Archer drawing (creak + leather). |
 | `bow_release` | 4 | Kenney impactWood_light (CC0); swishes (CC0) | Arrow loosed: string snap + whip of air. |
 | `arrow_hit` | 5 | Kenney impactWood_light (CC0) | Arrow striking stone/wood. |

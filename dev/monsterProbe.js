@@ -4,7 +4,8 @@
 //   M.spawn('goblin', 4)             spawn a monster 4 m in front of the hero (awake); returns it
 //   M.fight('widow', { secs: 20 })   spawn one, let it fight a passive (god-mode) hero: states visited, blows landed,
 //                                    distance kept, stalls, web hits, deaths when struck
-//   M.duel('lamia', { secs: 30 })    the hero attacks back (scripted light/heavy combo when in reach)
+//   M.duel('crown_brute', { secs: 30 })  the hero attacks back (scripted light/heavy combo when in reach)
+//                                    (the Maw itself: dev/mawProbe.js on ?at=maw)
 //   M.all()                          every monster archetype: fight + duel summary
 //   M.shot('bat', 1.2)               spawn + simulate + pause for a screenshot
 let g, p, V;
@@ -111,7 +112,7 @@ export function duel(arch, opts = {}) {
 
 export function all() {
   const out = {};
-  for (const a of ['goblin', 'bat', 'widow', 'widowling', 'lamia', 'goblin_king', 'widow_mother', 'lamia_maw']) {
+  for (const a of ['goblin', 'bat', 'widow', 'widowling', 'crown_brute', 'goblin_king', 'widow_mother']) {
     out[a] = { fight: fight(a, { secs: 14, n: a === 'bat' || a === 'widowling' ? 3 : 1 }), duel: duel(a, { secs: a.includes('_') ? 60 : 30 }) };
   }
   clear();

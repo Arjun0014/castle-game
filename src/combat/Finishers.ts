@@ -43,8 +43,12 @@ const UP = new THREE.Vector3(0, 1, 0);
 /** hero → foe distance at which each finisher is staged (m); the passing cut starts farther out */
 const STANDOFF: Record<FinisherId, number> = { stab: 1.05, frenzy: 1.35, kick: 1.45, headsman: 1.3, passing: 1.7 };
 const DURATION: Record<FinisherId, number> = { stab: 1.85, frenzy: 2.0, kick: 2.15, headsman: 1.95, passing: 1.9 };
-/** the passing cut: lateral offset of her line past the body, and how far beyond it she comes to rest */
-const PASS_SIDE = 0.55;
+/**
+ * the passing cut: lateral offset of her line past the body, and how far beyond it she comes to rest. Session 11:
+ * NEGATIVE = the body passes on her sword side — at +0.55 the slide cut's sweep went by 0.55–1.7 m from it (measured);
+ * at −0.5 the blade crosses its waist ~0.23 s into the slide
+ */
+const PASS_SIDE = -0.5;
 const PASS_BEYOND = 2.4;
 
 /** trigger tuning (session 9 combat tests; see CONTEXT §10 s9) */
@@ -55,7 +59,12 @@ export const FINISHER_TUNING = {
   grace: 0.45,
 };
 
-interface Beat { at: number; fn: () => void; done?: boolean }
+/**
+ * A beat of the director. A CUT beat (`until` set) is armed at `at` and fires on the first frame the blade actually
+ * meets the victim's body (bladeContact), or at `until` if it never does — its blood, streak, sound and the victim's
+ * reaction then happen where and when the steel goes in (session 11: the old fixed times fired up to 0.9 m early).
+ */
+interface Beat { at: number; fn: () => void; done?: boolean; until?: number }
 
 export class Finishers {
   active = false;
@@ -64,6 +73,11 @@ export class Finishers {
   force: FinisherId | null = null;
   /** tests: disable the random roll (always trigger when eligible) */
   always = false;
+  /** tests (dev/finisherContact.js): stage at this hero → foe distance instead of the computed one */
+  standoffOverride: number | null = null;
+  /** tests: the passing cut's lateral offset past the body (m; + = her line to the body's right) */
+  passSideOverride: number | null = null;
+  private get passSide() { return this.passSideOverride ?? PASS_SIDE; }
   /** game time the previous finisher ended */
   lastAt = -99;
   /** normal kills since the last finisher (the pity counter of the mid-fight chance) */
@@ -141,6 +155,9 @@ export class Finishers {
   private pick(e: Enemy, kind: 'humanoid' | 'beast'): FinisherId[] {
     let allowed: FinisherId[] = kind === 'beast' ? ['stab', 'passing'] : [...FINISHERS];
     if (e.arch.scale > 1.2) allowed = allowed.filter((id) => id !== 'kick');
+    // the headsman is a NECK cut: on a small body (a goblin, 1.35 m) the spin meets the head, not a neck — measured,
+    // every other variant's blades do meet a goblin (dev/finisherContact.js)
+    if (e.height < 1.6) allowed = allowed.filter((id) => id !== 'headsman');
     if (!this.bag.length) {
       this.bag = [...FINISHERS].sort(() => Math.random() - 0.5);
       if (this.bag[0] === this.lastId) this.bag.push(this.bag.shift()!);
@@ -198,8 +215,9 @@ export class Finishers {
     fwd.normalize();
     this.right.crossVectors(fwd, UP).normalize();
     const bodies = this.others(e);
-    const hero = e.pos.clone().addScaledVector(fwd, -STANDOFF[id]);
-    if (id === 'passing') hero.addScaledVector(this.right, PASS_SIDE);
+    // a bigger body is met farther out (its surface is nearer): the blade's measured reach stays on its flesh
+    const hero = e.pos.clone().addScaledVector(fwd, -(this.standoffOverride ?? STANDOFF[id] + (e.radius - 0.4)));
+    if (id === 'passing') hero.addScaledVector(this.right, this.passSide);
     const gy = w.groundBelow(hero.clone().setY(hero.y + 0.8), 1.6, st);
     if (gy === null) return 'no ground at the hero spot';
     hero.y = gy + 0.01;
@@ -234,7 +252,7 @@ export class Finishers {
       // standing in it
       let end: THREE.Vector3 | null = null, why = '';
       for (const beyond of [PASS_BEYOND, 1.7]) {
-        const q = e.pos.clone().addScaledVector(fwd, beyond).addScaledVector(this.right, PASS_SIDE);
+        const q = e.pos.clone().addScaledVector(fwd, beyond).addScaledVector(this.right, this.passSide);
         const ey = w.groundBelow(q.clone().setY(q.y + 0.8), 1.6, st);
         if (ey === null || Math.abs(ey - hero.y) > 0.4) { why = 'no ground beyond'; continue; }
         q.y = ey + 0.01;
@@ -310,13 +328,14 @@ export class Finishers {
       // foreground, the spin above it; a slow push-in on the neck cut, then it drifts up with the fountain
       this.shot = (t, out) => {
         const k = smooth((t - 0.5) / 0.3), up = smooth((t - 0.75) / 0.8);
-        out.pos.copy(foe).addScaledVector(fwd, 1.9 - k * 0.35).addScaledVector(right, 1.35 - k * 0.2).addScaledVector(UP, 0.75 + up * 0.35);
+        // (session 11: 0.35 m farther out — at 1.9 / 1.35 the kneeling body's own arm filled the corner of the frame)
+        out.pos.copy(foe).addScaledVector(fwd, 2.25 - k * 0.3).addScaledVector(right, 1.6 - k * 0.2).addScaledVector(UP, 0.85 + up * 0.35);
         out.look.copy(mid).addScaledVector(fwd, -0.15).addScaledVector(UP, (1.25 - k * 0.1) * Math.max(1, sc * 0.9));
       };
     } else {
       // the passing cut, composed in depth: the camera waits ahead of her line, beyond the Echo; she slides past the
       // body toward the lens and comes to rest in the foreground, the Echo standing behind her until it falls
-      const lineEnd = foe.clone().addScaledVector(fwd, this.passBeyond).addScaledVector(this.right, PASS_SIDE);
+      const lineEnd = foe.clone().addScaledVector(fwd, this.passBeyond).addScaledVector(this.right, this.passSide);
       this.shot = (t, out) => {
         const k = smooth((t - 0.2) / 0.7);
         out.pos.copy(lineEnd).addScaledVector(fwd, 2.4 - k * 0.25).addScaledVector(right, 1.65).addScaledVector(UP, 1.05 + k * 0.1);
@@ -354,8 +373,64 @@ export class Finishers {
     g.touch?.cinematic(true);
     g.audio.play('blade_ring', { rate: 0.7, vol: 0.6 });
     Platform.haptic(12);
+    this.sampleVictim(e);
+    this.lastGap = 9;
     this.beats = this.script(id, e);
     g.signals.emit('finisher', { id, enemy: e.arch.id, last: this.lastFight });
+  }
+
+  // ------------------------------------------------------------------ blade contact
+  /** where the steel met the body at the last contact (the cut's blood and streak are placed here) */
+  private contact = new THREE.Vector3();
+  /** the blade's travel at that moment (the blood is thrown along it) */
+  private contactDir = new THREE.Vector3();
+  private lastGap = 9;
+  /** where the stab went in / the neck cut landed (the blood that follows keeps coming from there) */
+  private stabAt = new THREE.Vector3();
+  private neckAt = new THREE.Vector3();
+  /** tests: every armed beat with the time it fired and the blade's gap to the body then (≤ 0.08 = contact) */
+  contactLog: { id: FinisherId; at: number; t: number; gap: number }[] = [];
+  private verts: { mesh: THREE.SkinnedMesh; idx: number[] }[] = [];
+  private sampleVictim(e: Enemy) {
+    this.verts = [];
+    e.root.traverse((o) => {
+      const m = o as THREE.SkinnedMesh;
+      if (!m.isSkinnedMesh || !m.visible) return;
+      const n = m.geometry.attributes.position.count, step = Math.max(1, Math.floor(n / 260));
+      const idx: number[] = [];
+      for (let k = 0; k < n; k += step) idx.push(k);
+      this.verts.push({ mesh: m, idx });
+    });
+  }
+  private _v = new THREE.Vector3(); private _a = new THREE.Vector3(); private _b = new THREE.Vector3(); private _q = new THREE.Vector3(); private _ab = new THREE.Vector3();
+  /**
+   * Is the blade in the victim's body this frame? The gap from the blade segment (hilt → tip) to the body's skinned
+   * surface (~260 sampled vertices), checked on this frame's blade and on two between it and last frame's (a fast
+   * swing travels a quarter metre a frame). Keeps the contact point and the blade's direction of travel for the cut.
+   */
+  private bladeContact(): boolean {
+    const e = this.e, bl = this.g.player.blade;
+    if (!e || !this.verts.length) return false;
+    e.root.updateMatrixWorld(true);
+    let best = Infinity;
+    for (const k of [1, 0.66, 0.33]) {
+      const a = this._a.lerpVectors(bl.prevHilt, bl.hilt, k), b = this._b.lerpVectors(bl.prevTip, bl.tip, k);
+      const ab = this._ab.subVectors(b, a), L2 = Math.max(1e-6, ab.lengthSq());
+      for (const { mesh, idx } of this.verts) {
+        for (const i of idx) {
+          const v = mesh.getVertexPosition(i, this._v).applyMatrix4(mesh.matrixWorld);
+          const t = THREE.MathUtils.clamp((v.x - a.x) * ab.x + (v.y - a.y) * ab.y + (v.z - a.z) * ab.z, 0, L2) / L2;
+          const q = this._q.copy(a).addScaledVector(ab, t);
+          const d = q.distanceTo(v);
+          if (d < best) { best = d; this.contact.copy(v).lerp(q, 0.5); }
+        }
+      }
+    }
+    this.lastGap = best;
+    this.contactDir.subVectors(bl.tip, bl.prevTip);
+    if (this.contactDir.lengthSq() < 1e-6) this.contactDir.copy(this.fwd);
+    this.contactDir.normalize();
+    return best <= 0.08;
   }
 
   /** the beats of each finisher (director seconds; hit-stop / slow motion stretch them with the animations) */
@@ -369,9 +444,11 @@ export class Finishers {
     const gibKind = e.arch.asset === 'hollow' ? 'rotten' : e.arch.asset === 'knight' ? 'armor' : 'flesh';
     const react = (heavy: boolean) => { if (!beast) e.once(heavy ? e.arch.clips.hitH : e.arch.clips.hitL, heavy ? 1.1 : 1.5, 0, 0.05); };
     const kneel = () => { if (!beast && e.actions.has('crouch_idle')) e.once('crouch_idle', 1, 0, 0.22); };
+    /** a cut that has just met the body (a contact beat): blood thrown along the blade's travel from where it went in */
     const cut = (sideSign: number, amount: number, heavy = false) => {
-      const d = fwd.clone().addScaledVector(this.right, sideSign * 0.8).normalize();
-      const at = chest();
+      const fresh = this.lastGap <= 0.12;
+      const d = fresh ? this.contactDir.clone().addScaledVector(fwd, 0.35).normalize() : fwd.clone().addScaledVector(this.right, sideSign * 0.8).normalize();
+      const at = fresh ? this.contact.clone() : chest();
       g.fx.bloodSpray(at, d, amount, bloodCol);
       g.gore.aftermath(at, d, amount * 0.7);
       g.audio.hitEnemy(flesh, heavy ? 30 : 18, at, heavy ? 0.9 : 0.5);
@@ -385,14 +462,18 @@ export class Finishers {
     const swing = (w: number) => g.audio.swing(w, p.pos, 1);
     const anim = (clip: string, start: number, speed: number, fade = 0.08) => p.anim.play(clip, { start, speed, fade });
     if (id === 'stab') {
+      // gs_plunge from 1.05 at ×1.7: the blade enters the kneeling body at ~0.73 s and is deepest at ~0.83 s (measured
+      // contact frames, dev/finisherContact.js; the old blow fired at 0.69 s with the steel still 0.3 m off). The kill
+      // blow waits for that contact.
       return [
         { at: 0, fn: () => { anim('gs_plunge', 1.05, 1.7, 0.12); react(true); } },
         { at: 0.2, fn: () => { kneel(); swing(0.3); } },
         { at: 0.55, fn: () => { this.trailOn = true; swing(1); } },
-        { at: 0.69, fn: () => {
-          // the stab: straight down through the kneeling body (a beast is pinned to the floor)
-          const at = chest().addScaledVector(UP, -0.15);
+        { at: 0.64, until: 0.86, fn: () => {
+          // the stab: straight down through the kneeling body (a beast is pinned to the floor), where it went in
+          const at = this.lastGap <= 0.12 ? this.contact.clone() : chest().addScaledVector(UP, -0.15);
           const d = fwd.clone().multiplyScalar(0.5).add(new THREE.Vector3(0, -1, 0)).normalize();
+          this.stabAt.copy(at);
           g.fx.bloodSpray(at, fwd.clone().negate().add(new THREE.Vector3(0, 0.6, 0)).normalize(), 1.2, bloodCol);
           g.fx.bloodSpray(at.clone().addScaledVector(fwd, 0.3), d, 1.0, bloodCol);
           g.gore.splat(at, new THREE.Vector3(0, -1, 0), 1.4, 2.5);
@@ -409,24 +490,29 @@ export class Finishers {
           g.hud.flash('#3a0000', 0.2);
           Platform.haptic(40);
         } },
-        { at: 0.9, fn: () => { this.trailOn = false; } },
-        { at: 1.05, fn: () => { g.fx.bloodSpray(chest(), new THREE.Vector3(0, 1, 0).addScaledVector(fwd, -0.3).normalize(), 0.7, bloodCol); g.audio.play('blood_splash', { pos: chest() }); } },
-        { at: 1.15, fn: () => g.enemies.finisherKill(e, fwd, 0.12, 4) },
+        { at: 0.98, fn: () => { this.trailOn = false; } },
+        { at: 1.1, fn: () => { g.fx.bloodSpray(this.stabAt, new THREE.Vector3(0, 1, 0).addScaledVector(fwd, -0.3).normalize(), 0.7, bloodCol); g.audio.play('blood_splash', { pos: this.stabAt }); } },
+        { at: 1.22, fn: () => g.enemies.finisherKill(e, fwd, 0.12, 4) },
       ];
     }
     if (id === 'frenzy') {
+      // session 11: the flurry is built from swings that REACH a body at the flurry's distance (measured contact
+      // frames): L1's forehand diagonal and its backhand return (atk_whirlwind from 0.3 at ×1.6: through the waist at
+      // ~0.27 s and ~0.6 s), a rising cut (atk_rising_cut from 0.5: through the chest ~0.19 s in), then the cleave's
+      // overhead (gs_cleave from 0.3) tears it apart. The old quick cut / chop ended their swings 0.4–1.1 m short of
+      // the body. Every cut fires on contact.
       return [
-        { at: 0, fn: () => { anim('gs_quick_cut', 0, 1.55, 0.1); this.trailOn = true; } },
-        { at: 0.13, fn: () => cut(1, 0.6) },
-        { at: 0.3, fn: () => cut(-1, 0.7) },
-        { at: 0.34, fn: () => anim('atk_chop', 0.08, 1.5, 0.07) },
-        { at: 0.49, fn: () => cut(1, 0.8) },
-        { at: 0.62, fn: () => anim('gs_cleave', 0.05, 1.3, 0.07) },
-        { at: 0.74, fn: () => cut(-1, 0.9, true) },
-        { at: 1.1, fn: () => {
-          // the destructive last blow: the overhead chop tears the Echo apart
-          const at = chest();
-          const d = fwd.clone().add(new THREE.Vector3(0, -0.5, 0)).normalize();
+        { at: 0, fn: () => { anim('atk_whirlwind', 0.3, 1.6, 0.1); this.trailOn = true; swing(0.5); } },
+        { at: 0.16, until: 0.4, fn: () => cut(1, 0.6) },
+        { at: 0.46, until: 0.7, fn: () => { cut(-1, 0.7); swing(0.55); } },
+        { at: 0.64, fn: () => anim('atk_rising_cut', 0.5, 1.6, 0.07) },
+        { at: 0.72, until: 0.94, fn: () => { cut(1, 0.85, true); swing(0.7); } },
+        { at: 0.95, fn: () => anim('gs_cleave', 0.3, 1.3, 0.07) },
+        { at: 1.1, until: 1.4, fn: () => {
+          // the destructive last blow: the overhead cleave tears the Echo apart, from where the blade went in
+          const fresh = this.lastGap <= 0.12;
+          const at = fresh ? this.contact.clone() : chest();
+          const d = (fresh ? this.contactDir.clone() : fwd.clone().add(new THREE.Vector3(0, -0.5, 0))).normalize();
           g.fx.hitstop(0.12);
           g.fx.slowmo(0.45, 0.4);
           g.fx.bloodSpray(at, d, 1.5, bloodCol);
@@ -439,15 +525,16 @@ export class Finishers {
           Platform.haptic(50);
           g.enemies.finisherKill(e, fwd, 1, 18);
         } },
-        { at: 1.3, fn: () => { this.trailOn = false; } },
+        { at: 1.5, fn: () => { this.trailOn = false; } },
       ];
     }
     if (id === 'kick') {
       return [
-        { at: 0, fn: () => { anim('gs_cleave', 0.05, 1.45, 0.1); this.trailOn = true; } },
-        { at: 0.1, fn: () => cut(1, 0.6) },
+        // the cleave's overhead half (from 0.42): its opening diagonal ended 1.3 m short of a body at the kick's distance
+        { at: 0, fn: () => { anim('gs_cleave', 0.42, 1.45, 0.1); this.trailOn = true; } },
+        { at: 0.06, until: 0.3, fn: () => cut(1, 0.6) },
         { at: 0.3, fn: () => anim('atk_rising_cut', 0.5, 1.55, 0.07) },
-        { at: 0.51, fn: () => cut(-1, 0.8, true) },
+        { at: 0.42, until: 0.6, fn: () => cut(-1, 0.8, true) },
         { at: 0.66, fn: () => { this.trailOn = false; } },
         { at: 0.72, fn: () => anim('kick_front', 0.15, 1.3, 0.07) },
         { at: 0.91, fn: () => {
@@ -469,14 +556,17 @@ export class Finishers {
       ];
     }
     if (id === 'headsman') {
-      const neck = () => e.pos.clone().setY(e.pos.y + (beast ? 0.7 : 1.05) * e.arch.scale);
+      // measured contact frames (guard, kneeling): the low sweep meets the legs ~0.35 s, the spin's neck cut ~0.73 s —
+      // the old fixed beats fired at 0.25 / 0.66 s with the blade 0.85 m away. Both cuts now wait for the steel, and
+      // the fountain rises from where the neck cut actually landed.
       return [
-        // the low sweep (raised overhead, then round at knee height: its measured cut 0.83 s → 0.25 s here)
+        // the low sweep (raised overhead, then round at knee height)
         { at: 0, fn: () => { anim('gs_low_sweep', 0.45, 1.5, 0.1); swing(0.4); } },
         { at: 0.14, fn: () => { this.trailOn = true; } },
-        { at: 0.25, fn: () => {
-          const at = e.pos.clone().setY(e.pos.y + 0.45);
-          const d = this.right.clone().multiplyScalar(-this.side).add(fwd.clone().multiplyScalar(0.3)).normalize();
+        { at: 0.24, until: 0.46, fn: () => {
+          const fresh = this.lastGap <= 0.12;
+          const at = fresh ? this.contact.clone() : e.pos.clone().setY(e.pos.y + 0.45);
+          const d = (fresh ? this.contactDir.clone() : this.right.clone().multiplyScalar(-this.side).add(fwd.clone().multiplyScalar(0.3))).normalize();
           g.fx.bloodSpray(at, d, 0.7, bloodCol);
           g.audio.hitEnemy(flesh, 20, at, 0.6);
           g.audio.play('bone_crunch', { pos: at, rate: 1.15, vol: 0.7 });
@@ -486,14 +576,16 @@ export class Finishers {
           kneel();
           Platform.haptic(18);
         } },
-        { at: 0.36, fn: () => { this.trailOn = false; } },
-        // she turns into the spin: its wide horizontal cut (1.07 s) at neck height lands at 0.66 s
+        { at: 0.5, fn: () => { this.trailOn = false; } },
+        // she turns into the spin: its wide horizontal cut at neck height
         { at: 0.42, fn: () => { anim('gs_high_spin', 0.74, 1.4, 0.07); swing(0.9); } },
-        { at: 0.52, fn: () => { this.trailOn = true; } },
-        { at: 0.66, fn: () => {
-          const at = neck();
-          const d = this.right.clone().multiplyScalar(this.side).addScaledVector(fwd, 0.2).normalize();
-          // the blow: a hard stop, a streak of light through the neck, the head thrown off, a fountain rising
+        { at: 0.54, fn: () => { this.trailOn = true; } },
+        { at: 0.62, until: 0.86, fn: () => {
+          const fresh = this.lastGap <= 0.12;
+          const at = fresh ? this.contact.clone() : e.pos.clone().setY(e.pos.y + (beast ? 0.7 : 1.0) * e.arch.scale);
+          const d = (fresh ? this.contactDir.clone().setY(0) : this.right.clone().multiplyScalar(this.side).addScaledVector(fwd, 0.2)).normalize();
+          this.neckAt.copy(at);
+          // the blow: a hard stop, a streak of light along the blade's path through the neck, the head thrown off, a fountain
           g.fx.hitstop(0.14);
           g.fx.slowmo(0.7, 0.3);
           this.streak(at.clone().addScaledVector(d, -0.7), at.clone().addScaledVector(d, 0.8), 0xffe6c0);
@@ -512,9 +604,9 @@ export class Finishers {
           e.recoil(d, 0.18);
           Platform.haptic(50);
         } },
-        { at: 0.85, fn: () => { this.trailOn = false; g.fx.bloodSpray(neck(), UP, 1.0, bloodCol); g.audio.play('blood_splash', { pos: neck() }); } },
-        { at: 1.05, fn: () => g.fx.bloodSpray(neck(), UP.clone().addScaledVector(fwd, -0.2).normalize(), 0.7, bloodCol) },
-        { at: 1.25, fn: () => { g.fx.bloodSpray(neck(), UP, 0.45, bloodCol); g.enemies.finisherKill(e, fwd.clone().negate().setY(-0.2).normalize(), 0.12, 0); } },
+        { at: 0.95, fn: () => { this.trailOn = false; g.fx.bloodSpray(this.neckAt, UP, 1.0, bloodCol); g.audio.play('blood_splash', { pos: this.neckAt }); } },
+        { at: 1.12, fn: () => g.fx.bloodSpray(this.neckAt, UP.clone().addScaledVector(fwd, -0.2).normalize(), 0.7, bloodCol) },
+        { at: 1.3, fn: () => { g.fx.bloodSpray(this.neckAt, UP, 0.45, bloodCol); g.enemies.finisherKill(e, fwd.clone().negate().setY(-0.2).normalize(), 0.12, 0); } },
       ];
     }
     // the passing cut
@@ -522,10 +614,11 @@ export class Finishers {
       // skip the run-up: the knee slide itself, its sweeping cut (1.30 s) meeting the body at 0.36 s
       { at: 0, fn: () => { anim('gs_slide_cut', 0.78, 1.45, 0.08); swing(0.95); g.audio.play('dodge', { pos: p.pos, rate: 0.8 }); } },
       { at: 0.2, fn: () => { this.trailOn = true; } },
-      { at: 0.36, fn: () => {
-        // contact: everything stops for a breath; one line of light through the body, and silence
-        const at = chest();
-        const d = fwd.clone().addScaledVector(this.right, -0.9).normalize();
+      { at: 0.16, until: 0.42, fn: () => {
+        // contact: everything stops for a breath; one line of light through the body along the blade, and silence
+        const fresh = this.lastGap <= 0.12;
+        const at = fresh ? this.contact.clone() : chest();
+        const d = (fresh ? this.contactDir.clone().setY(0).normalize() : fwd.clone().addScaledVector(this.right, -0.9)).normalize();
         this.streak(at.clone().addScaledVector(d, -0.9).addScaledVector(UP, -0.35), at.clone().addScaledVector(d, 0.9).addScaledVector(UP, 0.35), 0xfff0d8);
         g.fx.hitstop(0.2);
         g.audio.play('blade_ring', { pos: at, rate: 1.35, vol: 1.1 });
@@ -635,7 +728,12 @@ export class Finishers {
       p.pos.lerpVectors(this.heroFrom, this.heroTo, k * k * (3 - 2 * k));
     }
     p.invuln = 1;
-    for (const b of this.beats) if (!b.done && this.t >= b.at) { b.done = true; b.fn(); }
+    for (const b of this.beats) {
+      if (b.done || this.t < b.at) continue;
+      if (b.until !== undefined && this.t < b.until && !this.bladeContact()) continue;
+      if (b.until !== undefined) this.contactLog.push({ id: this.id!, at: b.at, t: +this.t.toFixed(3), gap: +this.lastGap.toFixed(3) });
+      b.done = true; b.fn();
+    }
     this.shot(this.t, this.cam);
     if (this.t >= this.dur) this.end();
   }

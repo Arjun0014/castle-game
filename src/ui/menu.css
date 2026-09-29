@@ -60,6 +60,11 @@
 #overlay.ld.ready .sg-heart { animation-duration: 1.1s; }
 #overlay.ld.failed .ld-chapter { color: #ff8a7a; }
 #overlay.ld.failed .ld-step { color: #ff9a8a; text-transform: none; letter-spacing: 0.04em; }
+/* a lost connection being retried (AssetManager Net): the note breathes, the heart slows */
+#overlay.ld.netwait .ld-detail { color: #ffc9a0; animation: ld-breathe 2.4s ease-in-out infinite; }
+#overlay.ld.netwait .sg-heart { animation-duration: 3.2s; }
+#overlay.ld.failed .ld-prompt { opacity: 1; pointer-events: auto; }
+#overlay.ld .ld-retry { margin: 2.2cqh auto 0; }
 /* the boot card carries the game's name (longer): a little smaller */
 #overlay.ld.boot .ld-title { font-size: clamp(24px, 8.4cqw, 58px); }
 html.view-wide #overlay.ld .ld-sigil { width: clamp(150px, 26cqh, 250px); margin-top: 4cqh; }

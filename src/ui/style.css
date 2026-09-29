@@ -41,6 +41,9 @@ html.view-portrait #stage { box-shadow: 0 0 0 1px rgba(216,179,106,0.08), 0 0 60
 .charge-seg { flex: 1; height: 12px; background: rgba(0,0,0,0.6); border: 1px solid #3a3a48; position: relative; overflow: hidden; }
 .charge-fill { height: 100%; width: 0; transition: width .2s; }
 .charge-seg.full { box-shadow: 0 0 10px rgba(255,255,255,0.35); }
+/* passive Resonance refill (TimeSystem.passive): a slow breath on the filling segment */
+.charge-seg.trickle .charge-fill { animation: trickle 2.4s ease-in-out infinite; }
+@keyframes trickle { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 .charge-label { font-size: 11px; letter-spacing: 3px; color: #a9a39a; margin-top: 6px; }
 .state-badge { position: absolute; left: 32px; bottom: 96px; font-size: 13px; letter-spacing: 8px; padding: 4px 12px; border: 1px solid; transition: all .6s; }
 .state-badge.past { color: var(--past); border-color: rgba(240,165,74,0.6); text-shadow: 0 0 8px rgba(240,165,74,0.5); }

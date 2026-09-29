@@ -6,6 +6,16 @@ import type { Player } from '../character/Player';
 export const PER_SHIFT = 100;
 export const CAPACITY = 200;
 export const SHIFT_COOLDOWN = 1.2;
+/**
+ * Passive Resonance (session 11). Outside combat the castle's pull on her blood refills the gauge slowly, so nobody
+ * has to hunt Echoes just to try the other memory — but only up to one shift's worth: kills (+25–200), hits (+2) and
+ * parries (+12) stay the fast source and the only way to bank a second shift. Paused while any live Echo of her fight
+ * is within 22 m (EnemyManager.inCombat) and for PASSIVE_DELAY after combat or a shift, then eases in over 2 s.
+ * 1.6/s = an empty gauge holds a shift again after ≈ 66 s of calm; a shift right after another still needs a fight.
+ */
+export const PASSIVE_RATE = 1.6;
+export const PASSIVE_CAP = PER_SHIFT;
+export const PASSIVE_DELAY = 4;
 
 export type ShiftVerdict = { ok: true; correction: THREE.Vector3 } | { ok: false; reason: string };
 
@@ -37,6 +47,21 @@ export class TimeSystem {
     if (this.charge > before) this.onGain?.(this.charge - before, reason);
   }
 
+  /** seconds of calm (no combat, no shift) — drives the passive refill */
+  calm = 0;
+  /** refilling passively right now (the HUD's gauge shimmers) */
+  trickling = false;
+  /** Passive Resonance: see PASSIVE_RATE. `combat` = a live fight is on her (EnemyManager.inCombat). */
+  passive(dt: number, combat: boolean) {
+    this.trickling = false;
+    if (combat || !this.unlocked) { this.calm = 0; return; }
+    this.calm += dt;
+    if (this.calm < PASSIVE_DELAY || this.charge >= PASSIVE_CAP) return;
+    const ease = Math.min(1, (this.calm - PASSIVE_DELAY) / 2);
+    this.charge = Math.min(PASSIVE_CAP, this.charge + PASSIVE_RATE * ease * dt);
+    this.trickling = true;
+  }
+
   /**
    * Destination validity in the other state:
    * 1) capsule overlap in the target BVH — small depenetration (≤ 0.45 m) is accepted as a correction;
@@ -60,7 +85,7 @@ export class TimeSystem {
   canBegin(player: Player): { ok: boolean; reason?: string } {
     if (!this.unlocked) return { ok: false, reason: 'Your blood has not yet woken to the castle.' };
     if (this.cooldown > 0) return { ok: false, reason: 'The castle has not settled.' };
-    if (this.charge < PER_SHIFT) return { ok: false, reason: 'Not enough resonance. Defeat Echoes to gather more.' };
+    if (this.charge < PER_SHIFT) return { ok: false, reason: 'Not enough resonance. Defeat Echoes — or give the castle time: its pull returns slowly.' };
     const v = this.validate(player);
     if (!v.ok) return { ok: false, reason: v.reason };
     return { ok: true };
@@ -75,6 +100,7 @@ export class TimeSystem {
     this.setState(this.other, player.pos);
     this.cooldown = SHIFT_COOLDOWN;
     this.shiftCount++;
+    this.calm = 0;
     return v;
   }
 

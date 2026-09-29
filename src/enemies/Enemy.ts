@@ -210,6 +210,12 @@ export class Enemy {
 
   get alive() { return this.state !== 'dead'; }
   get radius() { return this.arch.radius * this.arch.scale; }
+  /**
+   * The capsule against the world (session 11): at most 0.62 m. The capsule's lower sphere climbs anything lower than
+   * its radius like a ramp — the Maw (0.94 m) walked up the blood font's 0.9 m rim and fell into the font. Hits,
+   * separation and navigation clearance keep the full body `radius`.
+   */
+  get physRadius() { return Math.min(this.radius, 0.62); }
   get height() { return this.arch.height; }
   get isFlying() { return !!this.arch.flying; }
   get isRanged() { return !!this.arch.ranged; }
@@ -491,7 +497,7 @@ export class Enemy {
           this.tumble += (rest - this.tumble) * Math.min(1, dt * 10);
         }
         // the Echo breaks apart shortly after it comes to rest (or mid-air if it never lands)
-        if (this.shatterAt < 0 && ((this.settled && this.deadTime > 0.95) || this.deadTime > 2.6)) {
+        if (this.shatterAt < 0 && ((this.settled && this.deadTime > Math.max(0.95, this.deathHold)) || this.deadTime > Math.max(2.6, this.deathHold))) {
           this.shatterAt = this.deadTime;
           this.events.push('shatter');
         }
@@ -512,7 +518,7 @@ export class Enemy {
     if (!this.isFlying && (this.state === 'chase' || this.state === 'circle') && this.navMode !== 'hold') move = this.steer(move, dt, ctx);
     // walkers never step off a ledge on their own (chasing straight across a floor hole was a free kill —
     // the Kingsguard died in the Present apartments' voids 1 s into its fight); knockback still can
-    if (!this.isFlying && this.alive && move.lengthSq() > 0.04) move = this.keepFooting(move, ctx);
+    if (!this.isFlying && this.alive && move.lengthSq() > 0.04 && !this.passThrough) move = this.keepFooting(move, ctx);
     const hv = move.add(new THREE.Vector3(this.vel.x, 0, this.vel.z));
     const px = this.pos.x, py = this.pos.y, pz = this.pos.z;
     if (this.isFlying) this.integrateFlying(dt, hv, ctx);
@@ -577,10 +583,14 @@ export class Enemy {
 
   /** no gravity / ground snapping this frame (a Widow on its thread, mid-pounce): the brain sets pos.y itself */
   floating = false;
+  /** with floating: no collision either (the Maw's leap clears the font's rim and the font itself in the air) */
+  passThrough = false;
+  /** a long death clip plays out before the body breaks apart (s; the Maw's fall) */
+  protected deathHold = 0;
   private integrate(dt: number, hv: THREE.Vector3, world: CollisionWorld, state: TimeState) {
     if (this.floating) {
       this.pos.x += hv.x * dt; this.pos.z += hv.z * dt;
-      world.resolveCapsule(this.pos, this.radius, this.height, state);
+      if (!this.passThrough) world.resolveCapsule(this.pos, this.physRadius, this.height, state);
       this.grounded = false;
       return;
     }
@@ -593,7 +603,8 @@ export class Enemy {
     for (let i = 0; i < steps; i++) {
       this.pos.add(d);
       if (this.state === 'dead' && this.settled && this.deadTime > 0.8) continue;
-      const r = world.resolveCapsule(this.pos, this.radius, this.height, state);
+      // walkable ground resolves straight up (as for the hero): nobody creeps down a stair while standing on it
+      const r = world.resolveCapsule(this.pos, this.physRadius, this.height, state, undefined, this.alive);
       if (r.grounded) { this.grounded = true; if (this.vel.y < 0) this.vel.y = 0; }
     }
     if (!this.grounded && this.vel.y <= 0) {

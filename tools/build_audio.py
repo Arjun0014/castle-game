@@ -275,11 +275,11 @@ sound('web_hit', 'sfx', -6, 'A web glob bursting on the hero.',
 sound('widow_death', 'sfx', -5, 'Widow death screech.',
       [lambda: V(CRE80 + 'alien_05.ogg', af=HP, rate=0.7, fout=0.4), lambda: V(CRE80 + 'scream_01.ogg', af=HP, rate=0.6, fout=0.4)],
       ['80 CC0 creature SFX alien/scream (rubberduck, CC0)'])
-sound('serpent_hiss', 'sfx', -5, 'Crownheart lamia hiss / coil.',
-      [lambda f=f: V(MONSTER + f, af=HP, rate=0.75, fout=0.2) for f in ('Monster-2.wav', 'Monster-5.wav', 'Monster-6.wav', 'monster-11.wav')],
+sound('maw_snarl', 'sfx', -5, 'The Maw / crown brutes: snarls, wind-ups, the stagger (session 11; was the lamia hiss).',
+      [lambda f=f: V(MONSTER + f, af=HP, rate=0.68, fout=0.2) for f in ('Monster-2.wav', 'Monster-5.wav', 'Monster-6.wav', 'monster-11.wav')],
       ['Monster Sound Pack Vol. 1 (Ogrebane, CC0)'])
-sound('serpent_roar', 'sfx', -3, "The Maw's bellow.",
-      [lambda f=f: V(CRE80 + f, af=HP, rate=0.62, fout=0.5) for f in ('roar_02.ogg', 'roar_03.ogg')],
+sound('maw_roar', 'sfx', -3, "The Maw's roar (entrance, 65 %, the flex, its death).",
+      [lambda f=f: V(CRE80 + f, af=HP, rate=0.56, fout=0.6) for f in ('roar_02.ogg', 'roar_03.ogg')],
       ['80 CC0 creature SFX roar (rubberduck, CC0)'])
 sound('wraith_death', 'sfx', -5, 'Wraith dissolving.',
       [lambda i=i: mix((V(GHOST + f'qubodup-GhostMoan0{i}.wav', dur=1.4, rate=0.7, fout=0.9, af=HP), 0),

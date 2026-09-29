@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { Enemy, type EnemyCtx } from './Enemy';
-import { GOBLIN_LEAP, type Archetype, type EnemyAttack } from './EnemyTypes';
+import { GOBLIN_LEAP, type Archetype } from './EnemyTypes';
 import type { Game } from '../game/Game';
 import type { TimeState } from '../levels/Materials';
 import { Platform } from '../platform/Platform';
+import { Maw } from './Maw';
+import { Monster } from './MonsterBase';
 
 /**
  * Session 9 — the monsters of the ruined castle. Each has its own brain on top of the shared Enemy body (physics,
@@ -17,25 +19,23 @@ import { Platform } from '../platform/Platform';
  *   Widow   (widow.glb, one loop)                 ambusher / ranged: drops from the ceiling on a thread, skitters at
  *            mid range, spits WEB (slowed, no sprint or dodge for 2.2 s unless guarded), pounces, jabs. The brood
  *            (widowlings) swarm; the WEEPING MOTHER (mini-boss) spits volleys and hatches her brood.
- *   Lamia   (lamia.glb, one idle clip)           heavy / defensive: a 360° tail sweep at ankle height (jump or
- *            dodge), a guard-breaking maw lunge, a coiled guard against frontal blows (circle it, or kick / heavy
- *            through it). The MAW OF THE CROWNHEART (mini-boss): bellows and looses gloom bats from its maw.
+ *   Mutant  (mutant.glb, 16 clips)               session 11, its own file (enemies/Maw.ts): the MAW OF THE
+ *            CROWNHEART (Floor 3 mini-boss) and the crown brutes of the deepest fight.
  *
- * Only the goblin has real clips; the others are animated procedurally round their single loop (root pitch/roll,
- * bobbing, wing/leg/tail bone offsets, morphs). Their projectiles and telegraphs are pooled in MonsterFX (warmed at
+ * The goblin (retargeted) and the Mutant have real clips; bat and widow are animated procedurally round their single
+ * loop (root pitch/roll, bobbing, wing/leg bone offsets, morphs). Their projectiles and telegraphs are pooled in MonsterFX (warmed at
  * load). All belong to the Present (EnemyTypes.PAST_COUNTERPART remaps any placed in the Past).
  */
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _v = new THREE.Vector3();
-const _q = new THREE.Quaternion();
-const _q2 = new THREE.Quaternion();
 const smooth = (x: number) => { const k = THREE.MathUtils.clamp(x, 0, 1); return k * k * (3 - 2 * k); };
 
 // ============================================================================================ pooled FX
 interface Glob { mesh: THREE.Mesh; vel: THREE.Vector3; life: number; dmg: number; owner: Enemy; state: TimeState }
 interface Ring { mesh: THREE.Mesh; t: number; dur: number; r: number }
 interface Thread { line: THREE.Line; owner: Enemy | null; top: number }
+interface Quake { mesh: THREE.Mesh; at: THREE.Vector3; t: number; speed: number; reach: number }
 
 /** Web globs, ground warning rings, silk threads, the web on the hero — pooled, warmed at load. */
 export class MonsterFX {
@@ -52,6 +52,11 @@ export class MonsterFX {
   private discMat = new THREE.MeshBasicMaterial({ color: 0xff2a10, transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, toneMapped: false });
   private threadMat = new THREE.LineBasicMaterial({ color: 0xcfd8e0, transparent: true, opacity: 0.55 });
   private webT = 0;
+  /** the Maw's quake: a band of cracked, glowing floor running outward (enemies/Maw.ts) */
+  private quakes: Quake[] = [];
+  private quakePool: THREE.Mesh[] = [];
+  private quakeGeo = new THREE.RingGeometry(0.9, 1, 64, 1).rotateX(-Math.PI / 2);
+  private quakeMat = new THREE.MeshBasicMaterial({ color: 0xff5a1e, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, toneMapped: false });
 
   constructor(private g: Game) {
     for (let i = 0; i < 10; i++) { const m = new THREE.Mesh(this.globGeo, this.globMat); m.castShadow = false; this.globPool.push(m); }
@@ -61,6 +66,7 @@ export class MonsterFX {
       m.add(d); m.renderOrder = 4; m.frustumCulled = false;
       this.ringPool.push(m);
     }
+    for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(this.quakeGeo, this.quakeMat.clone()); m.renderOrder = 4; m.frustumCulled = false; this.quakePool.push(m); }
     for (let i = 0; i < 4; i++) {
       const geo = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
       const line = new THREE.Line(geo, this.threadMat); line.frustumCulled = false; line.visible = false;
@@ -95,6 +101,17 @@ export class MonsterFX {
     m.visible = true;
     this.g.scene.add(m);
     this.rings.push({ mesh: m, t: 0, dur, r: radius });
+  }
+
+  /** a quake wave from `at` running out at `speed` m/s to `reach` m (the hit test is the Maw's own: Maw.afterAnimate) */
+  wave(at: THREE.Vector3, speed: number, reach: number) {
+    const m = this.quakePool.pop();
+    if (!m) return;
+    m.position.copy(at).setY(at.y + 0.05);
+    m.scale.setScalar(0.3);
+    m.visible = true;
+    this.g.scene.add(m);
+    this.quakes.push({ mesh: m, at: at.clone(), t: 0, speed, reach });
   }
 
   /** a silk thread from `top` (y) down to the owner while it descends; null releases it */
@@ -150,6 +167,21 @@ export class MonsterFX {
       (disc.material as THREE.MeshBasicMaterial).opacity = 0.12 + 0.2 * k;
     }
     this.rings = this.rings.filter((r) => { if (r.t >= r.dur) { r.mesh.removeFromParent(); this.ringPool.push(r.mesh); return false; } return true; });
+    for (const q of this.quakes) {
+      q.t += dt;
+      const r = Math.max(0.3, q.t * q.speed);
+      q.mesh.scale.set(r, 1, r);
+      (q.mesh.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - r / (q.reach + 0.5));
+      // stone thrown up along the front of the wave
+      const n = Math.floor(r * 1.4);
+      for (let i = 0; i < n; i++) {
+        if (Math.random() > dt * 22) continue;
+        const a = Math.random() * Math.PI * 2;
+        const at = q.at.clone().add(new THREE.Vector3(Math.cos(a) * r, 0.1, Math.sin(a) * r));
+        g.fx.emit(at, new THREE.Vector3(Math.cos(a) * 1.2, 2.5 + Math.random() * 2, Math.sin(a) * 1.2), Math.random() < 0.4 ? 0xff7a30 : 0x5a5048, 0.6, 0.06 + Math.random() * 0.06, 9, 0, Math.random() < 0.6);
+      }
+    }
+    this.quakes = this.quakes.filter((q) => { if (q.t * q.speed >= q.reach) { q.mesh.removeFromParent(); this.quakePool.push(q.mesh); return false; } return true; });
     for (const t of this.threads) {
       if (!t.owner) continue;
       if (!t.owner.alive || t.owner.removed) { this.thread(t.owner, null); continue; }
@@ -185,13 +217,16 @@ export class MonsterFX {
     ring.add(new THREE.Mesh(this.discGeo, this.discMat));
     ring.position.copy(at).add(new THREE.Vector3(0, 0.05, -2));
     const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([at.clone().add(new THREE.Vector3(-0.6, 0, -1.6)), at.clone().add(new THREE.Vector3(-0.6, 2, -1.6))]), this.threadMat);
-    return { objects: [glob, ring, line], dispose: () => { glob.removeFromParent(); ring.removeFromParent(); line.removeFromParent(); line.geometry.dispose(); } };
+    const quake = new THREE.Mesh(this.quakeGeo, this.quakeMat);
+    quake.position.copy(at).add(new THREE.Vector3(0, 0.06, -2.4));
+    return { objects: [glob, ring, line, quake], dispose: () => { glob.removeFromParent(); ring.removeFromParent(); quake.removeFromParent(); line.removeFromParent(); line.geometry.dispose(); } };
   }
 
   clear() {
     for (const b of this.globs) { b.mesh.removeFromParent(); this.globPool.push(b.mesh); }
     for (const r of this.rings) { r.mesh.removeFromParent(); this.ringPool.push(r.mesh); }
-    this.globs = []; this.rings = [];
+    for (const q of this.quakes) { q.mesh.removeFromParent(); this.quakePool.push(q.mesh); }
+    this.globs = []; this.rings = []; this.quakes = [];
     for (const t of this.threads) { t.owner = null; t.line.visible = false; }
   }
 
@@ -199,51 +234,9 @@ export class MonsterFX {
     this.clear();
     for (const t of this.threads) { t.line.removeFromParent(); t.line.geometry.dispose(); }
     for (const m of this.ringPool) { (m.material as THREE.Material).dispose(); ((m.children[0] as THREE.Mesh).material as THREE.Material).dispose(); }
+    for (const m of this.quakePool) (m.material as THREE.Material).dispose();
+    this.quakeGeo.dispose(); this.quakeMat.dispose();
     this.globGeo.dispose(); this.globMat.dispose(); this.ringGeo.dispose(); this.ringMat.dispose(); this.discGeo.dispose(); this.discMat.dispose(); this.threadMat.dispose();
-  }
-}
-
-// ============================================================================================ shared base
-abstract class Monster extends Enemy {
-  constructor(arch: Archetype, model: THREE.Object3D, clips: THREE.AnimationClip[], encounter: string, owner: TimeState | 'BOTH', wave: number,
-    opts: Enemy['opts'], protected g: Game) {
-    super(arch, model, clips, encounter, owner, wave, opts);
-  }
-  protected get fxm() { return this.g.enemies.monsterFx!; }
-  protected sound(id: string, vol = 1, rate = 1) { this.g.audio.play(id as never, { pos: this.center.clone(), vol, rate, jitter: 0.08 }); }
-  /** a timed blow of this monster lands on the hero if she is inside reach / arc / height (then parry, block, hit) */
-  protected strike(atk: EnemyAttack, ctx: EnemyCtx, reachScale = 1) {
-    const to = _v.subVectors(ctx.playerPos, this.pos);
-    const dy = to.y; to.y = 0;
-    const d = to.length();
-    const ang = THREE.MathUtils.radToDeg(this.facing.angleTo(to.normalize()));
-    if (d <= atk.range * reachScale + this.radius * 0.5 + 0.3 && (atk.arc >= 360 || ang <= atk.arc / 2) && Math.abs(dy) < 1.9) { ctx.onAttackHit(this, atk); return true; }
-    return false;
-  }
-  protected clearTo(ctx: EnemyCtx, dist: number, dirP: THREE.Vector3) {
-    const o = this.pos.clone().setY(this.pos.y + 0.5);
-    if (ctx.world.raycast(o, dirP, dist, ctx.state)) return false;
-    return ctx.world.hasFooting(ctx.playerPos.clone().setY(ctx.playerPos.y + 1), 2, ctx.state) && !ctx.world.inVoid(ctx.playerPos.clone().setY(ctx.playerPos.y - 0.3), ctx.state);
-  }
-  protected tangent(dirP: THREE.Vector3, sign = 1) { return new THREE.Vector3().crossVectors(UP, dirP).multiplyScalar(sign); }
-
-  /**
-   * Procedural bones: those the clip animates are re-posed by the mixer every frame, the others must be put back to
-   * their rest rotation before an offset is layered on (or the offsets would accumulate frame after frame).
-   */
-  private restQ = new Map<THREE.Object3D, THREE.Quaternion>();
-  protected trackBones(bones: THREE.Object3D[], clips: THREE.AnimationClip[]) {
-    const animated = new Set<string>();
-    for (const c of clips) for (const t of c.tracks) if (t.name.endsWith('.quaternion')) animated.add(t.name.slice(0, t.name.lastIndexOf('.')));
-    for (const b of bones) if (!animated.has(b.name)) this.restQ.set(b, b.quaternion.clone());
-  }
-  /** rotate `bone` by `angle` about the WORLD vertical (the swing of a leg, the wave of a tail) */
-  protected swingBone(bone: THREE.Object3D, angle: number) {
-    const rest = this.restQ.get(bone);
-    if (rest) bone.quaternion.copy(rest);
-    _q.setFromAxisAngle(UP, angle);
-    bone.parent!.getWorldQuaternion(_q2);
-    bone.quaternion.premultiply(_q2.clone().invert().multiply(_q).multiply(_q2));
   }
 }
 
@@ -384,21 +377,25 @@ export class Bat extends Monster {
     model.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.morphTargetInfluences?.length) this.mouthMesh = m; });
   }
 
-  /** bats let loose by the Maw burst out of it */
+  /** bats called by the Maw's roar burst up out of the blood font; the Last Crown's out of the Crownheart */
   activate() {
     const hidden = this.state === 'hidden';
     super.activate();
     if (!hidden) return;
     const heart = this.opts.fromHeart ? this.g.level.markersOf('heart')[0] : undefined;
-    const maw = this.g.enemies.enemies.find((e) => e.alive && e.arch.id === 'lamia_maw' && e.encounter === this.encounter);
+    const maw = this.g.enemies.enemies.find((e) => e.alive && e.arch.id === 'maw' && e.encounter === this.encounter);
     if (heart) {
       // the Last Crown's call: bats pour out of the Crownheart's light
       const a = Math.random() * Math.PI * 2;
       this.pos.copy(heart.pos).add(new THREE.Vector3(Math.cos(a) * 2.5, -1.5, Math.sin(a) * 2.5));
       for (let i = 0; i < 12; i++) this.g.fx.emit(this.pos.clone(), new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(4), 0xff4a18, 0.6, 0.08, 0);
     } else if (maw) {
-      this.pos.copy(maw.center).addScaledVector(maw.facing, 0.8);
-      this.g.fx.bloodSpray(this.pos.clone(), maw.facing, 0.4, 0x28300c);
+      // out of the font (the fight's middle), a spray of the font's dark blood with each
+      const box = this.g.enemies.encounters.get(this.encounter)?.box;
+      const c = box ? box.getCenter(new THREE.Vector3()) : maw.pos.clone();
+      const a = Math.random() * Math.PI * 2;
+      this.pos.set(c.x + Math.cos(a) * 1.5, maw.pos.y + 0.6, c.z + Math.sin(a) * 1.5);
+      this.g.fx.bloodSpray(this.pos.clone(), UP, 0.5, 0x3a0a14);
     }
     this.setState('chase');
     this.sound('bat_screech', 0.9, 1);
@@ -560,6 +557,8 @@ export class Widow extends Monster {
   private eyes: THREE.MeshStandardMaterial[] = [];
   private eyeGlow = 0;
   private legs: { bone: THREE.Object3D; phase: number }[] = [];
+  /** front / back leg contacts (z, m at scale 1) from the load-time levelling: pitching pivots about the planted pair */
+  private contacts = { front: 0.7, back: -0.7 };
   private lastPos = new THREE.Vector3();
   private speedNow = 0;
   private get small() { return this.arch.id === 'widowling'; }
@@ -571,6 +570,8 @@ export class Widow extends Monster {
     // the four leg chains (Bone005 / 011 / 017 / 023): their roots swing for the skitter gait
     let i = 0;
     model.traverse((o) => { if ((o as THREE.Bone).isBone && /^Bone0(05|11|17|23)_/.test(o.name)) this.legs.push({ bone: o, phase: (i++ % 2) * Math.PI }); });
+    const c = model.userData.contacts as { front: number; back: number } | undefined;
+    if (c) this.contacts = c;
     this.trackBones(this.legs.map((l) => l.bone), clips);
   }
 
@@ -748,7 +749,11 @@ export class Widow extends Monster {
     const bob = moving ? Math.abs(Math.sin(this.step)) * 0.05 * this.arch.scale : 0;
     this.root.rotation.x += this.pitch;
     this.root.rotation.z += this.roll + (moving ? Math.sin(this.step) * 0.05 : 0);
-    this.root.position.y += this.lift + bob;
+    // rearing up (spit) or dipping (jab, pounce) turns about the legs that stay planted, not about the body's centre:
+    // pitching about the centre drove the other pair ~0.45 m into the floor
+    const sp2 = Math.sin(this.pitch) * this.arch.scale;
+    const pivot = this.alive ? Math.max(0, this.contacts.front * sp2, this.contacts.back * sp2) : 0;
+    this.root.position.y += this.lift + bob + pivot;
     if (this.cur) this.cur.timeScale = !this.alive ? 0 : 0.8 + this.speedNow * 0.35;
     if (this.alive && this.legs.length) {
       const amp = moving ? Math.min(0.35, 0.08 + this.speedNow * 0.05) : 0.03;
@@ -763,198 +768,13 @@ export class Widow extends Monster {
   }
 }
 
-// ============================================================================================ lamia
-export class Lamia extends Monster {
-  private mode: 'sweep' | 'lunge' | 'lash' | 'coil' | 'bellow' = 'sweep';
-  private mt = 0;
-  private biteCd = 2 + Math.random() * 2;
-  private coilCd = 0;
-  private frontHits: number[] = [];
-  private hit = false;
-  private yawOff = 0;
-  private pitch = 0;
-  private lift = 0;
-  private undulate = Math.random() * 10;
-  private tail: THREE.Object3D[] = [];
-  private spine: THREE.Object3D[] = [];
-  private maw: THREE.MeshStandardMaterial[] = [];
-  private mawGlow = 0;
-  private lastPos = new THREE.Vector3();
-  private speedNow = 0;
-  private bellowAt = [0.66, 0.36];
-  private get big() { return this.arch.id === 'lamia_maw'; }
-
-  constructor(arch: Archetype, model: THREE.Object3D, clips: THREE.AnimationClip[], encounter: string, owner: TimeState | 'BOTH', wave: number, opts: Enemy['opts'], g: Game) {
-    super(arch, model, clips, encounter, owner, wave, opts, g);
-    const byName = new Map<string, THREE.Object3D>();
-    model.traverse((o) => { if ((o as THREE.Bone).isBone) byName.set(o.name.replace(/_\d+$/, ''), o); });
-    for (let i = 8; i <= 23; i++) { const b = byName.get('spine0' + String(i).padStart(2, '0')); if (b) this.tail.push(b); }
-    for (const n of ['spine001', 'spine002', 'spine003']) { const b = byName.get(n); if (b) this.spine.push(b); }
-    for (const m of this.materials) if ((m as THREE.MeshStandardMaterial).emissiveMap) this.maw.push(m as THREE.MeshStandardMaterial);
-    this.trackBones(this.tail, clips);
-  }
-
-  protected brainThink(dt: number, dist: number, dirP: THREE.Vector3, dy: number, ctx: EnemyCtx): THREE.Vector3 | null {
-    const a = this.arch;
-    this.biteCd -= dt; this.coilCd -= dt;
-    if (this.navMode === 'hold') return null;
-    // the Maw bellows as its brood of bats is loosed (the encounter's waves at 65 % / 35 %)
-    if (this.big && this.bellowAt.length && this.hp < a.hp * this.bellowAt[0]) { this.bellowAt.shift(); return this.begin('bellow'); }
-    this.turnToward(dirP, a.turnRate, dt);
-    const [sweep, , lash] = a.attacks;
-    const slot = () => this.hasSlot || ctx.requestSlot(this, a.slotCost);
-    if (this.cooldown <= 0 && dist < sweep.range - 0.4 && Math.abs(dy) < 1.2 && slot()) { this.hasSlot = true; return this.begin('sweep'); }
-    if (this.biteCd <= 0 && dist > 2.6 && dist < (this.big ? 8 : 6.8) && Math.abs(dy) < 0.8 && this.clearTo(ctx, dist, dirP) && slot()) { this.hasSlot = true; return this.begin('lunge'); }
-    if (this.cooldown <= 0 && dist < lash.range && Math.abs(dy) < 1.4 && slot()) { this.hasSlot = true; return this.begin('lash'); }
-    // slither in to striking range, weaving
-    const want = this.big ? 3.6 : 3.0;
-    if (dist > want) return dirP.clone().addScaledVector(this.tangent(dirP), Math.sin(this.undulate * 0.8) * 0.3).normalize().multiplyScalar(a.runSpeed);
-    return this.tangent(dirP, this.circleDir).multiplyScalar(a.walkSpeed * 0.5);
-  }
-
-  private begin(mode: Lamia['mode']) {
-    this.mode = mode; this.mt = 0; this.hit = false;
-    this.setState('special');
-    const s = this.arch.scale;
-    if (mode === 'sweep') { this.fxm.ring(this.pos, this.arch.attacks[0].range, this.arch.attacks[0].telegraph!); this.sound('serpent_hiss', 1, this.big ? 0.8 : 1); this.hitFlash = 1; }
-    if (mode === 'lunge') { this.sound('serpent_hiss', 1.1, this.big ? 0.7 : 0.9); this.hitFlash = 1; this.events.push('telegraph'); }
-    if (mode === 'bellow') { this.sound('serpent_roar', 1.4, this.big ? 0.8 : 1); this.g.rig.addShake(0.35); this.g.fx.shockwave(this.pos.clone(), 5 * s, 0.35); }
-    if (mode === 'coil') this.sound('serpent_hiss', 0.8, 1.2);
-    return new THREE.Vector3();
-  }
-
-  private finish(cd: number) {
-    this.cooldown = cd;
-    if (this.hasSlot && this.lastCtx) { this.lastCtx.releaseSlot(this); this.hasSlot = false; }
-    this.setState('chase');
-  }
-  private lastCtx: EnemyCtx | null = null;
-
-  protected brainSpecial(dt: number, dist: number, dirP: THREE.Vector3, _dy: number, ctx: EnemyCtx): THREE.Vector3 {
-    this.mt += dt;
-    this.lastCtx = ctx;
-    const [sweep, lunge, lash] = this.arch.attacks;
-    const cd = (x: EnemyAttack) => x.cooldown[0] + Math.random() * (x.cooldown[1] - x.cooldown[0]);
-    if (this.mode === 'sweep') {
-      const tell = sweep.telegraph!, spin = 0.45;
-      if (this.mt < tell) { this.turnToward(dirP, 2, dt); this.yawOff = -0.9 * smooth(this.mt / tell); return new THREE.Vector3(); }
-      const k = Math.min(1, (this.mt - tell) / spin);
-      this.yawOff = -0.9 + (Math.PI * 2 + 0.9) * smooth(k);
-      if (!this.hit && k > 0.35) {
-        this.hit = true;
-        this.g.audio.swing(1, this.center.clone(), 1.2);
-        this.g.audio.play('rubble', { pos: this.pos.clone(), vol: 0.8 });
-        this.g.fx.dust(this.pos.clone().setY(this.pos.y + 0.1), 14);
-        // ankle height: a hero in the air (a jump) or dodging (i-frames) is clear of it
-        if (!ctx.playerAirborne) this.strike(sweep, ctx);
-      }
-      if (k >= 1) { this.yawOff = 0; this.finish(cd(sweep)); }
-      return new THREE.Vector3();
-    }
-    if (this.mode === 'lunge') {
-      const rear = lunge.telegraph!, strike = 0.3, rec = 0.95;
-      if (this.mt < rear) { this.turnToward(dirP, 4, dt); return new THREE.Vector3(); }
-      if (this.mt < rear + strike) {
-        if (!this.hit && dist < lunge.range * this.arch.scale + 0.4) { this.hit = true; this.strike(lunge, ctx, this.arch.scale * 1.1); this.g.audio.play('bone_crunch', { pos: ctx.playerPos.clone(), rate: 0.8, vol: 0.6 }); }
-        return this.facing.multiplyScalar(dist > 1.2 ? 13 : 0);
-      }
-      if (this.mt > rear + strike + rec) { this.biteCd = 4 + Math.random() * 2.5; this.finish(0.6); }
-      return new THREE.Vector3();
-    }
-    if (this.mode === 'lash' || this.mode === 'coil') {
-      if (this.mode === 'coil') {
-        // coiled: frontal blows glance off; then it lashes out
-        this.turnToward(dirP, 5, dt);
-        if (this.mt < 1.7) return new THREE.Vector3();
-        this.mode = 'lash'; this.mt = 0; this.hit = false;
-      }
-      const at = lash.telegraph!;
-      this.yawOff = Math.sin(THREE.MathUtils.clamp(this.mt / 0.55, 0, 1) * Math.PI) * 0.8 * this.circleDir;
-      if (!this.hit && this.mt >= at) { this.hit = true; this.strike(lash, ctx, this.arch.scale); this.g.audio.swing(0.7, this.center.clone(), 1); }
-      if (this.mt > 0.6) { this.yawOff = 0; this.finish(cd(lash)); }
-      return new THREE.Vector3();
-    }
-    // bellow
-    if (this.mt > 1.6) this.finish(0.5);
-    return new THREE.Vector3();
-  }
-
-  takeHit(damage: number, poiseDmg: number, knock: number, from: THREE.Vector3, opts: { knockdown?: boolean; guardBreak?: boolean } = {}) {
-    if (!this.alive) return 'dead';
-    const toHero = _v.subVectors(from, this.pos).setY(0).normalize();
-    const frontal = this.facing.dot(toHero) > 0.3;
-    if (this.state === 'special' && this.mode === 'coil' && frontal && !opts.guardBreak && !opts.knockdown) {
-      // the coil takes the blow: a little damage, sparks off the scales
-      this.hp -= damage * 0.15;
-      this.hitFlash = 1;
-      if (this.hp <= 0) { this.die(); return 'dead'; }
-      return 'blocked';
-    }
-    if (this.state === 'special' && this.mode === 'coil' && (opts.guardBreak || opts.knockdown)) {
-      // a kick / heavy breaks the coil open: it reels
-      this.mode = 'lash'; this.mt = -0.6; this.hit = true;
-      this.g.hud.prompt('The coil breaks open!', 1.2);
-    }
-    // repeated frontal blows make it coil up
-    if (frontal && this.state !== 'special' && this.coilCd <= 0) {
-      const now = this.g.t;
-      this.frontHits = this.frontHits.filter((t) => now - t < 1.5);
-      this.frontHits.push(now);
-      if (this.frontHits.length >= (this.big ? 3 : 2)) {
-        this.frontHits = []; this.coilCd = 6;
-        const r = super.takeHit(damage, poiseDmg, knock, from, opts);
-        if (r !== 'dead') { this.begin('coil'); return 'armor'; }
-        return r;
-      }
-    }
-    // bosses aside, a heavy blow can still stagger it; mid-attack it has hyper armour (heavy body)
-    if (this.state === 'special' && this.mode !== 'coil') {
-      this.hp -= damage; this.poise -= poiseDmg; this.hitFlash = 1;
-      if (this.hp <= 0) { this.die(); return 'dead'; }
-      return 'armor';
-    }
-    return super.takeHit(damage, poiseDmg, knock, from, opts);
-  }
-
-  die() { super.die(); this.sound('serpent_roar', 1.2, this.big ? 0.6 : 0.8); }
-
-  protected afterAnimate(dt: number, ctx: EnemyCtx) {
-    const moved = Math.hypot(this.pos.x - this.lastPos.x, this.pos.z - this.lastPos.z) / Math.max(dt, 1e-3);
-    this.lastPos.copy(this.pos);
-    this.speedNow += (Math.min(moved, 8) - this.speedNow) * Math.min(1, dt * 6);
-    const sp = this.state === 'special';
-    let pitch = 0, lift = 0;
-    if (!this.alive) { pitch = Math.min(1.1, this.deadTime * 1.6); lift = -0.4 * this.arch.scale * Math.min(1, this.deadTime); }
-    else if (sp && this.mode === 'lunge') { const r = this.arch.attacks[1].telegraph!; pitch = this.mt < r ? -0.4 * smooth(this.mt / r) : this.mt < r + 0.3 ? 0.35 : 0.2; }
-    else if (sp && this.mode === 'coil') { pitch = -0.25; lift = -0.25 * this.arch.scale; }
-    else if (sp && this.mode === 'bellow') pitch = -0.5 * Math.sin(Math.min(1, this.mt / 1.6) * Math.PI);
-    this.pitch += (pitch - this.pitch) * Math.min(1, dt * 7);
-    this.lift += (lift - this.lift) * Math.min(1, dt * 6);
-    if (!sp) this.yawOff *= Math.max(0, 1 - dt * 6);
-    this.root.rotation.y += this.yawOff;
-    this.root.rotation.x += this.pitch;
-    this.root.position.y += this.lift;
-    if (this.cur) this.cur.timeScale = !this.alive ? 0.3 : 1 + this.speedNow * 0.3;
-    // the coils: a travelling wave down the tail, wider as it moves; the sweep throws it round
-    this.undulate += dt * (2.2 + this.speedNow * 1.8);
-    const amp = (!this.alive ? 0.12 : sp && this.mode === 'sweep' ? 0.45 : 0.12 + Math.min(0.3, this.speedNow * 0.1));
-    for (let i = 0; i < this.tail.length; i++) this.swingBone(this.tail[i], Math.sin(this.undulate - i * 0.55) * amp * (0.4 + i / this.tail.length) / this.tail.length * 4);
-    // the maw in its belly glows as it rears to bite / bellows
-    const glow = this.alive && sp && (this.mode === 'lunge' || this.mode === 'bellow') ? 1 : 0;
-    this.mawGlow += (glow - this.mawGlow) * Math.min(1, dt * 8);
-    for (const m of this.maw) m.emissiveIntensity = 0.9 + this.mawGlow * 3.5;
-    if (sp && this.mode === 'lunge' && this.mawGlow > 0.5 && Math.random() < dt * 8) this.g.fx.emit(this.center.clone(), new THREE.Vector3(0, 0.6, 0), 0xa0ff60, 0.4, 0.05, -0.5);
-    void ctx;
-  }
-}
-
 /** Build the right class for an archetype (EnemyManager.spawnEnemy). */
 export function makeMonster(arch: Archetype, model: THREE.Object3D, clips: THREE.AnimationClip[], encounter: string, owner: TimeState | 'BOTH', wave: number, opts: Enemy['opts'], g: Game): Enemy | null {
   switch (arch.brain) {
     case 'goblin': return new Goblin(arch, model, clips, encounter, owner, wave, opts, g);
     case 'bat': return new Bat(arch, model, clips, encounter, owner, wave, opts, g);
     case 'widow': return new Widow(arch, model, clips, encounter, owner, wave, opts, g);
-    case 'lamia': return new Lamia(arch, model, clips, encounter, owner, wave, opts, g);
+    case 'maw': return new Maw(arch, model, clips, encounter, owner, wave, opts, g);
     default: return null;
   }
 }

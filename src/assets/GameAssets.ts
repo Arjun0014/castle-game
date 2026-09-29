@@ -29,7 +29,11 @@ const variant = (url: string) => {
   return USE_KTX2 && SIZES[k] ? k : url;
 };
 
-export interface EnemyTemplate { scene: THREE.Object3D; clips: THREE.AnimationClip[]; norm: THREE.Matrix4 }
+/**
+ * `contacts` (rigs levelled on their feet, see LEVEL): the front / back ground contacts in the normalised model's
+ * frame (z forward, metres at scale 1) — a brain pitching the body pivots about them instead of sinking a pair of legs.
+ */
+export interface EnemyTemplate { scene: THREE.Object3D; clips: THREE.AnimationClip[]; norm: THREE.Matrix4; contacts?: { front: number; back: number } }
 export interface VegProto { geo: THREE.BufferGeometry; mat: THREE.Material; scale: number }
 export interface TexSet { map: THREE.Texture; normal: THREE.Texture; arm: THREE.Texture }
 
@@ -37,10 +41,11 @@ const ENEMY_URL: Record<AssetId, string> = {
   knight: 'assets/characters/knight.glb', hollow: 'assets/characters/hollow.glb',
   archer: 'assets/characters/archer.glb', ghost: 'assets/characters/ghost.glb',
   lastcrown: 'assets/characters/lastcrown.glb',
-  // session 9 monsters: the goblin is retargeted in Blender (tools/blender/build_monsters.py); the other three are
-  // source copies normalised here at load (NORMALISE)
+  // session 9 monsters: the goblin is retargeted in Blender (tools/blender/build_monsters.py); bat and widow are
+  // source copies normalised here at load (NORMALISE). Session 11: the Creature Pack Mutant (the Maw, the crown brutes;
+  // tools/blender/build_mutant.py) replaced the Sketchfab lamia, whose flat alpha-cut model read as a paper cut-out
   goblin: 'assets/characters/goblin.glb', bat: 'assets/characters/bat.glb',
-  widow: 'assets/characters/widow.glb', lamia: 'assets/characters/lamia.glb',
+  widow: 'assets/characters/widow.glb', mutant: 'assets/characters/mutant.glb',
 };
 /**
  * Sketchfab source copies: scaled to a height (m), turned to face +Z, feet on the origin — measured on the first
@@ -50,8 +55,24 @@ const NORMALISE: Partial<Record<AssetId, { height: number; clip: string; yaw: nu
   ghost: { height: 1.6, clip: 'float', yaw: 0 },
   bat: { height: 0.72, clip: 'flap', yaw: Math.PI },
   widow: { height: 2.0, clip: 'crawl', yaw: 0 },
-  lamia: { height: 2.55, clip: 'sway', yaw: 0 },
 };
+/**
+ * Feet on the ground, measured over the rig's own clips at load (session 11). The goblin's retargeted GLB keys its
+ * pelvis translation as small deltas (y ≈ −3.5 units) without the 59.5-unit rest offset, so every clip ran with the
+ * hips ~0.5 m low and the goblin (and the ×1.6 Gutter King) stood buried to the thighs (lowest vertex −0.66 m). The
+ * error is the same constant in every clip: lift the model by the median of the per-frame lowest point over its
+ * standing / walking / running clips.
+ */
+const GROUND: Partial<Record<AssetId, string[]>> = {
+  goblin: ['idle_combat', 'idle_alert', 'walk_fwd', 'run_fwd'],
+};
+/**
+ * Levelled on its feet (session 11): the Widow's crawl keeps its front pair of legs ~0.47 m higher than the back pair,
+ * so grounded by its lowest point she stood on two legs with the ghost-head hanging in the air (it read as floating).
+ * The body is pitched so the front and back contacts (median of the per-frame lowest front / back point over the clip)
+ * both meet the floor, then set down on them.
+ */
+const LEVEL = new Set<AssetId>(['widow']);
 const VEG_URL: Record<string, { url: string; height: number; emissive?: number }> = {
   grass: { url: 'assets/vegetation/low_poly_grass.glb', height: 0.42 },
   grasspack: { url: 'assets/vegetation/low_poly_grass_pack.glb', height: 0.35 },
@@ -105,7 +126,7 @@ export class GameAssets {
   private registerAll() {
     const m = this.manager;
     m.register<GLTF>({
-      key: 'glb:hero', bytes: size(HERO_URL), label: 'The Uncrowned',
+      key: 'glb:hero', bytes: size(HERO_URL), label: 'The Uncrowned', urls: [HERO_URL],
       load: (p) => this.loadGltf(HERO_URL, p),
       dispose: (g) => disposeObject(g.scene, { textures: true }),
       memory: (g) => objectMemory(g.scene),
@@ -113,7 +134,7 @@ export class GameAssets {
     for (const [id, url0] of Object.entries(ENEMY_URL) as [AssetId, string][]) {
       const url = variant(url0);
       m.register<EnemyTemplate>({
-        key: 'glb:enemy:' + id, bytes: size(url), label: 'Echoes of the keep',
+        key: 'glb:enemy:' + id, bytes: size(url), label: 'Echoes of the keep', urls: [url],
         load: async (p) => await prepareEnemy(id, await this.loadGltf(url, p)),
         dispose: (t) => disposeObject(t.scene, { textures: true }),
         memory: (t) => objectMemory(t.scene),
@@ -122,7 +143,7 @@ export class GameAssets {
     for (const [kind, v] of Object.entries(VEG_URL)) {
       const url = variant(v.url);
       m.register<VegProto[]>({
-        key: 'veg:' + kind, bytes: size(url), label: 'Growth',
+        key: 'veg:' + kind, bytes: size(url), label: 'Growth', urls: [url],
         load: async (p) => prepareVeg(await this.loadGltf(url, p), v.height, v.emissive),
         dispose: (list) => { for (const x of list) { x.geo.dispose(); disposeMaterialAndMaps(x.mat); } },
         memory: (list) => list.reduce((s, x) => { const mm = objectMemory(new THREE.Mesh(x.geo, x.mat)); return { gpu: s.gpu + mm.gpu, cpu: s.cpu + mm.cpu }; }, { gpu: 0, cpu: 0 }),
@@ -130,13 +151,13 @@ export class GameAssets {
     }
     for (const [fid, f] of Object.entries(floorManifests as Record<string, { level: string; collision: string }>)) {
       m.register<GLTF>({
-        key: 'glb:level:' + fid, bytes: size(f.level), label: 'The castle remembers',
+        key: 'glb:level:' + fid, bytes: size(f.level), label: 'The castle remembers', urls: [f.level],
         load: (p) => this.loadGltf(f.level, p),
         dispose: (g) => disposeObject(g.scene, { textures: true }),
         memory: (g) => objectMemory(g.scene),
       });
       m.register<GLTF>({
-        key: 'glb:col:' + fid, bytes: size(f.collision), label: 'The castle remembers',
+        key: 'glb:col:' + fid, bytes: size(f.collision), label: 'The castle remembers', urls: [f.collision],
         load: (p) => this.loadGltf(f.collision, p),
         dispose: (g) => disposeObject(g.scene),
         memory: (g) => objectMemory(g.scene),
@@ -145,7 +166,7 @@ export class GameAssets {
     for (const fid of Object.keys(floorManifests)) {
       const url = `assets/levels/floor${fid.padStart(2, '0')}_nav.bin`;
       m.register<ArrayBuffer>({
-        key: 'nav:' + fid, bytes: size(url), label: 'Paths through the keep',
+        key: 'nav:' + fid, bytes: size(url), label: 'Paths through the keep', urls: [url],
         load: (p) => fetchBytes(url, size(url), p),
         dispose: () => { /* garbage-collected */ },
         memory: (b) => ({ gpu: 0, cpu: b.byteLength }),
@@ -154,7 +175,7 @@ export class GameAssets {
     for (const [key, e] of Object.entries(textureLibrary as Record<string, { diff: string; nor: string; arm: string; ktx2?: { diff: string; nor: string; arm: string } }>)) {
       const urls = USE_KTX2 && e.ktx2 && SIZES[e.ktx2.diff] ? e.ktx2 : { diff: e.diff, nor: e.nor, arm: e.arm };
       m.register<TexSet>({
-        key: 'tex:' + key, bytes: size(urls.diff) + size(urls.nor) + size(urls.arm), label: 'Stone and timber',
+        key: 'tex:' + key, bytes: size(urls.diff) + size(urls.nor) + size(urls.arm), label: 'Stone and timber', urls: [urls.diff, urls.nor, urls.arm],
         load: async (p) => {
           const parts = [0, 0, 0];
           const prog = (i: number) => (f: number) => { parts[i] = f; p((parts[0] + parts[1] + parts[2]) / 3); };
@@ -169,7 +190,7 @@ export class GameAssets {
     }
     for (const [id, s] of Object.entries(SOUNDS) as [SoundId, { files: string[] }][]) {
       m.register<AudioBuffer[]>({
-        key: 'snd:' + id, bytes: s.files.reduce((n, f) => n + size(f), 0), label: 'Echoing halls',
+        key: 'snd:' + id, bytes: s.files.reduce((n, f) => n + size(f), 0), label: 'Echoing halls', urls: s.files,
         load: async (p) => {
           const ctx = this.audioCtx;
           if (!ctx) throw new Error('audio context not created');
@@ -199,7 +220,7 @@ export class GameAssets {
     const lines = (voiceManifest as { lines: Record<string, { url: string; bytes: number }> }).lines;
     for (const [id, v] of Object.entries(lines)) {
       this.manager.register<AudioBuffer>({
-        key: 'vo:' + id, bytes: v.bytes, label: 'Her voice',
+        key: 'vo:' + id, bytes: v.bytes, label: 'Her voice', urls: [v.url],
         load: async (p) => this.voiceDecoder().decodeAudioData(await fetchBytes(v.url, v.bytes, p)),
         dispose: () => { /* garbage-collected once Dialogue drops it */ },
         memory: (b) => ({ gpu: 0, cpu: b.length * b.numberOfChannels * 4 }),
@@ -260,7 +281,7 @@ export class GameAssets {
     if (man.markers.statue) rigs.add('knight');
     if (man.markers.imprint) rigs.add('archer');
     // dev server only: ?monsters preloads every session-9 monster rig on any floor (dev/monsterProbe.js spawns them)
-    if (import.meta.env.DEV && typeof location !== 'undefined' && new URLSearchParams(location.search).has('monsters')) for (const r of ['goblin', 'bat', 'widow', 'lamia'] as AssetId[]) rigs.add(r);
+    if (import.meta.env.DEV && typeof location !== 'undefined' && new URLSearchParams(location.search).has('monsters')) for (const r of ['goblin', 'bat', 'widow', 'mutant'] as AssetId[]) rigs.add(r);
     keys.push(...[...rigs].sort().map((r) => 'glb:enemy:' + r));
     keys.push(...man.veg.map((v) => 'veg:' + v));
     keys.push(...(FLOOR_SOUNDS[id] ?? []).map((s) => 'snd:' + s));
@@ -297,23 +318,43 @@ async function prepareEnemy(id: AssetId, gl: GLTF): Promise<EnemyTemplate> {
     const c = box.getCenter(new THREE.Vector3());
     norm.makeRotationY(nz.yaw).multiply(new THREE.Matrix4().makeScale(s, s, s)).multiply(new THREE.Matrix4().makeTranslation(-c.x, -box.min.y, -c.z));
   }
-  if (id === 'lamia') {
-    // KHR_materials_pbrSpecularGlossiness is not read by three's GLTFLoader any more: take its diffuse texture as the
-    // base colour; the BLEND mode (sorting trouble on a skinned body) becomes an alpha cut-out
-    const mj = (gl.parser.json.materials ?? []) as { name?: string; extensions?: Record<string, { diffuseTexture?: { index: number } }> }[];
-    for (const def of mj) {
-      const sg = def.extensions?.KHR_materials_pbrSpecularGlossiness;
-      if (!sg?.diffuseTexture) continue;
-      const tex = await gl.parser.getDependency('texture', sg.diffuseTexture.index) as THREE.Texture;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      gl.scene.traverse((o) => {
-        const m = o as THREE.Mesh;
-        const mat = m.material as THREE.MeshStandardMaterial;
-        if (!m.isMesh || mat?.name !== def.name) return;
-        mat.map = tex; mat.color.set(0xffffff); mat.roughness = 0.62; mat.metalness = 0.05;
-        mat.transparent = false; mat.alphaTest = 0.4; mat.emissiveIntensity = 0.9; mat.needsUpdate = true;
-      });
+  let contacts: EnemyTemplate['contacts'];
+  const ground = GROUND[id];
+  if (ground) {
+    // 20th percentile of the per-frame lowest point: the planted foot of the stance / stride (a median sat the
+    // standing goblin ~5 cm above the floor, because a stride keeps one foot lifted half the time)
+    const lows = sampleClips(gl.scene, clips.filter((c) => ground.includes(c.name)), norm, 12).map((pts) => Math.min(...pts.map((p) => p.y))).sort((a, b) => a - b);
+    if (lows.length) norm.premultiply(new THREE.Matrix4().makeTranslation(0, -lows[Math.floor(lows.length * 0.2)], 0));
+  }
+  if (LEVEL.has(id) && clips[0]) {
+    // per frame: the lowest point of the front half and of the back half (z about the body's centre)
+    const frames = sampleClips(gl.scene, [clips[0]], norm, 16);
+    const fh: number[] = [], bh: number[] = [], fz: number[] = [], bz: number[] = [];
+    for (const pts of frames) {
+      let f: THREE.Vector3 | null = null, b: THREE.Vector3 | null = null;
+      for (const p of pts) {
+        if (p.z > 0) { if (!f || p.y < f.y) f = p; } else if (!b || p.y < b.y) b = p;
+      }
+      if (f && b) { fh.push(f.y); fz.push(f.z); bh.push(b.y); bz.push(b.z); }
     }
+    if (fh.length) {
+      const hf = median(fh), hb = median(bh), zf = median(fz), zb = median(bz);
+      // pitch about +X (positive = nose down) so both contacts lie on one level, then set them on the floor
+      const th = Math.atan2(hf - hb, zf - zb);
+      const y = hf * Math.cos(th) - zf * Math.sin(th);
+      norm.premultiply(new THREE.Matrix4().makeRotationX(th)).premultiply(new THREE.Matrix4().makeTranslation(0, -y, 0));
+      contacts = { front: zf * Math.cos(th) + hf * Math.sin(th), back: zb * Math.cos(th) + hb * Math.sin(th) };
+    }
+  }
+  if (id === 'mutant') {
+    // the Maw smoulders crimson when it enrages (enemies/Maw.ts drives the emissive colour): its colour map doubles as
+    // the emissive map from the start, black, so the warmed program is the one it needs
+    gl.scene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      const mat = m.material as THREE.MeshStandardMaterial;
+      if (!m.isMesh || !mat?.map) return;
+      mat.emissiveMap = mat.map; mat.emissive.setRGB(0, 0, 0); mat.emissiveIntensity = 1; mat.needsUpdate = true;
+    });
   }
   if (id === 'goblin') {
     // KHR_materials_unlit: lit instead, so the goblins sit in the castle's light like everything else (same maps)
@@ -332,7 +373,42 @@ async function prepareEnemy(id: AssetId, gl: GLTF): Promise<EnemyTemplate> {
     gl.scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && /^(phong1|EyeSpec_MAT1)$/.test((m.material as THREE.Material).name)) drop.push(m); });
     for (const o of drop) { o.removeFromParent(); disposeObject(o, { textures: true }); }
   }
-  return { scene: gl.scene, clips, norm };
+  return { scene: gl.scene, clips, norm, contacts };
+}
+
+function median(v: number[]) { const s = [...v].sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; }
+
+/**
+ * Skinned vertex positions (every few vertices, in the normalised frame `norm`) at `n` evenly spaced times of each
+ * clip: one point list per sampled frame. Load-time only (a few thousand vertices per frame).
+ */
+function sampleClips(scene: THREE.Object3D, clips: THREE.AnimationClip[], norm: THREE.Matrix4, n: number): THREE.Vector3[][] {
+  const mixer = new THREE.AnimationMixer(scene);
+  const meshes: THREE.SkinnedMesh[] = [];
+  scene.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) meshes.push(o as THREE.SkinnedMesh); });
+  const out: THREE.Vector3[][] = [];
+  const v = new THREE.Vector3(), m = new THREE.Matrix4();
+  for (const clip of clips) {
+    const act = mixer.clipAction(clip);
+    act.play();
+    for (let i = 0; i < n; i++) {
+      mixer.setTime((clip.duration * i) / n);
+      scene.updateMatrixWorld(true);
+      const pts: THREE.Vector3[] = [];
+      for (const mesh of meshes) {
+        mesh.skeleton.update();
+        m.multiplyMatrices(norm, mesh.matrixWorld);
+        const pos = mesh.geometry.attributes.position;
+        const step = Math.max(1, Math.floor(pos.count / 1200));
+        for (let k = 0; k < pos.count; k += step) pts.push(mesh.getVertexPosition(k, v).applyMatrix4(m).clone());
+      }
+      out.push(pts);
+    }
+    act.stop();
+  }
+  mixer.stopAllAction();
+  mixer.uncacheRoot(scene);
+  return out;
 }
 
 /** Vegetation prototypes: geometry baked to a unit footprint, feet at the origin, scaled to `height`. */

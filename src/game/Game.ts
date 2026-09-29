@@ -302,18 +302,35 @@ export class Game {
     if (this.floorOp) return this.floorOp;
     if (!FLOORS[next]) return Promise.reject(new Error('No floor ' + next));
     const op = (async () => {
-      const carry = { hp: this.player.hp, charge: this.time.charge, unlocked: this.time.unlocked, shifts: this.time.shiftCount };
-      this.stop();
-      const m = this.assets.manager;
-      const prev = this.floorId;
-      sink(0, 'Leaving ' + (FLOORS[prev]?.subtitle ?? 'the floor'));
-      m.retain('floor' + next, this.assets.floorKeys(next));
-      this.dialogue.release(prev);
-      this.unloadFloor();
-      const released = m.release('floor' + prev);
-      for (const k of released) if (k.startsWith('snd:')) this.audio.unbind(k.slice(4));
-      this.perf.mark(`transition ${prev}→${next}: released ${released.length}`);
-      await this.loadFloor(next, sink, [], released);
+      // "Try again" after a failed load (the old floor is already gone): resume with the same carry. Everything that
+      // did arrive is still resident under the new floor's scope, so only the failed files are asked for again.
+      const again = this.failedLoad?.next === next ? this.failedLoad : null;
+      this.failedLoad = null;
+      let carry: { hp: number; charge: number; unlocked: boolean; shifts: number }, released: string[];
+      if (again) {
+        ({ carry, released } = again);
+        sink(0, 'Seeking the way again');
+      } else {
+        carry = { hp: this.player.hp, charge: this.time.charge, unlocked: this.time.unlocked, shifts: this.time.shiftCount };
+        this.stop();
+        const m = this.assets.manager;
+        const prev = this.floorId;
+        sink(0, 'Leaving ' + (FLOORS[prev]?.subtitle ?? 'the floor'));
+        m.retain('floor' + next, this.assets.floorKeys(next));
+        this.dialogue.release(prev);
+        this.unloadFloor();
+        released = m.release('floor' + prev);
+        for (const k of released) if (k.startsWith('snd:')) this.audio.unbind(k.slice(4));
+        this.perf.mark(`transition ${prev}→${next}: released ${released.length}`);
+      }
+      try {
+        await this.loadFloor(next, sink, [], released);
+      } catch (err) {
+        // a download that never came (no connection): nothing of the new floor was built yet, so it can be retried
+        // in place; a failure while building is a real bug and needs a reload
+        if (!this.building) this.failedLoad = { next, carry, released };
+        throw err;
+      }
       // Floor 2's lift lands at Floor 3's lift foot: the arrival shot plays when the floor starts
       this.arrivedByLift = this.level.markersOf('lift').some((m) => m.props.role === 'arrive');
       this.time.unlocked = true;
@@ -326,17 +343,46 @@ export class Game {
     return op;
   }
 
+  /** a floor transition whose downloads failed (transitionTo resumes it on "Try again") */
+  private failedLoad: { next: number; carry: { hp: number; charge: number; unlocked: boolean; shifts: number }; released: string[] } | null = null;
+  /** loadFloor is past its downloads and building the floor (a failure from here on is not retryable) */
+  private building = false;
+  /** the next floor's bytes were requested ahead of the transition (prefetchNext) */
+  private prefetched = -1;
+  private prefetchT = 0;
+
+  /**
+   * Download the next floor's files while this one is still being played (session 11): once she is within 45 m of the
+   * way out — Floor 1's exit, Floor 2's King's lift — its GLBs, textures, sounds and voice lines stream into memory,
+   * so the chapter card after the lift decodes instead of downloading (and a connection that drops at that moment no
+   * longer strands her on the card).
+   */
+  private prefetchNext() {
+    const next = this.floor.next;
+    if (!next || this.prefetched === next || this.t < this.prefetchT) return;
+    this.prefetchT = this.t + 0.5;
+    const ways = [...this.level.markersOf('lift').filter((m) => m.props.role === 'depart').map((m) => m.pos), ...this.level.markersOf('exit').map((m) => m.box ? m.box.getCenter(new THREE.Vector3()) : m.pos)];
+    if (!ways.some((w) => w.distanceTo(this.player.pos) < 45)) return;
+    this.prefetched = next;
+    const vo = this.dialogue.loadKeys(next);
+    const keys = [...this.assets.floorKeys(next), ...vo.core, ...vo.floor];
+    const t0 = performance.now();
+    void this.assets.manager.prefetch(keys).then((b) => this.perf.mark(`prefetch floor ${next}: ${(b / 1e6).toFixed(1)} MB in ${Math.round(performance.now() - t0)} ms`));
+  }
+
   private async loadFloor(id: number, sink: LoadSink, extra: { scope: string; keys: string[] }[] = [], released: string[] = []) {
     const t0 = performance.now();
     const def = FLOORS[id];
     if (!def) throw new Error('No floor ' + id);
     this.floor = def;
     this.floorId = id;
+    this.building = false;
     const m = this.assets.manager;
     const keys = this.assets.floorKeys(id);
     const vo = this.dialogue.loadKeys(id);
     const voice = [{ scope: 'vo-core', keys: vo.core }, { scope: 'floor' + id, keys: vo.floor }].filter((x) => x.keys.length);
     await m.acquireAll([...extra, { scope: 'floor' + id, keys }, ...voice], (p) => sink(p.fraction * 0.78, `${def.loadingText} — ${p.label} (${p.done}/${p.count})`));
+    this.building = true;
     for (const k of [...this.assets.coreKeys(), ...this.assets.ambienceKeys(), ...keys]) {
       if (k.startsWith('snd:') && m.has(k) && !this.audio.isBound(k.slice(4))) this.audio.bind(k.slice(4), m.get<AudioBuffer[]>(k));
     }
@@ -350,6 +396,8 @@ export class Game {
     // floor rewards follow the floor reached (Floor 2: Crownbreaker, Floor 3: + Whirlwind) — also for ?floor=N
     this.player.abilities = abilitiesForFloor(id);
     this.abilityRevealAt = -1;
+    this.abilityReminderUntil = -1;
+    this.hud.clearAbility();
     const man = (floorManifests as Record<string, { materials: string[]; veg: string[] }>)[id];
     this.mats = new MaterialLibrary((set) => m.get('tex:' + set));
     this.mats.createAll(man.materials);
@@ -389,6 +437,7 @@ export class Game {
     this.lastWarmup = await this.warmGpu((f, label) => sink(0.84 + f * 0.16, `${def.loadingText} — ${label.toLowerCase()}`));
     this.loadLog.push({ floor: id, ms: Math.round(performance.now() - t0), assetsMs: Math.round(t1 - t0), buildMs: Math.round(t2 - t1), warmup: this.lastWarmup, released });
     sink(1, def.readyText);
+    this.building = false;
   }
 
   /** Force every drawable of the floor visible and render it for both time states (see assets/Warmup.ts). */
@@ -443,6 +492,8 @@ export class Game {
     this.audio.stopVoices();
     this.hud.boss(null);
     this.hud.setChannel(false);
+    this.hud.clearAbility();
+    this.touch?.holdHint(null);
     this.player.lockTarget = null;
     // a scripted exit (the lift's descent) hands everything back before the next floor
     this.player.endScripted();
@@ -473,7 +524,9 @@ export class Game {
   private wireEvents() {
     const p = this.player;
     p.events.onChannelStart = () => {
-      const c = this.time.canBegin(p);
+      // the Maw's fight pins this memory (EnemyManager.memoryHeld)
+      const held = this.time.unlocked && this.enemies.memoryHeld();
+      const c = held ? { ok: false, reason: 'The Maw holds this memory fast. Bring it down first.' } : this.time.canBegin(p);
       if (!c.ok) { this.hud.deny(c.reason!); this.audio.deny(); this.signals.emit('shift:deny', { reason: c.reason, at: 'begin' }); return false; }
       this.audio.channelStart();
       this.fx.channelStart(p.pos, this.time.other);
@@ -667,8 +720,40 @@ export class Game {
     this.heroLight = THREE.MathUtils.lerp(a.heroLight, b.heroLight, k);
     this.fill.color.copy(a.fill).lerp(b.fill, k);
     this.fill.intensity = THREE.MathUtils.lerp(a.fillI, b.fillI, k);
+    this.envNow = this.currentEnv();
   }
   private heroLight = ENV.PRESENT.heroLight;
+  /** the environment as last applied: the Crownheart's tone is layered on this each frame (never accumulated) */
+  private envNow: EnvPreset | null = null;
+  private heartTinted = false;
+  private static HERO_LIGHT = new THREE.Color(0xa8c4e8);
+  /**
+   * The chamber breathes with the Crownheart (session 11): near it (Crownheart.influence) the ambient, the floor's
+   * bounce, the fill, the hero's own light, the fog and the exposure lean toward the heart's colour and swell and sag
+   * with its energy — the lub-dub, the slow tides, the surges of the Last Crown's great casts. Crimson troughs, amber
+   * and gold on the beats: the architecture, her silhouette and the heroine are all lit by it.
+   */
+  private applyHeartTone() {
+    const h = this.heart, b = this.envNow;
+    const w = h && !h.broken ? h.influence(this.player.pos) : 0;
+    this.playerLight.color.copy(Game.HERO_LIGHT);
+    if (!b || (w <= 0 && !this.heartTinted)) return;
+    this.heartTinted = w > 0;
+    const c = h!.color, e = h!.energy;
+    const f = this.scene.fog as THREE.Fog;
+    // (THREE.Color works in linear light: small weights here are already clearly visible once tone-mapped; the
+    // chamber's crown lights carry most of the breathing, the ambient only leans)
+    this.hemi.color.copy(b.hemiSky).lerp(c, 0.16 * w);
+    this.hemi.groundColor.copy(b.hemiGround).lerp(c, 0.2 * w);
+    this.hemi.intensity = b.hemi * (1 + (0.26 * e - 0.11) * w);
+    this.fill.color.copy(b.fill).lerp(c, 0.3 * w);
+    this.fill.intensity = b.fillI * (1 + (0.36 * e - 0.13) * w);
+    this.playerLight.color.lerp(c, 0.45 * w);
+    this.playerLight.intensity = this.heroLight * (1 + (0.36 * e - 0.12) * w);
+    f.color.copy(b.fog).lerp(this._heartFog.copy(c).multiplyScalar(0.035), 0.5 * w);
+    this.renderer.toneMappingExposure = b.exposure * (1 + (0.045 * e - 0.018) * w);
+  }
+  private _heartFog = new THREE.Color();
 
   start() {
     if (!this.started) this.startTime = performance.now();
@@ -697,6 +782,8 @@ export class Game {
     this.abilityRevealAt = this.t;
     if (!fresh.length) return;
     const id = fresh[0], info = ABILITY_INFO[id];
+    // already performed (Continue on a floor where she used it): a short reminder, not the whole reveal again
+    if (this.learned[id]) { this.abilityReminderUntil = this.t + 5; return; }
     this.hud.abilityReveal(info.name, info.input);
     this.fx.shiftBurst(this.player.pos, this.time.state);
     this.fx.resonanceFrom(this.player.pos.clone().setY(this.player.pos.y + 3), this.player, 60);
@@ -709,12 +796,18 @@ export class Game {
     this.signals.emit('ability:unlock', { id });
     this.dialogue.sayId(info.line);
   }
-  /** the first not-yet-performed reward (newest first) gets the persistent tip */
+  /** a learned reward's reminder tip runs until this game time (announceAbilities) */
+  private abilityReminderUntil = -1;
+  /**
+   * The persistent tip teaches THIS floor's reward only (Floor 2: Crownbreaker / HOLD HEAVY, Floor 3: Whirlwind /
+   * HOLD LIGHT) until she has performed it. Session 11: an older reward never performed used to take the tip over on
+   * the next floor (Floor 3 showed HOLD HEAVY once the Whirlwind had been tried) — the Controls panel keeps them all.
+   */
   private updateAbilityTip() {
     const p = this.player;
     let pending: AbilityId | null = null;
-    for (const a of p.abilities) if (!this.learned[a] && (!pending || ABILITY_FLOOR[a] > ABILITY_FLOOR[pending])) pending = a;
-    const show = !!pending && this.abilityRevealAt >= 0 && this.t - this.abilityRevealAt > (ABILITY_FLOOR[pending!] === this.floorId ? 4.5 : 0.5) && p.alive && !this.finisher?.active;
+    for (const a of p.abilities) if (ABILITY_FLOOR[a] === this.floorId && (!this.learned[a] || this.t < this.abilityReminderUntil)) pending = a;
+    const show = !!pending && this.abilityRevealAt >= 0 && this.t - this.abilityRevealAt > (this.t < this.abilityReminderUntil ? 0 : 4.5) && p.alive && !this.finisher?.active;
     if (!show) { this.hud.abilityTip(null); this.touch?.holdHint(null); return; }
     const info = ABILITY_INFO[pending!];
     this.hud.abilityTip(info.input, Platform.isTouch ? info.touch : info.kbm);
@@ -921,6 +1014,8 @@ export class Game {
     p.update(dt, this.input, this.rig, this.level.collision, this.time.state, (kind, wish) => this.assist.meleeTarget(kind, p.pos, wish, p.facing, this.t));
     this.enemies.update(dt);
     this.time.update(dt);
+    // passive Resonance (TimeSystem.passive): slow, capped at one shift, paused in combat and during scripted scenes
+    this.time.passive(dt, this.enemies.inCombat || this.player.scripted || this.finisher.active);
     this.checkpoints.update(dt);
     for (const l of this.lifts) l.update(dt);
     this.heart?.update(dt);
@@ -961,6 +1056,7 @@ export class Game {
     const toCam = this.camera.position.clone().sub(p.pos).setY(0).normalize();
     this.playerLight.position.copy(p.pos).addScaledVector(toCam, 1.1).setY(p.pos.y + 2.3);
     this.playerLight.intensity = this.heroLight;
+    this.applyHeartTone();
     this.atmo.update(dt, this.t, this.camera, p.pos, p.grounded ? p.pos.y : null, (this.scene.fog as THREE.Fog).color);
     this.level.update(dt, this.t, p.pos);
     // the Whirlwind keeps its trail for the whole spin (a longer-lived ring of light round her)
@@ -982,7 +1078,7 @@ export class Game {
     this.audio.update(dt, this.ambCtx, this.camera.position);
     // HUD
     this.hud.setHealth(p.hp, p.maxHp);
-    this.hud.setCharge(this.time.charge, PER_SHIFT, this.time.state);
+    this.hud.setCharge(this.time.charge, PER_SHIFT, this.time.state, this.time.trickling);
     if (p.isChanneling) this.hud.setChannel(true, p.channelTime / p.channelDuration, this.time.state === 'PAST' ? 'TOWARD THE PRESENT' : 'TOWARD THE PAST');
     else this.hud.setChannel(false);
     this.hud.update(dt);
@@ -1078,6 +1174,7 @@ export class Game {
     // exit
     const exit = this.level.marker('exit', 'EXIT');
     if (!this.finished && exit.box!.containsPoint(head)) this.finish();
+    this.prefetchNext();
   }
 
   requirementMet(req?: string) {

@@ -31,6 +31,8 @@ const CASTS: Record<string, CastDef> = {
   dark: { clip: 'crouch_blast', release: [2.03], range: [0, 5], phase: 3, weight: 3, tail: 0.6, tell: 1 },
 };
 const PHASE_SPEED = [0, 1.05, 1.25, 1.4];
+/** her great casts draw on the Crownheart: it gathers with her and flares at the release (vfx/Crownheart.ts) */
+const GREAT_CASTS = new Set(['wave', 'bombard', 'nova', 'beam', 'orb', 'dark']);
 const PHASE_GAP: [number, number][] = [[0, 0], [1.3, 1.9], [0.85, 1.35], [0.55, 1.0]];
 const PHASE_RANGE = [0, 8.5, 7.5, 6.5];
 /** default ring radius she keeps to; the arena's lens marker overrides it (prop r; session 9: the Crownheart ring) */
@@ -238,6 +240,7 @@ export class LastCrown extends Enemy {
     if (id === 'nova') this.spells.tell(this.pos, 6.0, c.release[0] / sp, EMBER);
     if (id === 'dark') this.spells.tell(this.pos, 4.8, c.release[0] / sp, EMBER);
     if (id === 'beam') this.beamYaw = Math.atan2(this.g.player.pos.x - this.pos.x, this.g.player.pos.z - this.pos.z) - 0.62 * (Math.random() < 0.5 ? 1 : -1);
+    if (GREAT_CASTS.has(id)) this.g.heart?.charge(c.release[0] / sp);
   }
 
   private updateCast(dt: number, dist: number, dirP: THREE.Vector3) {
@@ -269,6 +272,8 @@ export class LastCrown extends Enemy {
   /** Spell leaves the hand. */
   private release(id: string, i: number, dist: number) {
     const g = this.g, p = g.player;
+    // the heart answers every spell (a flare; the great ones flood the chamber)
+    g.heart?.surge(GREAT_CASTS.has(id) ? 1.1 : 0.35);
     const col = this.color;
     const from = this.hand(i);
     const chest = p.pos.clone().setY(p.pos.y + 1.1);

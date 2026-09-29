@@ -88,10 +88,13 @@ export const OBJECTIVES: Record<number, ObjectiveDef[]> = {
       hints: [{ after: 45, line: 'hint_f3_gate' }] },
     { id: 'f3_oss', text: 'Cross the ossuary to the west platform', done: ['zone:-16,-6,81,91,-1,4', 'sigil:CP2', 'zone:5.8,14.2,81.8,98,-1,4'], at: [-2.2, 76.8, 0], shiftAt: [-2.2, 76.8, 0], shiftFrom: 'PRESENT' },
     { id: 'f3_col', text: 'Cross the fallen column to the east platform', done: ['sigil:CP2', 'zone:5.8,14.2,81.8,98,-1,4'], at: [-9, 86, 0], shiftAt: [-9.5, 85.5, 0], shiftFrom: 'PAST' },
+    // session 11: CP2 now waits at the cistern door (the last sigil before the Maw), CP2B beyond the far door
+    { id: 'f3_cp2', text: 'Kindle the Blood Sigil at the cistern door', done: ['sigil:CP2', 'started:E5'], at: [10, 96.6, 0] },
     { id: 'f3_maw', text: 'Enter the cistern of the blood font', done: ['started:E5', 'zone:-2,22,101,125,-1,4'], at: [10, 100.5, 0] },
     { id: 'f3_maw2', text: 'Defeat the Maw of the Crownheart', done: ['cleared:E5'] },
     { id: 'f3_font', text: 'Leave the cistern by the far door', done: ['zone:7,13,126,134,-1,4'], at: [10, 123.5, 0], shiftAt: [10, 121.5, 0], shiftFrom: 'PRESENT',
       hints: [{ after: 40, line: 'hint_f3_doors' }] },
+    { id: 'f3_cp2b', text: 'Kindle the Blood Sigil beyond the cistern', done: ['sigil:CP2B', 'zone:-4,10,137,162,-12,-6'], at: [10, 130.2, 0] },
     // the ramp: the Present has fallen in at 40-62 deg (walk it in the Past); the Past shuts the King's gate at 222 deg
     { id: 'f3_desc', text: "Descend the Great Descent round the heart's shaft", done: ['zone:-4,10,137,162,-12,-6', 'sigil:CP3', 'zone:22,28,144,152,-17,-12'], at: [10, 156, -6.4], shiftAt: [18.4, 150.9, -4.3], shiftFrom: 'PRESENT' },
     { id: 'f3_gate', text: "Pass the King's last gate", done: ['zone:3.5,14,132,139,-14,-11', 'sigil:CP3', 'zone:22,28,144,152,-17,-12'], at: [1.6, 141.3, -10.7], shiftAt: [1.8, 141.8, -10.6], shiftFrom: 'PAST' },

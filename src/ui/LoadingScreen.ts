@@ -178,11 +178,42 @@ export class LoadingScreen {
     });
   }
 
-  error(message: string) {
+  /**
+   * The load failed. With `retry` the card offers TRY AGAIN (a click / tap / Enter): a floor transition resumes in
+   * place (Game.transitionTo keeps what already arrived); without it the page must be reloaded.
+   */
+  error(message: string, retry?: () => void) {
+    this.el.classList.remove('netwait');
     this.el.classList.add('failed');
     this.chapter.textContent = 'THE CASTLE RESISTS';
     this.stepEl.textContent = message;
-    this.detail.textContent = 'Reload the page to try again.';
+    this.detail.textContent = retry ? 'The way down was lost. Check the connection, then try again.' : 'Reload the page to try again.';
+    this.promptEl.textContent = '';
+    if (!retry) return;
+    const b = document.createElement('button');
+    b.className = 'mm-item ld-retry focus';
+    b.innerHTML = '<span>Try again</span>';
+    this.promptEl.appendChild(b);
+    const go = (e: Event) => {
+      if (e instanceof KeyboardEvent && e.code !== 'Enter' && e.code !== 'Space') return;
+      e.preventDefault();
+      window.removeEventListener('keydown', go, true);
+      b.removeEventListener('click', go);
+      this.el.classList.remove('failed');
+      this.promptEl.textContent = '';
+      retry();
+    };
+    b.addEventListener('click', go);
+    window.addEventListener('keydown', go, true);
+  }
+
+  /**
+   * Network status while loading (AssetManager Net): attempt > 0 = a request failed and is being retried (the card
+   * says so instead of seeming to hang); 0 = the connection answered again.
+   */
+  connection(attempt: number, waitMs = 0) {
+    this.el.classList.toggle('netwait', attempt > 0);
+    if (attempt > 0) this.detail.textContent = `The way is lost — seeking it again (attempt ${attempt + 1}, ${Math.ceil(waitMs / 1000)} s)…`;
   }
 
   /** Fade into whatever is behind (the game, the menu). */
@@ -217,9 +248,11 @@ export class LoadingScreen {
     this.lastLabel = this.label;
     this.prog.style.strokeDashoffset = (RING_C * (1 - f)).toFixed(2);
     this.pct.textContent = String(p);
+    // a failure message, or the "seeking the way again" note, stays until the load moves on
+    if (this.el.classList.contains('failed')) return;
     const [step, ...rest] = this.label.split(' — ');
     this.stepEl.textContent = step ?? '';
-    this.detail.textContent = rest.join(' — ').replace(/\s*\(\d+\/\d+\)\s*$/, '');
+    if (!this.el.classList.contains('netwait')) this.detail.textContent = rest.join(' — ').replace(/\s*\(\d+\/\d+\)\s*$/, '');
   }
 
   /** A few embers rising through the dark (the Crownheart's light), drawn on a small canvas. */

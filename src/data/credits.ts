@@ -22,6 +22,7 @@ export const CREDITS: CreditSection[] = [
       { what: 'The Uncrowned', who: 'Mixamo “Maria” — Sword and Shield Pack, Great Sword Pack, Crouch Walking' },
       { what: 'Royal and Echo archers', who: 'Mixamo “Erika Archer” — Longbow Aiming Pack' },
       { what: 'The Last Crown', who: 'Mixamo “Nightshade” — Pro Magic Pack' },
+      { what: 'The Maw of the Crownheart, the crown brutes', who: 'Mixamo “Mutant” and its animations' },
     ],
   },
   {
@@ -35,7 +36,6 @@ export const CREDITS: CreditSection[] = [
       { what: 'Gloom bats', who: 'Pablo.Sanagus', note: '“Bat Dark Bad Cartoon Monster”', url: 'https://sketchfab.com/3d-models/bat-dark-bad-cartoon-monster-5d09ed0a0315433d939067b57dcb44ab' },
       { what: 'The Widow, the Weeping Mother', who: 'Hobu', note: '“Ragno (Monster)”', url: 'https://sketchfab.com/3d-models/ragno-monster-2e1a422e6f0048f98a786ceecac423d7' },
       { what: 'Ruin goblins, the Gutter King', who: 'XialiMu.Bell', note: '“Gobelin_monster”', url: 'https://sketchfab.com/3d-models/gobelin-monster-f71b5e7f9cff48e8b470d921c15643f7' },
-      { what: 'The Crownheart lamia, the Maw', who: 'KainHunter1997', note: '“Monster- Module XB1011”', url: 'https://sketchfab.com/3d-models/monster-module-xb1011-863a6528bf9e4fc48fc63d9ac9069765' },
       { what: 'Glowing flowers', who: 'anyaachan', note: '“Low poly glowing flower”', url: 'https://sketchfab.com/3d-models/low-poly-glowing-flower-f8bc344271e341ccabfce466b608a120' },
       { what: 'Grass', who: 'Natural_Disbuster', note: '“Low Poly Grass”', url: 'https://sketchfab.com/3d-models/low-poly-grass-c7b3cadd101245d899ca49fa587b2745' },
       { what: 'Grass tufts', who: 'Anskar', note: '“Low Poly Grass Pack”', url: 'https://sketchfab.com/3d-models/low-poly-grass-pack-2ffb4d5302c14d038eaf6488b8c7ede2' },

@@ -241,7 +241,8 @@ export class Player {
       this.root.position.copy(this.pos);
       this.root.rotation.y = this.yaw;
       this.anim.update(dt);
-      this.model.updateMatrixWorld(true);
+      // from the root: its own matrix was last computed by the previous render, so the blade trailed a frame
+      this.root.updateMatrixWorld(true);
       this.updateBlade();
       return;
     }
@@ -466,7 +467,7 @@ export class Player {
     this.root.position.copy(this.pos);
     this.root.rotation.y = this.yaw;
     this.anim.update(dt);
-    this.model.updateMatrixWorld(true);
+    this.root.updateMatrixWorld(true);
     this.updateBlade();
     // footsteps
     if (this.grounded && (this.state === 'move' || this.state === 'crouch') && hv.lengthSq() > 1) {
@@ -482,7 +483,8 @@ export class Player {
     this.grounded = false;
     for (let i = 0; i < steps; i++) {
       this.pos.add(delta);
-      const r = world.resolveCapsule(this.pos, RADIUS, this.height, tstate, this.contact);
+      // walkable ground resolves straight up: standing still on stairs / ramps she no longer creeps downhill
+      const r = world.resolveCapsule(this.pos, RADIUS, this.height, tstate, this.contact, true);
       if (r.grounded) {
         this.grounded = true;
         this.groundNormal.copy(r.groundNormal);
@@ -495,7 +497,7 @@ export class Player {
       const g = world.groundBelow(this.pos, 0.45, tstate);
       if (g !== null && this.pos.y - g < 0.45) {
         this.pos.y = g + 0.01;
-        world.resolveCapsule(this.pos, RADIUS, this.height, tstate, this.contact);
+        world.resolveCapsule(this.pos, RADIUS, this.height, tstate, this.contact, true);
         this.grounded = true;
         this.vel.y = 0;
       }

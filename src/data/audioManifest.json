@@ -831,40 +831,40 @@
     "80 CC0 creature SFX alien/scream (rubberduck, CC0)"
    ]
   },
-  "serpent_hiss": {
+  "maw_snarl": {
    "bus": "sfx",
    "gain": -5,
    "loop": false,
    "files": [
-    "assets/audio/serpent_hiss_0.ogg",
-    "assets/audio/serpent_hiss_1.ogg",
-    "assets/audio/serpent_hiss_2.ogg",
-    "assets/audio/serpent_hiss_3.ogg"
+    "assets/audio/maw_snarl_0.ogg",
+    "assets/audio/maw_snarl_1.ogg",
+    "assets/audio/maw_snarl_2.ogg",
+    "assets/audio/maw_snarl_3.ogg"
    ],
    "durations": [
-    1.122,
-    0.579,
-    0.621,
-    0.709
+    1.238,
+    0.638,
+    0.685,
+    0.781
    ],
-   "use": "Crownheart lamia hiss / coil.",
+   "use": "The Maw / crown brutes: snarls, wind-ups, the stagger (session 11; was the lamia hiss).",
    "sources": [
     "Monster Sound Pack Vol. 1 (Ogrebane, CC0)"
    ]
   },
-  "serpent_roar": {
+  "maw_roar": {
    "bus": "sfx",
    "gain": -3,
    "loop": false,
    "files": [
-    "assets/audio/serpent_roar_0.ogg",
-    "assets/audio/serpent_roar_1.ogg"
+    "assets/audio/maw_roar_0.ogg",
+    "assets/audio/maw_roar_1.ogg"
    ],
    "durations": [
-    1.257,
-    0.739
+    1.392,
+    0.818
    ],
-   "use": "The Maw's bellow.",
+   "use": "The Maw's roar (entrance, 65 %, the flex, its death).",
    "sources": [
     "80 CC0 creature SFX roar (rubberduck, CC0)"
    ]

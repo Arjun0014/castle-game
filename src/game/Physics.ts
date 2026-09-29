@@ -15,6 +15,7 @@ const _box = new THREE.Box3();
 const _tri = new THREE.Vector3();
 const _cap = new THREE.Vector3();
 const _dir = new THREE.Vector3();
+const _fn = new THREE.Vector3();
 const _v = new THREE.Vector3();
 const _ray = new THREE.Ray();
 const DIRS6 = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, -1)];
@@ -69,8 +70,14 @@ export class CollisionWorld {
     old.dispose();
   }
 
-  /** Push a capsule out of geometry. Mutates `feet`. Returns contact info. */
-  resolveCapsule(feet: THREE.Vector3, radius: number, height: number, state: TimeState, out?: CapsuleResult): CapsuleResult {
+  /**
+   * Push a capsule out of geometry. Mutates `feet`. Returns contact info.
+   * `vertGround` (the hero): a walkable FACE under her (not an edge) is resolved straight up, by depth / n.y, instead of
+   * along its normal. Grounded, she is pulled into the floor every frame; on a ramp or a stair wedge the normal push
+   * had a downhill component, so standing still she crept down the stairs (session 11). Walls, ledge edges and
+   * slopes too steep to stand on (n.y ≤ 0.55) keep the normal push — they still shove her off.
+   */
+  resolveCapsule(feet: THREE.Vector3, radius: number, height: number, state: TimeState, out?: CapsuleResult, vertGround = false): CapsuleResult {
     const res = out ?? { grounded: false, groundNormal: new THREE.Vector3(0, 1, 0), hitCeiling: false, hitWall: false, push: new THREE.Vector3() };
     res.grounded = false; res.hitCeiling = false; res.hitWall = false;
     res.groundNormal.set(0, 1, 0);
@@ -93,8 +100,20 @@ export class CollisionWorld {
             const depth = radius - d;
             _dir.subVectors(_cap, _tri);
             if (_dir.lengthSq() < 1e-12) tri.getNormal(_dir); else _dir.normalize();
-            _seg.start.addScaledVector(_dir, depth);
-            _seg.end.addScaledVector(_dir, depth);
+            let vertical = false;
+            if (vertGround && _dir.y > 0.55) {
+              tri.getNormal(_fn);
+              if (_fn.y < 0) _fn.negate();
+              vertical = _fn.dot(_dir) > 0.985; // the face itself, not one of its edges
+            }
+            if (vertical) {
+              const lift = depth / _dir.y;
+              _seg.start.y += lift;
+              _seg.end.y += lift;
+            } else {
+              _seg.start.addScaledVector(_dir, depth);
+              _seg.end.addScaledVector(_dir, depth);
+            }
             any = true;
             if (_dir.y > 0.55) {
               res.grounded = true;
