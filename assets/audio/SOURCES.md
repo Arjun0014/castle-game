@@ -81,3 +81,13 @@ CC0, so the bow release is composed from CC0 parts; `Dark Ambience Loop` (qubodu
 | `amb_drips` | 1 | 100 CC0 SFX #2 loop_water_02 (CC0) | Present undercroft/crypt water. |
 | `amb_fire` | 1 | Fireplace Sound loop (PagDev, CC0) | Past: torches, braziers and hearths (volume follows the nearest flame). |
 | `amb_past` | 1 | Loopable Dungeon Ambience (JaggedStone, CC0), low-passed | Past bed: the inhabited keep's room tone (warm, low). |
+
+
+## Session 5 — Floor 3 / the Last Crown (ElevenLabs sound generation, build-time only)
+
+Generated 2026-09-29 with `node tools/elevenlabs_sfx.mjs <ids>` from the prompts in `tools/elevenlabs_sfx.json`
+(files + provenance in `assets/audio/elevenlabs/` and its `MANIFEST.json`); built by `tools/build_audio.py` into
+runtime OGGs used only on Floor 3: `mage_charge` (3), `mage_bolt` (4), `mage_impact` (4), `mage_nova` (2),
+`mage_teleport` (3), `mage_beam` (2), `mage_ward` (2), `mage_rune` (3), `crown_resonance` (2), `boss_scream` (3),
+`boss_death` (1), `final_collapse` (1). The API key stays in the git-ignored `.env`; nothing is exposed to client code.
+Not yet reviewed by ear.

@@ -28,10 +28,9 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 **AI authoring workflow:** Claude Code + Blender MCP where available  
 **World scope:** one ancestral castle  
 **Total floors:** 3  
-**Current implementation priority:** session 4 = jam-facing portrait build (portrait default, touch controls, portrait
-camera/HUD), combat feel + new L1, archers, mobile performance, git — all done and verified (§2.1, §6, §10). Floor 3:
-blueprint written (`docs/LEVEL_03_BLUEPRINT.md` v1.0) and the final boss asset processed (`boss.glb`); geometry,
-boss controller and ending NOT built yet (§8).
+**Current implementation priority:** session 5 = new assets integrated: Great Sword techniques + sword guard + real
+crouch walk for the hero, the **mage final boss (the Last Crown, Pro Magic Pack "Nightshade")**, Floor 3 built and
+playable end to end with an ending (§6, §10). All three floors exist. Next: human playtests (balance, feel, real phone).
 
 The player is a forgotten descendant of the royal bloodline that once ruled the castle. The bloodline is bound to an ancient temporal mechanism called the Crownheart. The player can force the castle between two spatial memories:
 
@@ -82,7 +81,7 @@ The state change is also the primary traversal/puzzle mechanic.
 
 ## Combat
 
-The supplied hero has a large Mixamo sword-and-shield animation set: verified 49 clips (see §4 and `src/data/animationManifest.ts`).
+The hero uses 73 Mixamo clips: the 49 Sword & Shield clips + 23 Great Sword Pack clips + the Crouch Walking clip (see §4 and `src/data/animationManifest.ts`).
 
 The implementation should exploit the available animation variety.
 
@@ -152,13 +151,34 @@ Zips are extracted (copies, never modified) by `python tools/extract_assets.py` 
 
 - `Maria WProp J J Ong.fbx`: Mixamo character "Maria" with props. FBX 7700.
   - Armature `Armature`, 65 bones, standard `mixamorig:*` names incl. full fingers. T-pose rest. Object scale 0.01, rot X 90°.
-  - Mesh `Maria_J_J_Ong` 14,566 tris, shield is part of this body mesh (skinned to left arm).
+  - Mesh `Maria_J_J_Ong` 14,566 tris. **There is no shield mesh** (verified session 5 with close-up renders): the "shield"
+    is her armoured left vambrace/gauntlet and the red panel is a short cape. Guard/bash use the vambrace; two-handed
+    Great Sword grips therefore cannot clip a shield.
   - Mesh `Maria_sword` 80 tris, skinned (1 vertex group) — the sword is already attached to the right hand. Blade length 1.145 m.
   - One material `MariaMat`, packed 2048² textures: diffuse, normal, specular.
   - Height ≈ 1.75 m, hips 1.05 m.
 - 49 separate animation FBX clips (no mesh), all 30 fps, all with the identical 65-bone skeleton, only `mixamorig:Hips` carries location keys.
   - Locomotion / strafes / several attacks contain root translation (e.g. `run` 2.85 m/0.7 s, `attack` 3.55 m leap). Processed in Blender (see below).
-  - **No roll clip and no crouch-walk cycle exist in the pack.** Dodge is designed as a directional dash on the run/strafe clips (see manifest).
+  - No roll clip exists in any pack: dodge stays a directional dash on the run/strafe clips (see manifest).
+
+## Hero additions (session 5) — `Great Sword Pack.zip` + `Crouch Walking.fbx`
+
+- `Great Sword Pack.zip`: the same Maria FBX (identical 65-bone rig; bytes differ only in FBX metadata) + 50 clips
+  (`great sword *`, `two handed sword death*`, `draw a great sword 1/2`, `spell cast`). Almost every clip is a true
+  two-handed grip (left hand within 0.15 m of the right the whole clip). Inspection: `tools/blender/inspect_pack.py`
+  → `build/analysis/greatsword/inspect.json` (duration, loop closure, root travel, yaw, blade/hand/foot peaks with
+  swing direction + reach) and `tools/contact_sheet.py` → `build/analysis/greatsword/sheet_0..5.png`, `close_sheet.png`.
+- **23 used** (ids in `tools/blender/hero_clip_map.json` `extraClips`, each with its role): attacks `gs_cleave`,
+  `gs_quick_cut`, `gs_low_sweep`, `gs_spin_double`, `gs_rampage` (3.5 s, 3 hits, 3.1 m), `gs_high_spin` (2.3 m),
+  `gs_leap_spin` (double airborne spin, 3.2 m), `gs_slide_cut` (3.5 m), `gs_crouch_sweep`, `gs_spin_kick`, `gs_plunge`
+  (kneeling floor plunge); **sword guard set** `gs_block_enter/idle/exit/impact` + crouched `gs_crouch_block_*`;
+  reactions `gs_hit_light/heavy`; deaths `gs_death_forward/collapse`. **27 unused** with reasons (`unusedGreatSword`):
+  two-handed idles/locomotion/turns/jumps/crouch transitions (duplicates of the base set), a third kick, power up,
+  spell cast, draws.
+- `Crouch Walking.fbx` (loose file, 65-bone rig): 36-frame loop, perfect closure, **1.21 m/s** root speed, hips
+  0.74–0.80 m, sword upright in the right hand → `crouch_walk`.
+- `hero.glb` 5.8 → 7.4 MB (73 clips; KTX2 copy 12.7 MB). Old clip data unchanged (verified: all 49 manifest entries
+  identical after the rebuild).
 - Full clip classification: `tools/blender/hero_clip_map.json` (hand-authored from contact sheets `build/reports/sheet_*.png`).
 - Generated manifest with durations, root-motion curves, sword/foot/shield timing peaks: `src/data/heroAnimations.json`.
 
@@ -180,7 +200,20 @@ Sketchfab exports with the usual `Sketchfab_model` root matrices — scale must 
 | `ragno_monster.glb` (4.1 MB) | 3.6k | 57 joints (`Bone_NN`) | `Esqueleto|EsqueletoAction` 3.33 s (one cycle) | 9× 1024 PNG (base/MR/normal ×3) + emissive eyes | spider. Needs procedural attack motion (only one clip). Not integrated. |
 | `gobelin_monster.glb` (1.4 MB) | 3.1k | 70-joint 3ds Max Biped (`Bip001*`) | `Standby_0` 6.7 s (idle only) | 2× 1024 PNG, KHR_materials_unlit | would need Mixamo→Biped retarget (tools/blender/build_enemies.py style) to walk/attack. Not integrated. |
 | `monster-_module_xb1011.glb` (0.96 MB) | 1.3k | 41-joint metarig | `metarig|Idle` 5.0 s | spec-gloss (KHR_materials_pbrSpecularGlossiness), BLEND, occlusion + emissive maps | small blob creature; low value. Not integrated. |
-| `final_boss_light_monster.glb` (**30.5 MB**) | 22.4k (9 skinned meshes, all with morph targets) | **399 joints** (Reallusion `RL_BoneRoot`) | `Motion` 8.83 s (1592 channels: 398 T / 787 S / 398 R + 9 weights) | 15 PNGs (1024², 1024×512), **every material alphaMode BLEND** (needs opaque override except wings/hair) | the Floor 3 final boss ("The Last Crown"). Only ONE motion clip: attacks/phases need more animation (see §9). Convert its textures to KTX2 before use (30 MB of PNG). Not loaded anywhere yet. |
+| `final_boss_light_monster.glb` (**30.5 MB**) | 22.4k (9 skinned meshes, all with morph targets) | **399 joints** (Reallusion `RL_BoneRoot`) | `Motion` 8.83 s (one idle clip) | 15 PNGs | **Superseded (session 5)** by the Pro Magic Pack boss. Its processed copy (`tools/build_boss.mjs`) is no longer shipped or loaded. |
+
+### Final boss (session 5) — `Pro Magic Pack with final boss.zip`
+
+- `Nightshade J Friedrich.fbx`: Mixamo horned sorceress, **2.35 m**, 12,999 tris, 68 bones (the hero's 65 mixamorig
+  bones + Ribbon1-3), one material with diffuse / normal / specular / **glow** 2048² maps. 56 clips on the same skeleton
+  (verified): 12 casts (1H throw / sweep / double cast / raise; 2H cast-slam / ground slam / nova / push / lean push /
+  **channelled beam** / charged orb / crouch blast), a magical guard set (start/idle/react/end), walk + run ×4
+  directions, sprint, turns, crouch set, jumps, 8 hit reactions, 4 deaths, 4 idles.
+- Inspection: `build/analysis/magic/inspect.json`, `sheet_0..6.png`, `close_boss.png` (bright close-ups at each cast's
+  measured hand-release frame).
+- `tools/blender/build_lastcrown.py` → `public/assets/characters/lastcrown.glb` (32 clips, textures 1024², 4.4 MB;
+  KTX2 5.7 MB) + `src/data/bossAnimations.json` (durations, hand-release peaks). Unused clips listed with reasons in
+  the script (`UNUSED`). Runtime scale 1.15 → 2.7 m.
 
 New texture sets (zips under `assets/materials/`, extracted to `assets/extracted/materials/`): `plaster_stone_wall_02_1k`
 (Poly Haven; diff JPG + nor_gl/arm/disp PNG — the plaster/limestone the Floor 2 royal wing asked for),
@@ -305,9 +338,13 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | Floor 2 geometry | BUILT (v1) | `tools/blender/floor02_layout.py` → `build_floor02.py` → `public/assets/levels/floor02.glb` (14.8k tris) + collision (3.4k tris); 0 validation issues |
 | Floor 2 runtime | WORKING | `?floor=2` loads (44 enemies, 12 encounters, 5 sigils, 6 fissures); Floor 1 exit → chapter reload into Floor 2 with HP/charge carry; FR1 fracture breaks + Present chandelier bridge verified; every route segment walked with 0 falls (see §10) |
 | Floor 2 full playthrough | **VERIFIED (session 3)** | god: spawn → G7 in one run + CP5 → exit segment; **real damage (`?autopilot=full&floor=2`): exit reached at 495 s, 6 deaths → checkpoint respawns (4 in the Kingsguard fight: kicked into floor holes), 35 kills, 7 shifts, 0 compiles / 0 uploads** |
-| Floor 3 blueprint | DONE (v1.0, self-reviewed) | `docs/LEVEL_03_BLUEPRINT.md` — "The Crown": Bell Chamber → Wind Gallery weave → East Terrace / spire ramp → Hall of Crowns → the Crown; new rule "slips"; the Last Crown (stationary; ward anchors = F2 fractures, state-dependent attacks, forced slips, binding broken by shifting) |
-| Final boss asset | PROCESSED, VERIFIED IN ENGINE | `tools/build_boss.mjs` (`npm run assets:boss`) → `public/assets/characters/boss.glb` (14.8 MB) → `ktx2/characters/boss.glb` (13.2 MB); loads in 0.7 s, renders correctly at 2× (4.2 m); **not used by any floor yet** |
-| Floor 3 geometry / runtime / boss AI / ending | NOT STARTED | implementation plan: blueprint §N |
+| Floor 3 blueprint | DONE (**v2.0**, session 5) | `docs/LEVEL_03_BLUEPRINT.md` — mage boss, compact floor (BC → WG weave → warded stair / spire ramp → Hall of Crowns → the Crown). The v1.0 stationary-boss design is obsolete |
+| Final boss asset | DONE, VERIFIED | `lastcrown.glb` (Pro Magic Pack Nightshade, 32 clips) — §4 |
+| Floor 3 geometry | BUILT, TRAVERSAL VERIFIED | `tools/blender/floor03_layout.py` + `build_floor03.py` → `floor03.glb` (7.2k tris) + collision (1.8k); 0 validation issues; scripted walks: G1 gap (Present void / Past floor), portcullis (Past blocks / Present passes), stair (Past stops at the Royal Ward, Present spire ramp reaches the hall), Crown doors (Present fused / Past open) |
+| Floor 3 runtime + Last Crown | WORKING (bot-verified) | `src/enemies/LastCrown.ts`, `src/vfx/Spells.ts`; god bot fight: phase 2 at 26 s, phase 3 at 85 s, slips, blinks, wards/bindings broken by the bot's shifts, 0 errors; real-damage bot (never dodges/guards) dies every ~35–40 s and reached phase 2; checkpoint respawn resets the fight. **No human playtest yet** |
+| Ending | WORKING | boss death → final slip to the Present → `Game.endGame()` card "THE CROWNHEART IS SILENT" (+ time / Echoes / shifts / deaths) |
+| **Hero Great Sword combat (session 5)** | DONE, VERIFIED (numeric) | `dev/combatHarness.js` matrix: every route/branch below chains and connects on a dummy; skeleton hips scale constant 0.0100 in all 29 attack definitions; root speed ≤ 7 m/s in attacks (12.8 dodge) |
+| **Crouch walk** | DONE, VERIFIED | planted-foot speed p25 0.04 m/s at 1.55 m/s body speed (was 1.55 = full slide); auto-crouch crawl verified on the F1 crawl line |
 | **Asset lifecycle (session 3)** | DONE, VERIFIED | `src/assets/AssetManager.ts` (ref-counted scopes, shared in-flight loads, byte-weighted progress, disposal), `src/assets/GameAssets.ts` (every key + per-floor dependency lists from `src/data/floorManifests.json`). Scopes: `core` (hero, shared sounds), `ambience` (5 beds, skipped when muted), `floorN`. F1→F2→F1→F2 returns identical GL counts |
 | **Loading screen** | DONE | `src/ui/LoadingScreen.ts`: initial + floor transitions; "LOADING CAER VEYR / ████░░ 82% / Preparing the Royal Floor — …"; real progress (bytes, then build, then GPU warm-up) |
 | **In-place floor transitions** | DONE, VERIFIED | `Game.transitionTo(next)`: stop loop → retain shared keys → `unloadFloor()` → release old scope (disposes textures/geometries/materials/skeletons/bone textures/audio buffers only it used) → load+build+warm next → carry HP/charge. Duplicate calls share one promise. F1→F2 ≈ 2 s (was page reload 3.4 s + 6.4 s first-frame freeze) |
@@ -377,6 +414,11 @@ Runtime (`src/`):
   shaft dust, smoke wisps. Per-state presets `ATMO`; lighting presets `ENV` in `Game.ts` (Present: low hemi,
   near-vertical shadowing moon so light falls through roof holes, low-angle shadowless `fill`, hero light).
 - `vfx/Fire.ts` — all `fire` markers as one instanced procedural flame shader per state.
+- Session 5: `enemies/LastCrown.ts` (Floor 3 mage boss, extends Enemy), `vfx/Spells.ts` (pooled boss spells + warm kit),
+  `data/bossAnimations.json` (generated), `tools/blender/{inspect_pack,build_lastcrown,floor03_layout,build_floor03}.py`,
+  `tools/contact_sheet.py`, dev modules `dev/combatHarness.js` (hero routes, parry, execution, crouch foot-slide, auto-crouch)
+  and `dev/bossBot.js` (Last Crown fight bot): `const h = await import('/dev/combatHarness.js'); await h.install(); h.matrix()`.
+  Floor 3 build: `blender --background --factory-startup --python tools/blender/build_floor03.py` (run Blender directly).
 - `audio/Audio.ts` — sample engine: `play(id, {pos, vol, rate, jitter, delay})`, buses + compressor, voice caps,
   equal-power panners, listener = camera; gameplay vocabulary (`swing`, `hitEnemy`, `block`, `footstep`, ...);
   ambience beds driven by `AmbientContext` (open-sky raycast, nearest flame, depth, combat) from `Game`.
@@ -405,9 +447,16 @@ toggle · contextual interact pill (sigils/traces) · pause. Guard + Attack = sh
 guard thumb onto Attack); Guard + Heavy = kick. No crouch button: walking into a gap too low to stand crouches
 automatically and stands up after (`Player.autoCrouch`). Haptics (Android): light hit 8 ms … parry 34 ms, hurt 22–40 ms.
 
-Combos: **L1 whirlwind slash** (session 4) → L2 rising cut → L3 lunge cut → L4 advancing sweep (loops); L1 + heavy =
-**F1c** (the whirlwind continues: hits 2+3); L2 + heavy = F1 whirlwind; L3/L4 + heavy = leap slam; heavy = spin slash →
-heavy = jump spin; sprint + light/heavy = dash lunge / leap slam; air attack; crouch sweep; kick and bash break guards.
+Combo graph (session 5, `src/combat/CombatData.ts` header): **Route A** L1 whirlwind slash → L2 rising cut → L3 lunge
+cut → L4 advancing sweep → **L5 two-handed cleave** (2 hits) → L1. **Route B ("pause" combo: a light press ≥ 0.25 s
+after the combo window, up to 0.5 s after the attack ends):** L1‥B2 quick cut → B3 low sweep → **B4 spin double
+(finisher)**; L2‥B3, L3‥B4. **Heavy endpoints:** L1+H F1c · L2+H F1 · L3+H **F3 high spin** · L4+H F2 leap slam ·
+L5+H **F4 rampage** (3 cuts, 3 m) · B2+H F2 · B3+H **F5 leaping double spin**. **Heavy chain:** H1 spin slash → H2 jump
+spin → **H3 Crownbreaker** (hold heavy: the sword stays raised up to 1.2 s; release = plunge shockwave, damage/reach ×
+up to 2, guard break). **Contextual:** sprint+L **slide cut**, sprint+H **leaping double spin**, dodge→L lunge cut,
+dodge→H high spin, air attack, crouch L → **two-handed crouch sweep**, kick → **spinning kick**, guard+L shield bash,
+**parry → L riposte** (two-handed cleave, 0.75 s window) / parry → H high spin, heavy beside a staggered non-boss enemy
+≤ 45 % HP = **EXECUTION** (plunge, 95). Guard is now the two-handed **sword guard** (squares up to the blow).
 A parry staggers the attacker and grants +12 resonance.
 
 ## Testing hooks
@@ -436,6 +485,17 @@ A parry staggers the attacker and grants +12 resonance.
 
 # 8. Next Concrete Tasks
 
+1. **Human playtest of the Last Crown** (desktop + phone): damage values (bolt 15, fan 10×5, wave 18, repel 22, rune 26,
+   nova 34, dark burst 38, orb 40, binding 45, beam 13–16/0.3 s), cast gaps per phase (`PHASE_GAP`), ward/slip/binding
+   timers, whether the ward prompt teaches "shift to break" clearly enough. Consider making the Past upper stair show the
+   ward from closer (the player stops 0.4 m below it).
+2. **Human playtest of the new hero combos**: pause-route timing (`PAUSE_DELAY` 0.25 s, `PAUSE_GRACE` 0.5 s), riposte
+   window, Crownbreaker charge, execution frequency.
+3. **AutoPilot ROUTES[3]** (Floor 3 has `autopilot: false`); `dev/bossBot.js` covers the fight only.
+4. Real-phone test (`npm run dev:lan`), audio mix by ear (incl. the 12 new ElevenLabs boss sounds).
+5. Floor 2 visual pass with the session-3 textures; new monster GLBs still unintegrated (bat/spider/goblin/blob).
+
+(Session 4's Floor 3 build plan, kept for history — superseded by blueprint v2.0 §M and done in session 5:)
 1. **Build Floor 3** from `docs/LEVEL_03_BLUEPRINT.md` §N, in order:
    a. `tools/blender/floor03_layout.py` + `build_floor03.py` (copy the floor02 driver; run Blender directly — the npm
       script hit cmd.exe quoting before) → `public/assets/levels/floor03.glb` + `floor03_collision.glb`; QA renders.
@@ -459,17 +519,18 @@ A parry staggers the attacker and grants +12 resonance.
 
 These would materially improve the game and are best sourced manually (licensing/quality judgement by ear/eye):
 
-- **Final boss animation (highest value for Floor 3):** `final_boss_light_monster.glb` has a single 8.8 s `Motion`
-  clip (a subtle breathing idle — the model is a rooted, throne-like winged seraph on a dark pool). Floor 3 is designed
-  so the boss never needs to walk (blueprint §I), but these clips on the same 399-joint rig would lift the fight a lot:
-  **wings-spread roar / cast** (phase changes, Decree), **a forward strike or crest flare** (beam/lance tell), **a hit
-  flinch**, **a collapse/death**. Blend-shape (morph) animations also work — every mesh already has morph targets.
+- ~~Final boss animation~~ — **solved in session 5** by the Pro Magic Pack (a full mage set). Nice-to-have for the
+  Last Crown: a **teleport / vanish** clip and a **levitating idle** (she hovers over the Present holes), a **kneel-to-death**
+  that ends lying on the lens, a crown/diadem prop.
+- **Hero:** a roll clip (dodge is still a dash); the Great Sword pack's clips are two-handed — a one-handed *fast
+  horizontal* and *backhand* on the Sword & Shield rig would still add variety to route A.
+- **Audio (boss):** a real choir/drone bed for the Crown (the ElevenLabs `crown_resonance` is a one-shot).
 - **Enemy animation for the new monsters:** the spider/goblin/blob each ship one clip (walk / idle / idle). Attack,
   hit, death clips (or the source rigs so Mixamo clips can be retargeted) are needed before they can fight.
 - **Audio:** human combat vocal efforts/grunts/death cries (royal guards + hero); a real bow draw/release/arrow set;
   distant crowd / war drums for Past halls; a choir/drone bed for the finale and the Crownheart; heavier plate-armour
   foley; stone-scrape / masonry-shift layers for the time shift. (Gore/kill/shatter layers now come from ElevenLabs.)
-- **Characters/animations:** a roll clip and a crouch-walk cycle for the Mixamo hero; a spear set for the knight;
+- **Characters/animations:** a spear set for the knight;
   **an archer melee/shove or a quick point-blank shot clip** and **archer hit/death clips on the archer rig** (the archer
   reuses the hero's retargeted hit/death clips); **2–3 more light sword slashes** on the same Mixamo rig (the chain now
   uses whirlwind-opening → rising cut → lunge cut → advancing sweep; a fast horizontal and a fast backhand would let the
@@ -488,7 +549,7 @@ These would materially improve the game and are best sourced manually (licensing
   **Y-flipped** (TextureLoader convention), GLB-embedded ones must not. e.g. `toktx --t2 --encode uastc --uastc_quality 2
   --uastc_rdo_l 2 --zcmp 19 --genmipmap --assign_oetf srgb out.ktx2 in.png` (KTX-Software) or
   `gltf-transform uastc in.glb out.glb --level 2 --rdo 2 --zstd 19` / `gltf-transform etc1s …` for GLBs.
-  **Still to convert (when used):** `final_boss_light_monster.glb` (30 MB PNG), the 4 new monster GLBs, the new
+  Done session 5: `hero.glb` (73 clips) and `lastcrown.glb` (KTX2). **Still to convert (when used):** the 4 new monster GLBs, the new
   vegetation GLBs and the 4 new texture sets — add them to `GLBS` / `SETS` in tools/build_ktx2.mjs.
 
 ## 9.1 ElevenLabs sound plan
@@ -528,6 +589,52 @@ then generation + `Audio.voice(id)` hook.
 ---
 
 # 10. Latest Verified Session
+
+### Session 5 (2026-09-29) — Great Sword Pack, crouch walk, mage final boss, Floor 3
+
+**Asset inspection first** (§4): all three new sources inspected in Blender (kinematics + contact sheets + close-ups)
+before any mapping. Tools: `tools/blender/inspect_pack.py`, `tools/contact_sheet.py`. Key findings: same hero rig;
+Maria has no shield mesh; crouch walk is a clean 1.21 m/s loop; Nightshade is a complete mage set on the hero's rig.
+
+**Hero** (`CombatData.ts`, `Player.ts`, `animationManifest.ts`, `build_hero.py`, `hero_clip_map.json`): combo graph in §7.
+Bugs fixed while verifying: (1) `activeHits()` tested `hitsDone.has(windowIndex)` against `index*1000+enemyId` keys —
+window N silently never hit enemy N (the second hit of L5/F3/B4 on enemy #1); (2) a follow-up pressed before a long
+attack's `inputFrom` expired (0.4 s) before its late cancel point (H2→H3) — accepted inputs now stay queued;
+(3) **the crouch was a sliding pose**: `crouch_enter` is a clamped one-shot that was never released in the crouch state,
+so no crouch base clip ever showed — now released, and the real crouch-walk loop plays at ground speed (settles into the
+crouch idle when stopped; moving crouch enter/exit blends without the one-shots). Crouch speed 1.8 → 1.55 m/s.
+Sword guard replaces the vambrace guard (standing + crouched sets), blocks/parries square up to the blow, sparks at
+the blade's middle. Hit reactions and deaths alternate one-/two-handed sets.
+**Verified** (`dev/combatHarness.js`, passive dummy, Floor 1 hall): routes A/B, all heavy endpoints, H1-H2-H3 (charged
+78 vs 40), sprint slide 24 / leap 40, dodge→L 22 / dodge→H 22+28, attack→dodge cancel, air 30, crouch chain 14+16,
+kick chain 8+12, bash 6, parry → RIPOSTE / F3, execution (guard at 40 % HP killed); hips world scale 0.0100 in every
+run; crouch-walk foot plant p25 0.04 m/s; auto-crouch through the F1 crawl. Portrait screenshots: sword guard, crouch walk.
+
+**The Last Crown** (`LastCrown.ts`, `Spells.ts`, blueprint §I): range-based spell choice (long: bolt, twin bolts,
+bombardment runes, beam; mid: fan, ground wave, nova; short: repel, dark burst, blink away when crowded; P3 homing orb),
+phases at 65 % / 30 % (kneel break: invulnerable, push-back, adds, +200 surge, forced slip), wards and bindings broken
+only by the hero's own shift (3.5–4 s stagger, ×1.5 damage), forced slips every 24 s / 15 s with a 3 s wedge telegraph
+(a hero caught over a hole is thrown clear to the lens edge, −20 HP), Past pillars stop bolts and the beam (Present beam
+at knee height: jump it). Everything pooled (16 bolts, 8 runes, 6 rings, beam, ward, tether, 4 wedge decals) and
+warmed at load. Bolts flying in from off-screen get portrait edge chevrons. Game-wide fix: fall respawn searches for
+footing in the current memory (a slip can open a hole under `lastSafe`).
+**Performance (boss phase 2 → 3, 1200 rendered frames, pane size):** 0 compiles, 0 uploads, 0 new programs; step p99
+2.6 ms, render p99 6.6 ms, GPU p99 8.9 ms; 1 frame > 33 ms (the phase-break slip). Floor 3 load 4.3 s (dev, warm).
+
+**Audio:** 12 ElevenLabs sounds (build-time, `tools/elevenlabs_sfx.json`: mage_charge/bolt/impact/nova/teleport/beam/
+ward/rune, crown_resonance, boss_scream, boss_death, final_collapse) → `tools/build_audio.py` → Floor-3-only scope.
+Unheard by a human.
+
+**Build / package:** `npm run build` PASS; `npm run package:itch` → `build/caer-veyr-itch.zip` **91.4 MB, 372 files**, no
+source packs / FBX / .blend; the unused seraph `boss.glb` removed from `public/` (reproducible with `npm run assets:boss`).
+Packaged build served from `/html/12345/`: Floor 3 direct load and Floor 2 → 3 transition (4.3 s, identical GL counts)
+with 0 failed requests.
+
+**Commits (pushed to Arjun0014/castle-game main):** hero Great Sword/guard/crouch · Floor 3 + Last Crown · stair
+fix + boss.glb removal · CONTEXT.
+
+**Needs a human / real phone:** boss fairness and readability, the pause-combo timing, touch play of the boss (dodge
+timing against bolts in portrait), audio mix. Emulated: portrait touch HUD + boss bar + off-screen chevrons verified.
 
 ### Session 4 (2026-09-29) — jam portrait build, touch, combat feel, archers, mobile perf, git
 

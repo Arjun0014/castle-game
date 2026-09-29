@@ -24,3 +24,5 @@ assets/blender/
 # local tooling
 .claude/settings.local.json
 .wolf/
+
+__pycache__/
