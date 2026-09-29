@@ -242,10 +242,10 @@ export class HUD {
     this.messageTimer = seconds;
   }
 
-  deny(text: string) {
+  deny(text: string, seconds = 2.4) {
     this.denyEl.textContent = text;
     this.denyEl.classList.add('on');
-    this.denyTimer = 2.4;
+    this.denyTimer = seconds;
   }
 
   boss(name: string | null, f = 1) {

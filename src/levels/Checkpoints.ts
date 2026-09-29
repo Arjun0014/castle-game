@@ -79,8 +79,9 @@ export class Checkpoints {
     }
     if (this.near?.kind === 'sigil') {
       const cid = this.near.m.name;
-      const left = this.cooldownLeft(cid);
-      if (left > 0) g.hud.interact(`Recovering · ${Math.ceil(left)} s`, 'BLOOD SIGIL', true);
+      // a sigil that was just used shows no card at all (the recovery ring on the floor carries its state);
+      // pressing Interact on it anyway gets a brief note (interact())
+      if (this.cooldownLeft(cid) > 0) g.hud.interact(null);
       else if (g.enemies.engagedNear(p, SIGIL_SAFE)) g.hud.interact('Enemies are near', 'BLOOD SIGIL', true);
       else g.hud.interact(this.save?.cid === cid ? 'Renew Checkpoint' : 'Activate Checkpoint', 'BLOOD SIGIL');
     } else if (this.near?.kind === 'trace') {
@@ -116,7 +117,7 @@ export class Checkpoints {
     const m = this.near.m;
     const left = this.cooldownLeft(m.name);
     if (left > 0) {
-      g.hud.deny(`This sigil is still recovering — ${Math.ceil(left)} s`);
+      g.hud.deny('The sigil is still recovering.', 1.2);
       g.audio.deny();
       g.signals.emit('sigil:blocked', { cid: m.name, why: 'cooldown' });
       return true;

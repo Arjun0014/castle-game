@@ -4,10 +4,10 @@
   "pools": {
     "cp": { "cooldown": 20, "chance": 1 },
     "shift": { "cooldown": 100, "chance": 0.35 },
-    "enter": { "cooldown": 50, "chance": 0.5 },
-    "after": { "cooldown": 70, "chance": 0.4 },
-    "lowhp": { "cooldown": 60, "chance": 1 },
-    "execute": { "cooldown": 35, "chance": 0.5 },
+    "enter": { "cooldown": 100, "chance": 0.35 },
+    "after": { "cooldown": 130, "chance": 0.35 },
+    "lowhp": { "cooldown": 90, "chance": 1 },
+    "execute": { "cooldown": 110, "chance": 0.35 },
     "idle": { "cooldown": 150, "chance": 1 }
   },
   "lines": [

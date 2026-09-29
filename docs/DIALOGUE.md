@@ -53,12 +53,14 @@ Line-by-line text: `src/data/dialogue.json` (subtitle = `text`, performance = `t
   1 idle. A new line interrupts the current one only if the current one is ≤ 2 and the new one is higher (the old
   line fades out over 0.15 s). Otherwise a line of priority ≥ 3 waits in a queue (max 2, expires after 6 s);
   lower lines are dropped.
-- **Breathing room:** ≥ 2.5 s of silence between lines (story lines excepted); ≥ 8 s between two combat barks.
+- **Breathing room:** ≥ 2.5 s of silence between lines (story lines excepted); ≥ 25 s between two combat barks.
+  Queued tutorial/story lines wait up to 14 s for their turn, combat barks 5 s.
 - **Once-only:** onboarding, story, boss, discovery and hint lines play once per run (a trace re-examined shows
   its text again but she does not repeat herself).
 - **Pools** (a random line, never the same twice running, each line once before any repeats): checkpoint
-  20 s, shift 100 s + 35 % chance, fight start 50 s + 50 %, fight cleared 70 s + 40 %, low health 60 s, execution
-  35 s + 50 %, idle 150 s.
+  20 s, shift 100 s + 35 % chance, fight start 100 s + 35 %, fight cleared 130 s + 35 %, low health 90 s,
+  execution 110 s + 35 %, idle 150 s; "Archers!" at most every 4 min, "Too many of them" every 5 min.
+  (Tuned after a bot run said 22 lines in 6 minutes, half of them combat barks.)
 - **Combat** barks never interrupt story; fight-start barks are skipped when a story/boss line fired in the last
   6 s (boss intros already speak).
 - **Idle** needs all of: no combat, no line in the last 45 s, no hint pending, and the player has genuinely done

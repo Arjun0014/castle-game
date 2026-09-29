@@ -134,9 +134,9 @@ export class Dialogue {
     if (d.boss || this.clock - this.lastEnd < 6 && this.cur?.line.pri === 5) return;
     const kinds = d.kinds ?? [];
     if (this.clock - this.lastShiftAt < 2.5 && !this.played.has('shift_danger')) { this.sayId('shift_danger'); return; }
-    if (kinds.some((k) => ARCHERS.has(k)) && this.clock - this.archerAt > 150) { this.archerAt = this.clock; this.sayId('cmb_archer'); return; }
+    if (kinds.some((k) => ARCHERS.has(k)) && this.clock - this.archerAt > 240) { this.archerAt = this.clock; this.sayId('cmb_archer'); return; }
     if (kinds.some((k) => HEAVY.has(k)) && !this.heavyFloors.has(this.floorId)) { this.heavyFloors.add(this.floorId); this.sayId('cmb_heavy'); return; }
-    if ((d.count ?? 0) >= 5 && this.clock - this.manyAt > 200) { this.manyAt = this.clock; this.sayId('cmb_many'); return; }
+    if ((d.count ?? 0) >= 5 && this.clock - this.manyAt > 300) { this.manyAt = this.clock; this.sayId('cmb_many'); return; }
     const l = this.fromPool('enter');
     if (l) this.say(l);
   }
@@ -153,7 +153,7 @@ export class Dialogue {
     }
     const gap = line.pri >= 5 ? 0.4 : 2.5;
     if (this.clock - this.lastEnd < gap) { if (line.pri >= 3) this.enqueue(line); return; }
-    if (line.cat === 'combat' && this.clock - this.lastCombatAt < 8) return;
+    if (line.cat === 'combat' && this.clock - this.lastCombatAt < 25) return;
     this.start(line);
   }
 
@@ -165,6 +165,8 @@ export class Dialogue {
   }
 
   private start(line: Line) {
+    // a moment that has passed: the first-kill wonder is moot once the sigil rite has spoken
+    if (line.id === 'f1_first_kill' && this.played.has('f1_rite')) return;
     this.played.add(line.id);
     if (line.pool) {
       this.poolAt.set(line.pool, this.clock);
@@ -284,7 +286,8 @@ export class Dialogue {
       g.hud.subtitle(null);
     }
     if (!this.cur && !this.pending && this.queue.length) {
-      this.queue = this.queue.filter((q) => this.clock - q.at < 6);
+      // tutorial / story lines wait longer for their turn than combat barks
+      this.queue = this.queue.filter((q) => this.clock - q.at < (q.line.pri >= 4 ? 14 : 5));
       const q = this.queue[0];
       if (q && this.clock - this.lastEnd >= (q.line.pri >= 5 ? 0.4 : 1.2)) { this.queue.shift(); this.start(q.line); }
     }
