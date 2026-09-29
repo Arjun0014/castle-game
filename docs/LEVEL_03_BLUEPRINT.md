@@ -102,7 +102,7 @@ way after ~30 s without progress. Level prompts name each difference (`C_GAP`, `
 
 ## G. Combat plan
 
-Rewards (resonance): goblin 30 · bat 12 · Widow 60 · widowling 12 · lamia 80 · the Maw 200 · Remnant 50 · guard 40 ·
+Rewards (resonance): goblin 30 · bat 12 · Widow 60 · widowling 12 · crown brute 90 · the Maw 200 · Remnant 50 · guard 40 ·
 muster 40 · archer 30 · royal warden 100 · the Last Crown 200.
 
 | Id | Where | Memory | Composition (wave 2+ in brackets) | Notes |
@@ -111,13 +111,13 @@ muster 40 · archer 30 · royal warden 100 · the Last Crown 200.
 | E2 | Hall of Roots north (at the grille) | PAST | 2 royal wardens, a guard, an archer [2 guards] | the King's last guard; fought on the far side of the chasm |
 | E3 | ossuary P1 | PRESENT | Widow (drops from the dark), 2 bats [2 widowlings] | a fight on a disc over a void |
 | E4 | ossuary P2 | PAST | royal warden, 2 guards | on the other side of the Past-only bridge |
-| E5 | the cistern | PRESENT | **THE MAW OF THE CROWNHEART** (lamia ×1.4, 900 HP) [3 bats from its belly at 65 %] [2 goblins from the dome at 35 %] | mini-boss; the rim keeps the fight round the font |
+| E5 | the cistern | PRESENT | **THE MAW OF THE CROWNHEART** (session 11: the Creature Pack Mutant ×1.8, 1150 HP — hook, sweep, chains, leap slam over the font, quake waves, hop, roar, flex enrage; `enemies/Maw.ts`) [3 gloom bats rise out of the font at its 65 % roar] | mini-boss; the rim keeps the fight round the font; the fight holds the memory (no shift until it falls). CP2 at the cistern door before it, CP2B on the landing after the north door |
 | E6 | ramp head −60..30° | PRESENT | 4 goblins, 2 bats [2 goblins] | met only by a player who walks the ramp head in the Present |
 | E7 | ramp 110..200° | PAST | 2 royal wardens, 2 guards, an archer [2 muster] | the Kingsguard's last post on the stair |
-| E8 | ramp 250..345° | PRESENT | lamia, Widow, goblin [Widow, 2 Remnants] | the deepest fight, just before the foot |
+| E8 | ramp 250..345° | PRESENT | crown brute (a lesser Maw ×1.3), Widow, goblin [Widow, 2 Remnants] | the deepest fight, just before the foot |
 | BOSS | the Crownheart | BOTH | the Last Crown [3 bats out of the heart at 65 %] [2 goblins + 2 widowlings at 35 %] | §I |
 
-Monster behaviour: `src/enemies/Monsters.ts` (goblin skirmisher, bat swarm, Widow, lamia). Session 10 audit
+Monster behaviour: `src/enemies/Monsters.ts` (goblin skirmisher, bat swarm, Widow) and `src/enemies/Maw.ts` (the Maw, crown brutes). Session 10 audit
 (`dev/auditProbe.js`): every enemy of every Floor 3 encounter acts; in the big fights every waiting enemy gets a turn.
 
 ## H. Temporal economy (worst case, critical path)
@@ -157,7 +157,7 @@ at CP3 (the Threshold), the fight resets cleanly, the Present Crown doors let he
 ## J. Streaming / performance
 
 Scope `floor3`: `floor03.glb` (93 visual objects, 20.0k tris), `floor03_collision.glb` (4.7k tris), nav 491 KB; rigs
-knight / archer / hollow (Remnants) / goblin / bat / widow / lamia / lastcrown (KTX2); the 12 boss sounds and the monster
+knight / archer / hollow (Remnants) / goblin / bat / widow / mutant / lastcrown (KTX2); the 12 boss sounds and the monster
 sounds. The descent has no sky (`noSky`); the fog colour is the dark beyond the walls. Point lights come from the pooled
 light rig (crown lights prioritised). Spells and Remnants are pooled and warmed behind the loading screen.
 
@@ -202,5 +202,5 @@ probes `dev/f3Probe.js` (gates, route), `dev/bossBot.js` (the fight), `dev/monst
 
 The boss asset (`Pro Magic Pack with final boss.zip` → `lastcrown.glb`) is described in CONTEXT.md §4 and
 `tools/blender/build_lastcrown.py`. Monsters: `gobelin_monster.glb` (retargeted), `bat_dark_bad_cartoon_monster.glb`,
-`ragno_monster.glb` (the Widow), `monster-_module_xb1011.glb` (the lamia / the Maw) — CC BY 4.0, credited in the game's
+`ragno_monster.glb` (the Widow) — CC BY 4.0 (session 11: the Maw is the Mixamo Creature Pack Mutant; the lamia model is gone), credited in the game's
 Credits (`src/data/credits.ts`).

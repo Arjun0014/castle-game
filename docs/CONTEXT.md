@@ -29,7 +29,12 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 **World scope:** one ancestral castle  
 **Total floors:** 3  
 **Game title:** THE CASTLE REMEMBERS (the castle is Caer Veyr).
-**Current implementation priority:** session 10 = finishing polish (§10 Session 10): a real **title screen** over the
+**Current implementation priority:** session 11 = bug fixes + Floor 3 polish (§10 Session 11): monsters on their feet,
+no sliding on stairs, passive Resonance, floor transitions that survive a lost connection (retry / TRY AGAIN /
+prefetch), the right reward message per floor, **the Maw of the Crownheart rebuilt on the Creature Pack Mutant**
+(16 clips, full moveset, CP2 before / CP2B after), **the Crownheart as the chamber's living light**, and finishers
+whose cuts fire on real blade contact. Next: the untested items in §8 Session 11, then human / real-phone play.
+Session 10 = finishing polish (§10 Session 10): a real **title screen** over the
 castle itself (Continue / New Game → Guided or Minimal guidance → the opening film / Controls / Settings / Credits), a
 cinematic **chapter card** loading screen with real progress, the **Guided Floor 1 tutorial** (move → crouch, one
 lesson at a time), a **pause menu**, floor-level **saves**, the **enemy audit** of all floors (every archer shoots, bats
@@ -414,6 +419,13 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **Opening film (s10 integration)** | COMMITTED, VERIFIED in browser (muted) | New Game (a gesture) → `ui/Intro.ts` via `import.meta.glob` → subtitles + Skip → play; `?nointro` skips; dev `&film` shows it in a muted test session |
 | **Guided tutorial (s10)** | DONE, VERIFIED (`dev/tutorialProbe.js`: all 19 lessons in order) | `game/Tutorial.ts`: move, look, the way in, light (world near-freeze until the first blow), heavy, combo, guard + parry (slow blows, wider parry window), dodge (desktop), finish, Resonance, sigil, two memories, shift, the Past, the living guard, shift back, crouch, end; E1's Hollows teach (passive, cannot die), the hero is protected (≥ 1/3 HP). Minimal = compact cards + objectives/rings/guide. **Not played by a human** |
 | **Settings / saves / pause (s10)** | DONE, VERIFIED (production) | `game/Settings.ts` (master/ambience/effects/voice, subtitles, camera sensitivity, shake; localStorage), `game/Save.ts` (Floors II/III; Continue restores learned/bestiary/deaths/play time), `PauseMenu` (Resume / Controls / Settings / Quit to title), ending → Return to the title |
+| **Monster grounding (s11)** | DONE, VERIFIED (numeric) | `GameAssets` GROUND (goblin: measured lift) + LEVEL (Widow levelled on 4 legs), Widow pitch pivots on its legs |
+| **Stairs (s11)** | DONE, VERIFIED | `Physics.resolveCapsule(vertGround)`: 0 drift standing on 9 stair spots; jump / dodge / knock / walk unchanged |
+| **Passive Resonance (s11)** | DONE, VERIFIED (curve) | `TimeSystem.passive`: 1.6/s after 4 s calm, cap 100, paused in combat |
+| **Transition robustness (s11)** | DONE, VERIFIED (simulated outage) | `Net` retry/backoff, TRY AGAIN resumes in place, next-floor prefetch |
+| **The Maw = Creature Pack Mutant (s11)** | DONE, VERIFIED (god bot) | `enemies/Maw.ts`, `mutant.glb`, CP2 at the cistern door + CP2B after; real-damage bot NOT run |
+| **Crownheart light (s11)** | DONE, VERIFIED (numeric + screenshots) | `vfx/Crownheart.ts` shader + chamber tone; boss bot NOT re-run |
+| **Finisher contact (s11)** | DONE, VERIFIED (contact matrix, regression) | cut beats fire on blade contact; 5 variants × 7 bodies |
 | **Enemy audit (s10)** | DONE, VERIFIED (`dev/auditProbe.js`, all floors) | 4 blind perched archers relocated at load (`checkPerches`), perched archers no longer slide down ramps, bats' swoop counter leak fixed, blind flyer spawns moved (`checkFlyers`), F3 respawn crash fixed; slot rotation fair in every big fight |
 
 ---
@@ -468,6 +480,13 @@ Runtime (`src/`):
   shaft dust, smoke wisps. Per-state presets `ATMO`; lighting presets `ENV` in `Game.ts` (Present: low hemi,
   near-vertical shadowing moon so light falls through roof holes, low-angle shadowless `fill`, hero light).
 - `vfx/Fire.ts` — all `fire` markers as one instanced procedural flame shader per state.
+- Session 11: `enemies/Maw.ts` (the Maw / crown brutes), `enemies/MonsterBase.ts` (the shared `Monster` body, split out
+  of Monsters.ts), `data/mutantAnimations.json` + `tools/blender/build_mutant.py` (Blender headless: `blender --background
+  --factory-startup --python tools/blender/build_mutant.py`, then `node tools/build_ktx2.mjs --only glb`), `AssetManager.Net`
+  (retry / prefetch cache), `Game.transitionTo` failedLoad + `prefetchNext` + `applyHeartTone`, `TimeSystem.passive`,
+  `Physics.resolveCapsule(vertGround)`, `Enemy.physRadius / passThrough / deathHold`, `EnemyManager.memoryHeld`,
+  `HUD.clearAbility`, `Finishers.bladeContact` + armed beats, dev `dev/mawProbe.js`, `dev/finisherContact.js`
+  (`C.setHome([x,y,z,yaw]); C.measure(id, arch)`; `C.reach(clip, {standoff})` = contact frames of any hero clip).
 - Session 10: `ui/MainMenu.ts` (title screen + `PauseMenu`; shared Controls / Settings / Credits panels), `ui/menu.css`
   (loading card, title, panels, pause menu, tutorial card, end card), `ui/LoadingScreen.ts` (chapter card + `sigilSVG`),
   `data/credits.ts`, `game/Settings.ts`, `game/Save.ts`, `game/Tutorial.ts` (Guided Floor 1), `main.ts` (boot card →
@@ -607,6 +626,20 @@ A parry staggers the attacker and grants +12 resonance.
 ---
 
 # 8. Next Concrete Tasks
+
+**Session 11 follow-ups (do these first):**
+1. Run what this session could not: `dev/bossBot.js` on `?at=lastcrown` (god + real damage) with the new Crownheart,
+   a real-damage Maw fight (`dev/mawProbe.js` with `god: false`; its numbers: `EnemyTypes` maw attacks, `Maw.ts`
+   LEAP_* / WAVE_* / cooldowns), `?view=wide` + desktop kbm passes, `npm run package:itch` + production preview, a walked
+   F1 → F2 → King's lift → F3 run (lift ridden only from the `?floor=2` warp this session).
+2. Human / phone: is the Maw fair in portrait (leap ring, quake jump timing, the hook's tell, 1150 HP)? Does the
+   Crownheart's breathing read (weights in `Game.applyHeartTone`, ramp in `vfx/Crownheart.ts`)? Passive regen feel
+   (1.6/s, cap 100, `TimeSystem` PASSIVE_*). The finishers in portrait (contact now true; framing per variant in
+   `Finishers.setShot`).
+3. Goblin retarget leftovers: walk feet ~5 cm high, the lunge dips ~11 cm (a proper fix is re-keying the pelvis with
+   its rest offset in `build_monsters.py` / `build_enemies.retarget`, then re-measuring GROUND).
+4. Play-testing: run your own `npm run dev` (a server started by a Claude session stops with it — that was the
+   Floor 2 → 3 'stuck loading' report).
 
 **Session 10 follow-ups (the session-9 brief is DONE — see §10 Session 10):**
 1. **Real phone + human playtest** (`npm run dev:lan` → `http://192.168.1.39:5173/`, or the itch zip): the title screen on a
@@ -764,6 +797,126 @@ then generation + `Audio.voice(id)` hook.
 ---
 
 # 10. Latest Verified Session
+
+### Session 11 (2026-09-30) — bug fixes + Floor 3 polish: grounding, stairs, passive Resonance, transition robustness, the Mutant Maw, the living Crownheart, contact-true finishers
+
+Commits (Arjun0014/castle-game main, as Arjun0014): `4cc0d89` all code/assets · this CONTEXT commit.
+`THE_CASTLE_REMEMBERS_LORE.md` (the user's file) stays untracked.
+
+**1. Monster grounding** (`assets/GameAssets.ts` `GROUND` / `LEVEL` / `sampleClips`, `enemies/Monsters.ts` Widow):
+- Goblin (and the ×1.6 Gutter King) stood buried to the thighs: lowest vertex −0.66 m (−1.06 m king). Root cause in the
+  asset: `goblin.glb`'s pelvis translation keys are small deltas (y ≈ −3.5 units) without the 59.5-unit rest offset, so
+  every clip ran with the hips ~0.5 m low. Fix at load: the model is lifted by the 20th percentile of the per-frame
+  lowest point over idle_combat / idle_alert / walk / run (same constant for every clip). Now idle +1.6 cm, run +2 cm,
+  king the same ratio. Residual retarget artefacts: walk feet ~5 cm high, the lunge dips ~11 cm.
+- Widow / Weeping Mother "floated": grounded by its lowest point, its front pair of legs sat 0.47 m (0.6–0.8 m on the
+  Mother) above the floor — it stood on two legs, the ghost-head hanging in the air. Fix: `LEVEL` pitches the model so
+  the front and back contacts (median per-frame lowest front/back point over the crawl) both meet the floor, contacts
+  stored on the template; the Widow's rear-up / jab pitch now pivots about the planted pair (the spit used to drive the
+  back legs 0.45 m into the floor). Measured after: front 0.04 / back 0.04 m while running, nothing below the floor.
+
+**2. Stairs** (`game/Physics.ts` `resolveCapsule(…, vertGround)`, `Player.integrate`, `Enemy.integrate`): standing still
+on stairs she slid up to 8.8 m in 10 s (grounded, she is pulled into the floor at 2 m/s and the capsule was pushed out
+along the tilted normal). Walkable FACES (n.y > 0.55, the face itself, not an edge) now resolve straight up by
+depth/n.y; walls, ledge edges and steep slopes keep the normal push. Verified: 0.000 m drift on 9 stair/ramp spots,
+walking up/down unchanged (2.7 m in 0.7 s, no air frames), jump peak 1.08 m + clean landing, knockback both ways
+0.59 m, dodge 4.6 m down a stair, 0 drift after stopping, the lift ride, F3 route. Also `Enemy.physRadius` (≤ 0.62 m):
+a 0.94 m capsule climbed the blood font's 0.9 m rim like a ramp (the Maw walked into the font).
+`Player` now updates its ROOT matrix before tracking the blade (the blade trailed a frame behind her body).
+
+**3. Passive Resonance** (`time/TimeSystem.ts` `passive`, `PASSIVE_RATE 1.6/s`, `PASSIVE_CAP 100`, `PASSIVE_DELAY 4 s`):
+out of combat (no live Echo of her fight within 22 m, no scripted scene, no finisher) the gauge refills after 4 s of
+calm, easing in over 2 s, at 1.6/s up to ONE shift's worth (0 → 100 in ~67 s, measured). Kills (+12…200), hits (+2)
+and parries (+12) stay the fast source and the only way to bank the second 100; a shift resets the calm. The filling
+segment breathes (`.charge-seg.trickle`). Deny text: "…or give the castle time: its pull returns slowly."
+Not yet tuned against a full human traversal (§8).
+
+**4. Floor 2 → 3 "stuck on the chapter card" — root cause.** Reproduced exactly (ERR_CONNECTION_REFUSED on :5173 for
+the boss sounds / voice / level GLB, card stuck on "THE CASTLE RESISTS … Reload the page"): Floor 3's files are only
+fetched at the transition, and the dev server that served the page was no longer running (no process listened on :5173
+when this session started — it was a Claude preview server, which stops with the session that started it). The game
+then failed the whole floor on the first refused request with no way on (a reload also fails without a server). Fixes
+(`assets/AssetManager.ts` `Net`, `fetchBytes`, `prefetch`; `game/Game.ts` `transitionTo` / `failedLoad` /
+`prefetchNext`; `ui/LoadingScreen.ts` `error(msg, retry)` / `connection`; `main.ts`):
+- transient failures (no response, 408/429/5xx, a body cut off mid-download) retry with backoff (0.6 → 8 s, ~26 s in
+  all); the card says "The way is lost — seeking it again (attempt n)…"; a 404 still fails loudly;
+- a transition whose downloads failed offers TRY AGAIN (click / tap / Enter) and resumes in place: HP / Resonance /
+  shifts kept, what already arrived stays resident, only failed files are asked for again (Continue has it too; the
+  boot card's TRY AGAIN reloads);
+- within 45 m of the way out (Floor 1's exit, Floor 2's King's lift) the next floor's files download into memory
+  (`Net.cache`, ≤ 96 MB, consumed once): 9.2 MB for Floor 3 in 210 ms locally, so the card after the lift decodes.
+Verified: dev warp `?floor=2` → lift → F3 (1.4 s); simulated dead network during the transition → retries → network
+back → loads by itself; dead network for 26 s → TRY AGAIN → F3 with HP 123 / charge 150 carried, controls back, boss
+sounds resident; regression F1 → F2 → F3 in place. Play-test tip: run your own `npm run dev` in a terminal (a server
+started by a Claude session dies with that session).
+
+**5. Floor 3 ability message.** The HUD outlives the in-place transition: a reveal still on screen and the Crownbreaker's
+HOLD HEAVY tip were carried onto Floor 3, and once the Whirlwind had been tried an un-tried Crownbreaker took the tip
+over again. Now `HUD.clearAbility()` on unload and on load, the persistent tip teaches only THIS floor's reward (F2
+Crownbreaker / HOLD HEAVY, F3 Whirlwind / HOLD LIGHT), and a reward already performed gets a 5 s reminder instead of
+the full reveal (Continue). Verified: F3 arrival 0–4 s no stale reveal, 4.5 s WHIRLWIND / HOLD LIGHT, tip after; no
+HOLD HEAVY after the Whirlwind is learned; regression rows for both floors pass.
+
+**6. THE MAW OF THE CROWNHEART = the Creature Pack Mutant** (`enemies/Maw.ts`, `enemies/MonsterBase.ts`,
+`tools/blender/build_mutant.py`, `src/data/mutantAnimations.json`, `public/assets/characters/mutant.glb` 2.6 MB +
+KTX2 4.1 MB, `dev/mawProbe.js`). Pack inspected whole (`build/analysis/mutant/inspect.json`, contact sheets
+`clips_0/1.png`): Mixamo "Mutant", 37 mixamorig bones (no fingers), 11.3k tris, one material (2048² diffuse + normal →
+1024²), 1.86 m T-pose / head 1.3 m hunched; 19 clips. Used 16: idle (breathing), idle_look, walk 1.21 m/s, run
+2.2 m/s, turn_l45 / turn_r45 / turn_r90 (pelvis yaw taken out in the build and replayed on the root), punch (contact
+0.30 s), swipe (both blades rake at 1.23 s), leap_slam (1.6 m, fists land 1.67 s), leap_turn (lands 64° round; yaw
+taken out too), pound (slam 1.90 s), hop, roar (head peak 1.40 s), flex (chest beat 2.1 s), death. Unused: 'mutant
+idle' (14 s duplicate), 'mutant left turn 45' / 'right turn 45 (2)' (no body yaw). No reaction clips in the pack —
+borrowing the Pro Magic Pack's by bone name was tried and rejected (other rest orientations: it turned side-on).
+Moveset (Maw ×1.8, 1150 HP, poise 300): HOOK (slow wind-up then the hook; a parried hook STUNS it 4.4 s: stumble,
+head hanging 2.4 s, played back up, ×1.35 damage) · SWEEP (1 s tell, 230°, guard break, a step in) · chains hook→sweep,
+phase 2 hook→hook→sweep, enraged + hop→leap · CROWNFALL (5.5–15 m, aimed 0.6 s ahead of her run, crimson ring where
+it will land from take-off, crosses the font in the air, direct blow under the fists 34 + shock ring 18 — jump it,
+~1 s exposed landing; a heavy into the landing stuns) · TURNING FALL when she is round its flank · QUAKE (wave runs out
+at 8 m/s to 9 m: jump or dodge through; twice from phase 2) · HOP out when she hugs its belly · ROAR entrance + 65 %
+(knock-back blast, 3 gloom bats rise out of the font) · FLEX at 35 % (×1.3 damage while it beats its chest, then
+ENRAGED: ×1.22 speed, crimson smoulder) · heavy turns on the spot · poise STAGGER (death stumble 0–1.15 s) · death
+(falls back along its clip, body stays 4.2 s). Shifting is denied while its fight holds her ("The Maw holds this
+memory fast") — the Past's open north door was a way round it. Crown brute (E8, ×1.3, 360 HP): hook / sweep / hop.
+Layout (`floor03_layout.py`, rebuilt, 0 issues, NAV3 rebaked): E5 = maw + 3 bats (wave 2), the 35 % goblin wave
+removed; E8 lamia → crown_brute; **CP2 moved to the bridge at the cistern door (10, 96.6)**; **new CP2B on the landing
+past the north door (10, 130.2)** — a boss fight and a required shift apart; objectives `f3_cp2`, `f3_cp2b`. The lamia
+(`monster-_module_xb1011.glb`) is gone from runtime, KTX2 list, build_monsters, credits; sounds renamed `maw_snarl` /
+`maw_roar` (same CC0 sources). Verified with the probe (god): roar, sweeps, quake jumped, staggers, hop, turns, 65 %
+roar + bats, flex → enraged, hook→hook→sweep chains, death at 56.7 s of a random-attack bot, E5 clears, surge to 200,
+lock lifts; kiting: 4 leaps in 40 s, every landing on the ring (5.7–6.7 m from the font centre), none in the font.
+
+**7. The Crownheart** (`vfx/Crownheart.ts`, `Game.applyHeartTone`, `LastCrown` GREAT_CASTS): the crystal is a shader
+of domain-warped noise veins climbing through flat facets + a slower drifting layer + a tide, coloured on one ramp
+(clotted blood → crimson → orange-amber → gold → hot yellow-white: colour moves only with the energy, never an RGB
+cycle); an additive counter-flowing shell; embers peel off on the beats. Its colour/energy drive every crown light
+within 34 m (the heart's own light 6.1–9.7 per beat, 12.6 on a surge) and, near it, the hemisphere / ground bounce /
+fill / hero light / fog / exposure (±8–15 %, linear-light weights — the first tuning washed the room orange). Phases run
+it hotter and faster; the Last Crown's great casts (wave, bombard, nova, beam, orb, dark) draw it in as she gathers
+and flare it at the release; her glow takes its colour. Phones: 3 noise octaves. Warmed (54 programs, 0 failures).
+
+**8. Finishers** (`combat/Finishers.ts`, `dev/finisherContact.js`): measured the gap between the real blade (hilt→tip)
+and the victim's skinned surface every frame. Before: frenzy's first four cuts fired with the blade 0.74–1.13 m from the
+body (only the last blow connected), the headsman's sweep / neck cut 0.85 m early, the stab 0.3 m early, the kick's
+first cut 1.28 m short, the passing cut never touched the body (0.55 m; 1.66 m at its "line of light"). Now: CUT beats
+are armed and fire on the first frame the blade meets the body (≤ 0.08 m, three sub-steps per frame), blood / streak /
+reaction at the contact point along the blade's travel; frenzy rebuilt from swings that reach (atk_whirlwind ×2,
+atk_rising_cut, the cleave's overhead); stab/headsman retimed (contacts ~0.73 / 0.35 + 0.73 s); kick opens with the
+cleave's overhead half; the passing cut passes with the body on her sword side (PASS_SIDE −0.5, the blade crosses its
+waist ~0.23 s) — same clip, camera and feel; standoff + (radius − 0.4); the headsman is not offered to bodies < 1.6 m;
+the headsman camera 0.35 m farther out (the kneeling body's arm filled the frame). Verified contacts (gaps, every
+armed beat): guard, hollow, royal warden, goblin — all 5 variants 0.001–0.077 m; Widow and crown brute stab / passing
+0.012–0.071 m; kingsguard/bosses and widowlings refused as designed.
+
+**Tests run:** tsc + `npm run build` PASS; `dev/regression.js` 49/49 PASS (portrait touch 375×812, F1 → F2 → F3 in place,
+all 5 finishers kill/credit/camera, both rewards + reveals, touch layout, wall/hole refusals); `dev/f3Probe.js` gates
+9/9 + route spawn → arena with 6 shifts (a route waypoint added on the fallen column's axis — the bot's straight line
+clipped its edge); `dev/mawProbe.js` kite / fight / parry→stun; `dev/finisherContact.js` matrix; grounding probes;
+stair drift probes; passive curve; transition failure / retry / prefetch; portrait screenshots (the Maw, its leap,
+the Crownheart, the headsman contact).
+**Not run this session (next session / human):** the Last Crown fight bot (`dev/bossBot.js`) after the Crownheart
+change, a real-damage Maw bot, `?view=wide` and desktop-kbm passes, `npm run package:itch` + production preview, a full
+F1 → F2 → lift → F3 playthrough by walking (the lift was ridden from the `?floor=2` warp; F1 → F2 → F3 by the in-place
+transition), passive-regen tuning against a human's traversal, everything by ear and on a real phone.
 
 ### Session 10 (2026-09-30) — title screen, chapter cards, Guided tutorial, enemy audit, Floor 3 played end to end
 
