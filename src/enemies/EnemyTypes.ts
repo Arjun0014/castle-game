@@ -3,7 +3,7 @@ import { HERO_CLIPS } from '../data/animationManifest';
 export type AssetId = 'knight' | 'hollow' | 'archer' | 'ghost' | 'lastcrown';
 /** echo: pale drifting motes · muster: faint gold dust · elite: rising embers · corrupt: ash · dread: boss embers */
 export type AuraKind = 'echo' | 'muster' | 'elite' | 'corrupt' | 'dread';
-export type ArchetypeId = 'kingsguard' | 'guard' | 'muster' | 'royal_warden' | 'hollow' | 'hollow_warden' | 'wraith' | 'archer' | 'echo_archer' | 'gate_warden' | 'remnant' | 'last_crown';
+export type ArchetypeId = 'kingsguard' | 'guard' | 'muster' | 'royal_warden' | 'hollow' | 'hollow_warden' | 'wraith' | 'archer' | 'echo_archer' | 'gate_warden' | 'remnant' | 'remnant_guard' | 'last_crown';
 
 export interface EnemyAttack {
   clip: string; speed: number; start: number;
@@ -33,6 +33,16 @@ export interface Archetype {
   slotCost: number;       // how many melee attack slots it occupies
   boss?: boolean;
 }
+
+/**
+ * Monster rigs (the necromorph Hollow, the night ghost) belong to the ruined Present. An enemy placed in the Past
+ * with one of them is replaced by its living counterpart at spawn (logged in EnemyManager.pastFixes; Floors 1–2
+ * data has none, Floor 3's E0 Remnants are remapped). Fissure/boss adds in the Past use `remnant_guard`.
+ */
+export const PAST_COUNTERPART: Partial<Record<ArchetypeId, ArchetypeId>> = {
+  hollow: 'guard', remnant: 'remnant_guard', hollow_warden: 'royal_warden', wraith: 'remnant_guard', echo_archer: 'archer',
+};
+export const MONSTER_RIGS = new Set<AssetId>(['hollow', 'ghost']);
 
 /** Hit window from the hero manifest's measured sword peak (same clip, retargeted). */
 function win(clipId: string, i = 0, pad0 = 0.06, pad1 = 0.06): [number, number] {
@@ -118,6 +128,16 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     hp: 36, poise: 20, runSpeed: 3.6, walkSpeed: 1.4, radius: 0.38, height: 1.8, reward: 50, blockChance: 0, aggroRange: 30, turnRate: 6,
     attacks: [{ clip: 'atk_chop', speed: 1.0, start: 0.0, window: win('atk_chop'), damage: 8, range: 2.0, arc: 80, knock: 1.2, weight: 1, cooldown: [1.4, 2.4], rootScale: 1, telegraph: 0.3 }],
     clips: HOLLOW_CLIPS, slotCost: 1,
+  },
+  /**
+   * The Past's fissure Echo: a remembered guard (knight rig, faint echo motes), as weak as the Present Remnant.
+   * The Past is the living castle — its Echoes are the people it remembers, never the rotted Hollows.
+   */
+  remnant_guard: {
+    id: 'remnant_guard', asset: 'knight', scale: 0.96, aura: 'echo',
+    hp: 36, poise: 20, runSpeed: 3.5, walkSpeed: 1.4, radius: 0.4, height: 1.85, reward: 50, blockChance: 0.1, aggroRange: 30, turnRate: 5.5,
+    attacks: [{ clip: 'atk_chop', speed: 1.0, start: 0.0, window: win('atk_chop'), damage: 8, range: 2.1, arc: 70, knock: 1.2, weight: 1, cooldown: [1.4, 2.4], rootScale: 1, telegraph: 0.3 }],
+    clips: KNIGHT_CLIPS, slotCost: 1,
   },
   hollow_warden: {
     id: 'hollow_warden', asset: 'knight', scale: 1.12, aura: 'corrupt',

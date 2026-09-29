@@ -17,7 +17,9 @@ import { ATMO_UNIFORMS } from '../vfx/Atmosphere';
  */
 
 /** skills the tutorials wait for (kept for the whole run: floors transition in place) */
-export interface Learned { moved: number; looked: number; hits: number; guarded: boolean; dodged: boolean; shifted: boolean; sigil: boolean; resonance: boolean; heavy: boolean }
+export interface Learned { moved: number; looked: number; hits: number; guarded: boolean; dodged: boolean; shifted: boolean; sigil: boolean; resonance: boolean; heavy: boolean;
+  /** floor rewards performed at least once (their unlock tip stays until then) */
+  crownbreaker: boolean; whirlwind: boolean }
 
 export class Objectives {
   private list: ObjectiveDef[];
@@ -208,7 +210,8 @@ void main() {
       const stages = [
         () => L.hits - (this.hitsAtStart ?? 0) >= 2,
         () => L.guarded || this.teachStageT > 11,
-        () => L.dodged || this.teachStageT > 11,
+        // touch has no Dodge button (session 8): that stage is skipped there
+        () => L.dodged || touch || this.teachStageT > 11,
       ];
       while (this.teachStage < stages.length && stages[this.teachStage]()) { this.teachStage++; this.teachStageT = 0; }
       title = 'FIGHT';

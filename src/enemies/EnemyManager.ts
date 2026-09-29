@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { Enemy, type EnemyCtx } from './Enemy';
 import { LastCrown } from './LastCrown';
-import { ARCHETYPES, type ArchetypeId, type AssetId, type EnemyAttack } from './EnemyTypes';
+import { ARCHETYPES, MONSTER_RIGS, PAST_COUNTERPART, type ArchetypeId, type AssetId, type EnemyAttack } from './EnemyTypes';
 import type { Game } from '../game/Game';
 import type { TimeState } from '../levels/Materials';
 import type { Marker } from '../levels/Level';
@@ -68,8 +68,10 @@ function disposeClone(root: THREE.Object3D) {
 
 export class EnemyManager {
   assets = new Map<AssetId, EnemyTemplate>();
-  /** pre-instantiated fissure Remnants (spawning never clones a rig mid-game) */
+  /** pre-instantiated fissure Echoes (spawning never clones a rig mid-game): Remnants for the Present,
+   *  remembered guards for the Past (no Hollow ever rises in the living castle) */
   private remnantPool: Enemy[] = [];
+  private pastEchoPool: Enemy[] = [];
   /** pooled arrow meshes */
   private arrowPool: THREE.Mesh[] = [];
   enemies: Enemy[] = [];
@@ -112,8 +114,9 @@ export class EnemyManager {
     this.assets = templates;
     this.spawnFromMarkers();
     this.spawnStaticFigures();
-    if (this.g.level.markersOf('fissure').length) {
+    if (this.g.level.markersOf('fissure').length || this.enemies.some((e) => e instanceof LastCrown)) {
       for (let i = 0; i < REMNANT_POOL; i++) this.remnantPool.push(this.makeRemnant());
+      if (this.assets.has(ARCHETYPES.remnant_guard.asset)) for (let i = 0; i < REMNANT_POOL; i++) this.pastEchoPool.push(this.makeRemnant('PAST'));
     }
     for (let i = 0; i < ARROW_POOL; i++) {
       const m = new THREE.Mesh(this.arrowGeo, this.arrowMat);
@@ -129,10 +132,18 @@ export class EnemyManager {
     }
   }
 
-  private makeRemnant() {
-    const { model, clips } = this.instantiate(ARCHETYPES.remnant.asset);
-    return new Enemy(ARCHETYPES.remnant, model, clips, 'REMNANT', this.g.time.state, 1, { rise: true, yaw: 0 });
+  private makeRemnant(st: TimeState = 'PRESENT') {
+    const arch = st === 'PAST' ? ARCHETYPES.remnant_guard : ARCHETYPES.remnant;
+    const { model, clips } = this.instantiate(arch.asset);
+    return new Enemy(arch, model, clips, 'REMNANT', st, 1, { rise: true, yaw: 0 });
   }
+  /** a pooled fissure/boss Echo for memory `st` (a remembered guard in the Past, a Remnant in the Present) */
+  private takeEcho(st: TimeState): Enemy | null {
+    const arch = st === 'PAST' ? ARCHETYPES.remnant_guard : ARCHETYPES.remnant;
+    if (!this.assets.has(arch.asset)) return null;
+    return (st === 'PAST' ? this.pastEchoPool : this.remnantPool).pop() ?? this.makeRemnant(st);
+  }
+  private poolEcho(e: Enemy) { (e.arch.id === 'remnant_guard' ? this.pastEchoPool : this.remnantPool).push(e); }
 
   /**
    * Objects that exercise every shader variant enemies can need mid-fight but that are not visible at load:
@@ -185,7 +196,7 @@ export class EnemyManager {
    */
   forceVisible(): () => void {
     const sc = this.g.scene;
-    const pooled = [...this.remnantPool];
+    const pooled = [...this.remnantPool, ...this.pastEchoPool];
     for (const e of pooled) sc.add(e.root);
     for (const e of [...this.enemies, ...pooled]) e.root.visible = true;
     for (const s of this.statues) s.visible = true;
@@ -200,7 +211,7 @@ export class EnemyManager {
   /** Remove and free every enemy-side object of the floor (rig templates stay with the AssetManager). */
   dispose() {
     const sc = this.g.scene;
-    for (const e of [...this.enemies, ...this.remnants, ...this.remnantPool]) { sc.remove(e.root); e.dispose(); }
+    for (const e of [...this.enemies, ...this.remnants, ...this.remnantPool, ...this.pastEchoPool]) { sc.remove(e.root); e.dispose(); }
     for (const st of this.statues) { sc.remove(st); disposeClone(st); }
     for (const im of this.imprints) { sc.remove(im.obj); disposeClone(im.obj); }
     for (const ar of this.arrows) sc.remove(ar.mesh);
@@ -208,7 +219,7 @@ export class EnemyManager {
     for (const m of this.tracers) { sc.remove(m); (m.material as THREE.Material).dispose(); }
     this.tracers = [];
     this.tracerGeo.dispose(); this.tracerMat.dispose();
-    this.enemies = []; this.remnants = []; this.remnantPool = []; this.statues = []; this.imprints = [];
+    this.enemies = []; this.remnants = []; this.remnantPool = []; this.pastEchoPool = []; this.statues = []; this.imprints = [];
     this.arrows = []; this.arrowPool = [];
     this.encounters.clear();
     this.slotsUsed.clear();
@@ -246,17 +257,22 @@ export class EnemyManager {
     for (const m of lvl.markersOf('enemy')) this.spawnEnemy(m);
   }
 
+  /** Past-placed monsters replaced by their living counterpart (see PAST_COUNTERPART); tests expect none on F1/F2 */
+  pastFixes: string[] = [];
+
   private spawnEnemy(m: Marker) {
     const p = m.props;
-    const arch = ARCHETYPES[p.archetype as ArchetypeId];
+    let arch = ARCHETYPES[p.archetype as ArchetypeId];
     if (!arch) throw new Error('Unknown archetype ' + p.archetype);
+    const sub = p.state === 'PAST' ? PAST_COUNTERPART[arch.id] : undefined;
+    if (sub && MONSTER_RIGS.has(arch.asset)) { this.pastFixes.push(`${m.name} ${arch.id} -> ${sub}`); arch = ARCHETYPES[sub]; }
     const { model, clips } = this.instantiate(arch.asset);
     // Blender yaw (about +Z) → three.js yaw (about +Y): character forward is -Y in Blender = +Z three
     const yaw = (p.yaw ?? 0) + Math.PI;
     const e = arch.id === 'last_crown'
       ? new LastCrown(arch, model, clips, p.encounter, p.state, p.wave ?? 1, { yaw }, this.g)
       : new Enemy(arch, model, clips, p.encounter, p.state, p.wave ?? 1, { rise: !!p.rise, kneel: !!p.kneel, perch: !!p.perch, yaw, tint: p.tint });
-    e.place(this.walkableSpawn(m.pos, p.state, !!p.perch || arch.id === 'last_crown' || !!arch.flying, m.name));
+    e.place(this.walkableSpawn(m.pos, p.state, !!p.perch || arch.id === 'last_crown' || !!arch.flying, m.name, this.encounters.get(p.encounter), e.radius));
     this.g.scene.add(e.root);
     this.enemies.push(e);
     const enc = this.encounters.get(p.encounter);
@@ -317,12 +333,6 @@ export class EnemyManager {
   // ------------------------------------------------------------------ queries
   isCleared(id: string) { return this.encounters.get(id)?.cleared ?? false; }
 
-  private hostileNear(p: THREE.Vector3, r: number) {
-    const st = this.g.time.state;
-    return this.enemies.some((e) => e.alive && !e.removed && (e.owner === st || e.owner === 'BOTH') && e.state !== 'hidden' && e.state !== 'dormant' && e.pos.distanceTo(p) < r)
-      || this.remnants.some((e) => e.alive && e.pos.distanceTo(p) < r);
-  }
-
   /** An engaged (triggered, living, visible) enemy of the current memory within r m — Blood Sigils refuse then. */
   engagedNear(p: THREE.Vector3, r: number) {
     const st = this.g.time.state;
@@ -347,7 +357,7 @@ export class EnemyManager {
    * A walker must start on walkable ground of its own memory: a spawn wedged between a tomb and a wall (a body
    * cannot fit) is moved to the nearest walkable spot within 1.5 m. Logged so the layout can be corrected.
    */
-  private walkableSpawn(pos: THREE.Vector3, state: TimeState | 'BOTH', exempt: boolean, name: string) {
+  private walkableSpawn(pos: THREE.Vector3, state: TimeState | 'BOTH', exempt: boolean, name: string, arena?: Encounter, radius = 0.34) {
     const nav = this.nav;
     if (!nav || exempt) return pos;
     const st = state === 'BOTH' ? this.g.time.state : state;
@@ -356,6 +366,19 @@ export class EnemyManager {
     if (!nav.walkable(pos, 0.5)) {
       const q = nav.nearestWalkable(pos, 3);
       if (q && q.distanceTo(pos) < 1.6) { out = q.clone(); this.spawnFixes.push(`${name} ${st} moved ${q.distanceTo(pos).toFixed(2)} m`); }
+    }
+    // an island: the spot is walkable but closed in (the E3 reinforcements stood INSIDE the west tents' collision
+    // boxes and could never come out) → the nearest spot within 6 m that opens onto the floor (≥ 300 nodes ≈ 75 m²
+    // reachable; stepping down off a tomb or a mound is always possible, so those are never islands)
+    if (arena && nav.reachableCount(out, 300, radius) < 300) {
+      let best: THREE.Vector3 | null = null, bd = Infinity;
+      for (let r = 0.5; r <= 6 && !best; r += 0.5) for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        const q = nav.nearestWalkable(new THREE.Vector3(out.x + Math.cos(a) * r, out.y, out.z + Math.sin(a) * r), 1);
+        if (!q || Math.abs(q.y - out.y) > 0.6 || q.distanceTo(out) >= bd) continue;
+        if (nav.reachableCount(q, 300, radius) >= 300) { best = q.clone(); bd = q.distanceTo(out); }
+      }
+      if (best) { this.spawnFixes.push(`${name} ${st} island → moved ${bd.toFixed(2)} m`); out = best; }
     }
     nav.use(this.g.time.state, this.g.level.flags);
     return out;
@@ -436,7 +459,9 @@ export class EnemyManager {
       if (e.hasSlot && e.owner !== st && e.owner !== 'BOTH') { this.releaseSlot(e); e.hasSlot = false; }
       if (e.owner === 'BOTH' && e.alive) this.relocateIfInvalid(e, st);
     }
-    for (const r of this.remnants) r.root.visible = true;
+    // fissure / boss Echoes belong to the memory they rose in, like every other Echo (they were drawn frozen in
+    // the other memory before)
+    for (const r of this.remnants) r.root.visible = (r.owner === st || r.owner === 'BOTH') && !r.removed;
     for (const s of this.statues) s.visible = s.userData.state === st;
     for (const im of this.imprints) im.obj.visible = st === 'PAST' && im.fade > 0;
     for (const a of this.arrows) a.mesh.visible = a.state === st;
@@ -453,14 +478,31 @@ export class EnemyManager {
   }
 
   // ------------------------------------------------------------------ slots
+  /**
+   * Attack slots, first come first served — with a queue: whoever has been asking longest (> 0.8 s) goes next and
+   * nobody else takes a freed slot before it. Without it a slot-cost-2 elite (Royal / Hollow Warden) never found
+   * the pool empty while guards kept re-taking single slots: the E10 Royal Warden circled for 30 s without a blow.
+   */
+  private slotWait = new Map<number, { since: number; last: number }>();
   requestSlot = (e: Enemy, cost: number) => {
     if (e.arch.boss) return true; // the boss attacks on its own schedule; it never starves the pool
+    const now = this.g.t;
+    let w = this.slotWait.get(e.id);
+    if (!w || now - w.last > 0.5) { w = { since: now, last: now }; this.slotWait.set(e.id, w); }
+    w.last = now;
+    let first = e.id, firstSince = w.since;
+    for (const [id, x] of this.slotWait) {
+      if (now - x.last > 0.5) { this.slotWait.delete(id); continue; }
+      if (x.since < firstSince) { first = id; firstSince = x.since; }
+    }
+    if (first !== e.id && now - firstSince > 0.8) return false;
     let used = 0;
     for (const v of this.slotsUsed.values()) used += v;
     // during the finale only one add may press the player while the Warden lives
     const cap = this.boss && this.boss.triggered && this.boss.alive ? 1 : this.slotCapacity;
     if (used + cost > cap && used > 0) return false;
     this.slotsUsed.set(e.id, cost);
+    this.slotWait.delete(e.id);
     e.slotTime = 0;
     return true;
   };
@@ -500,10 +542,13 @@ export class EnemyManager {
     const sightTick = this.sightT <= 0;
     if (sightTick) this.sightT = 0.2;
     for (const e of this.enemies) {
+      const enc = this.encounters.get(e.encounter)!;
+      // the hero stands inside this Echo's own (running) fight: it never leashes, and one that did wakes again
+      e.heroInArena = enc.triggered && !enc.cleared && p.alive && enc.box.containsPoint(head);
       if (e.triggered || !e.alive || e.state === 'hidden' || e.state === 'dormant') continue;
       if (e.owner !== st && e.owner !== 'BOTH') continue;
-      const enc = this.encounters.get(e.encounter)!;
       if (enc.finale && !enc.triggered) continue; // the finale starts only from its arena volume
+      if (e.heroInArena && e.wave <= enc.wave && !e.isRanged) { e.activate(); continue; }
       const d = e.pos.distanceTo(p.pos);
       if (e.isRanged) {
         // archers see far and from any height (galleries, perches): they open fire on sight without waking the
@@ -522,11 +567,15 @@ export class EnemyManager {
     let active = 0;
     let combat = false;
     for (const e of [...this.enemies, ...this.remnants]) {
-      if (e.removed) continue;
-      if (e.owner !== st && e.owner !== 'BOTH') continue;
+      if (e.removed) { e.root.visible = false; continue; }
+      // an Echo of the other memory is never drawn (and does not act) until the hero shifts there: a riser woken
+      // by a BOTH-memory wave used to stand in the bind pose, frozen, in the wrong memory (T-pose bug)
+      if (e.owner !== st && e.owner !== 'BOTH') { e.root.visible = false; continue; }
       const d = e.pos.distanceTo(p.pos);
       // render only what can matter: near enemies or those in a live fight
       e.root.visible = e.state !== 'hidden' && (d < 42 || (e.triggered && e.alive));
+      // safety net: a drawn body always has an animation on its skeleton (never the bind pose)
+      if (e.root.visible && !e.posed) e.repose();
       const hot = e.triggered || d < 38;
       if (!hot && e.alive) continue;
       // bosses are never lost to a void: a kick toward the edge staggers them instead (blueprint E10)
@@ -557,7 +606,7 @@ export class EnemyManager {
     if (this.boss && this.boss.triggered && this.boss.alive) g.hud.boss(this.bossName, this.boss.hp / this.boss.arch.hp);
     else g.hud.boss(null);
     // dead remnants go back to the pool
-    this.remnants = this.remnants.filter((r) => { if (r.removed) { g.scene.remove(r.root); r.reset(); this.remnantPool.push(r); return false; } return true; });
+    this.remnants = this.remnants.filter((r) => { if (r.removed) { g.scene.remove(r.root); r.reset(); this.poolEcho(r); return false; } return true; });
   }
 
   /** Per-enemy presentation: drain gameplay events into VFX/audio cues and emit identity auras. */
@@ -653,8 +702,17 @@ export class EnemyManager {
 
   private updateWaves(enc: Encounter) {
     if ((enc.finale || enc.bossFight) && this.boss && enc.enemies.includes(this.boss) && !this.boss.alive && !enc.cleared) {
-      // the Warden's fall ends the Last Muster: its remaining Echoes collapse with it
-      for (const e of enc.enemies) if (e.alive) { e.die(); this.killCount++; }
+      // the Warden's fall ends the Last Muster: its remaining Echoes collapse with it. Only bodies that are in the
+      // fight and in this memory collapse on screen; unwoken risers/kneelers and the other memory's Echoes simply
+      // are not there any more (they used to stay behind, T-posed)
+      const st = this.g.time.state;
+      for (const e of enc.enemies) {
+        if (!e.alive) continue;
+        const here = (e.owner === st || e.owner === 'BOTH') && e.root.visible && e.state !== 'hidden' && e.state !== 'dormant' && e.state !== 'rise';
+        if (here) e.die(); else e.vanish();
+        this.killCount++;
+        if (e.hasSlot) { this.releaseSlot(e); e.hasSlot = false; }
+      }
       this.clear(enc);
       return;
     }
@@ -670,8 +728,11 @@ export class EnemyManager {
       const f = this.boss.hp / this.boss.arch.hp;
       advance = (enc.wave === 1 && f < 0.65) || (enc.wave === 2 && f < 0.35);
     } else {
-      const inWave = enc.enemies.filter((e) => e.wave <= enc.wave && e.alive).length;
-      advance = inWave <= 1;
+      // perched archers never hold back the reinforcements (E3: the 2 balcony archers kept the tent guards
+      // standing idle forever once the yard guards were down); a wave of archers only waits for its ground fight
+      const ground = enc.enemies.filter((e) => e.wave <= enc.wave && e.alive && !e.opts.perch);
+      const any = enc.enemies.some((e) => e.wave <= enc.wave && !e.opts.perch);
+      advance = any ? ground.length <= 1 : enc.enemies.filter((e) => e.wave <= enc.wave && e.alive).length <= 1;
     }
     if (advance) {
       enc.wave++;
@@ -694,7 +755,7 @@ export class EnemyManager {
   }
 
   private separate() {
-    const list = [...this.enemies, ...this.remnants].filter((e) => e.alive && e.root.visible && (e.triggered || e.state === 'idle'));
+    const list = [...this.enemies, ...this.remnants].filter((e) => e.alive && e.root.visible && e.state !== 'finisher' && (e.triggered || e.state === 'idle'));
     const p = this.g.player;
     for (let i = 0; i < list.length; i++) {
       const a = list[i];
@@ -763,6 +824,7 @@ export class EnemyManager {
         const key = `${p.attackSerial}:${index}:${e.id}`;
         if (this.hitRegistry.has(key)) continue;
         let hit = false;
+        let falloff = 1;
         let contact = e.center.clone();
         const dy = Math.abs(e.pos.y - p.pos.y);
         if (win.shape === 'blade') {
@@ -786,17 +848,22 @@ export class EnemyManager {
         } else {
           const to = e.pos.clone().sub(p.pos).setY(0);
           const d = to.length();
-          const reach = (win.reach ?? 2.5) + e.radius + (p.attack?.charge ? p.chargeLevel * 1.5 : 0);
+          const shock = p.attack?.shock;
+          const reach = (win.reach ?? 2.5) + e.radius + (p.attack?.charge ? p.chargeLevel * (shock?.reach ?? 1.5) : 0);
           const arc = win.shape === 'front' ? (win.arc ?? 90) : (win.arc ?? 360);
           const ang = THREE.MathUtils.radToDeg(f.angleTo(to.normalize()));
-          if (d < reach && (arc >= 360 || ang < arc / 2) && dy < 1.9) hit = true;
+          // the Crownbreaker's shockwave reaches a little higher (a gallery step, a tomb lid) and weakens to the rim
+          if (d < reach && (arc >= 360 || ang < arc / 2) && dy < (shock ? 2.4 : 1.9)) { hit = true; if (shock) falloff = 1 - shock.falloff * THREE.MathUtils.clamp(d / reach, 0, 1); }
         }
         if (!hit) continue;
         this.hitRegistry.add(key);
         this.playerHits++;
         p.hitsDone.add(index * 1000 + e.id);
-        const cm = p.attack?.charge ? 1 + p.chargeLevel : 1; // the Crownbreaker's charge doubles its blow
-        const res = e.takeHit(win.damage * cm, win.poise * cm, win.knock, p.pos, { knockdown: win.knockdown, guardBreak: win.guardBreak });
+        const cm = (p.attack?.charge ? 1 + p.chargeLevel : 1) * falloff; // the Crownbreaker's charge doubles its blow
+        const res = e.takeHit(win.damage * cm, win.poise * cm, win.knock * (p.attack?.shock ? 1 + p.chargeLevel * 0.5 : 1), p.pos, { knockdown: win.knockdown, guardBreak: win.guardBreak });
+        // the last Echo of a fight may die in a cinematic finisher instead (it then owns the kill presentation and
+        // the one kill credit: finisherKill)
+        if (res === 'dead' && g.finisher.tryStart(e)) continue;
         const kind = p.attack?.kind ?? 'light';
         const feel = FEEL[kind];
         // how heavy this connection sounds/feels: attack kind, damage, and the last beat of a chain
@@ -851,7 +918,8 @@ export class EnemyManager {
     // the Last Crown is the Crownheart's making: she bleeds light, not blood (her death is her own sequence)
     if (e.arch.asset === 'lastcrown') { g.fx.sparks(contact, 22, g.time.state === 'PAST' ? 0xffc060 : 0xc05aff); g.fx.ashBurst(contact, dir, 8); return; }
     const kind = p.attack?.kind;
-    const power = res === 'dead' ? (kind && HEAVY_KINDS.has(kind) ? 1 : damage >= 28 ? 0.75 : 0.35) : 0;
+    // Whirlwind kills are thrown outward off the spin; heavies and finishers fling hardest
+    const power = res === 'dead' ? (kind && HEAVY_KINDS.has(kind) ? 1 : kind === 'whirl' ? 0.7 : damage >= 28 ? 0.75 : 0.35) : 0;
     const amount = Math.min(1.5, damage / 28) + (res === 'dead' ? 0.35 + power * 0.4 : 0);
     const asset = e.arch.asset;
     if (e.isFlying) g.fx.ashBurst(contact, dir, Math.round(10 + amount * 16));
@@ -873,7 +941,41 @@ export class EnemyManager {
     if (power > 0.7 && !e.isFlying) g.audio.play('bone_crunch', { pos: contact });
   }
 
-  onKill(e: Enemy, voidDeath = false) {
+  /** A finisher caught `e` (it had just died): back to a living, untargetable pose the director drives. */
+  holdForFinisher(e: Enemy) {
+    e.state = 'finisher';
+    e.stateTime = 0;
+    e.hp = Math.max(1, e.hp);
+    e.attack = null;
+    e.untargetable = true;
+    e.events.length = 0;
+    e.vel.set(0, 0, 0);
+    e.tumble = 0; e.tumbleRate = 0; e.settled = false; e.shatterAt = -1; e.deadTime = 0;
+    if (e.hasSlot) { this.releaseSlot(e); e.hasSlot = false; }
+  }
+
+  /**
+   * The finisher's final blow: the body dies, is thrown (power 0..1.4 through the fling/tumble physics) and torn
+   * (`gibs` chunks), and the kill is credited — exactly once — through onKill (resonance, heal, signals, and so
+   * the encounter's clear on the next update).
+   */
+  finisherKill(e: Enemy, dir: THREE.Vector3, power: number, gibs: number) {
+    if (e.state !== 'finisher') return;
+    const g = this.g;
+    e.untargetable = false;
+    e.state = 'hit'; // die() refuses a body already 'dead'; 'finisher' is alive
+    e.die();
+    e.fling(dir, power);
+    const at = e.center.clone();
+    const asset = e.arch.asset;
+    if (gibs > 0) g.gore.gibs(at, dir, gibs, asset === 'hollow' ? 'rotten' : asset === 'knight' ? 'armor' : 'flesh');
+    g.gore.aftermath(at, dir, 0.6 + power * 0.6);
+    g.audio.play('gore_splat', { pos: at, jitter: 0.08 });
+    if (power > 0.6) { g.audio.play('bone_crunch', { pos: at }); g.audio.play('kill_impact', { pos: at, rate: asset === 'knight' ? 0.9 : 1 }); }
+    this.onKill(e, false, true);
+  }
+
+  onKill(e: Enemy, voidDeath = false, finisher = false) {
     this.killCount++;
     const pl = this.g.player;
     if (pl.alive) pl.hp = Math.min(pl.maxHp, pl.hp + (e.arch.boss ? 80 : e.arch.reward >= 70 ? 30 : 12));
@@ -882,7 +984,7 @@ export class EnemyManager {
     this.g.fx.resonanceFrom(e.center.clone(), this.g.player, e.arch.reward);
     this.g.audio.release(e.center.clone());
     if (voidDeath) this.g.hud.prompt('Cast into the void.', 2);
-    this.g.signals.emit('kill', { arch: e.arch.id, boss: !!e.arch.boss, ranged: e.isRanged, voidDeath, execution: this.g.player.attack?.id === 'EXECUTE' });
+    this.g.signals.emit('kill', { arch: e.arch.id, boss: !!e.arch.boss, ranged: e.isRanged, voidDeath, execution: finisher || this.g.player.attack?.id === 'EXECUTE', finisher });
     if (e.arch.boss) { /* surge handled by encounter clear */ }
   }
 
@@ -956,12 +1058,14 @@ export class EnemyManager {
     for (const f of g.level.markersOf('fissure')) {
       if (f.pos.distanceTo(p.pos) > 14 || Math.abs(f.pos.y - p.pos.y) > 4) continue;
       if ((this.fissureCooldown.get(f.name) ?? 0) > 0) continue;
-      if (this.hostileNear(p.pos, 25)) continue;
+      // only a fight that can actually reach her holds the fissure back (idle Echoes on the floor below and a
+      // perched archer without a line of sight used to block the softlock refill: Floor 2 G6 at 96 resonance)
+      if (this.engagedNear(p.pos, 25)) continue;
       this.fissureCooldown.set(f.name, 15);
       g.perf.mark('fissure remnants');
       for (let i = 0; i < 2; i++) {
-        const e = this.remnantPool.pop() ?? this.makeRemnant();
-        g.perf.mark(this.remnantPool.length ? 'remnant from pool' : 'remnant pool empty');
+        const e = this.takeEcho(g.time.state);
+        if (!e) break;
         e.owner = g.time.state;
         e.yaw = Math.random() * 6.28;
         const off = new THREE.Vector3(Math.cos(i * Math.PI) * 1.2, 0, Math.sin(i * Math.PI) * 1.2);
@@ -980,7 +1084,7 @@ export class EnemyManager {
   summonRemnants(n: number, near: THREE.Vector3) {
     const g = this.g, st = g.time.state;
     for (let i = 0; i < n; i++) {
-      const e = this.remnantPool.pop();
+      const e = this.takeEcho(st);
       if (!e) return;
       let at = near.clone();
       for (let k = 0; k < 12; k++) {
@@ -1042,7 +1146,7 @@ export class EnemyManager {
       enc.wave = 0;
       for (const e of enc.enemies) { e.reset(); }
     }
-    for (const r of this.remnants) { this.g.scene.remove(r.root); r.reset(); this.remnantPool.push(r); }
+    for (const r of this.remnants) { this.g.scene.remove(r.root); r.reset(); this.poolEcho(r); }
     this.remnants = [];
     this.slotsUsed.clear();
     for (const a of this.arrows) { this.g.scene.remove(a.mesh); this.arrowPool.push(a.mesh); }

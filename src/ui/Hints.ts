@@ -6,7 +6,7 @@ import { Platform } from '../platform/Platform';
  */
 const TOUCH_PROMPTS: Record<string, string> = {
   T_MOVE: 'Left thumb moves — push to the rim to sprint · drag anywhere else to look · JUMP to leap',
-  T_COMBAT: 'ATTACK · HEAVY · hold GUARD (tap just before a hit = parry, then ATTACK to riposte) · DODGE toward the stick · GUARD + HEAVY kicks · pause a beat between attacks for two-handed combos',
+  T_COMBAT: 'ATTACK · HEAVY · hold GUARD (tap just before a hit = parry, then ATTACK to riposte) · GUARD + ATTACK bashes · GUARD + HEAVY kicks · pause a beat between attacks for two-handed combos',
   T_SHIFT: "The gate stands raised in the castle's memory. Hold SHIFT to shift — costs one resonance.",
   T_CROUCH: 'Walk into low gaps — you stoop through them on your own.',
   T_CRAWL: 'Keep moving to crawl beneath the fallen roof.',

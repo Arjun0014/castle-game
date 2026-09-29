@@ -51,6 +51,8 @@ export class HUD {
       <div class="objective"><i>◆</i><span></span></div>
       <div class="subtitle"><span></span></div>
       <div class="tutorial"><b></b><span></span></div>
+      <div class="gift"><small>THE CASTLE ANSWERS YOUR BLOOD</small><b></b><span class="gift-key"></span></div>
+      <div class="gift-tip"><b></b><span></span></div>
       <div class="prompt"></div>
       <div class="interact"></div>
       <div class="message"></div>
@@ -87,6 +89,8 @@ export class HUD {
     this.objectiveEl = q('.objective');
     this.subtitleEl = q('.subtitle');
     this.tutorialEl = q('.tutorial');
+    this.giftEl = q('.gift');
+    this.giftTipEl = q('.gift-tip');
     this.guideEl = document.createElement('div');
     this.guideEl.className = 'offscreen guide';
     root.appendChild(this.guideEl);
@@ -116,6 +120,35 @@ export class HUD {
       el.className = 'offscreen on' + (t.ranged ? ' ranged' : '') + (t.hot ? ' hot' : '');
     }
   }
+
+  private giftEl!: HTMLElement;
+  private giftTipEl!: HTMLElement;
+  private giftTimer = 0;
+  private giftTipKey = '';
+  /**
+   * A floor reward unlocked: a short gilded reveal (the move's name and its input), not a modal — play goes on.
+   * The persistent how-to lives in abilityTip() until the move has been performed once.
+   */
+  abilityReveal(name: string, input: string, seconds = 4.4) {
+    const el = this.giftEl;
+    (el.children[1] as HTMLElement).textContent = name;
+    (el.children[2] as HTMLElement).textContent = input;
+    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    this.giftTimer = seconds;
+  }
+  /** Compact persistent tip ("HOLD HEAVY — …") until the move is tried; null hides it. */
+  abilityTip(input: string | null, text = '') {
+    const key = input ? input + '|' + text : '';
+    if (key === this.giftTipKey) return;
+    this.giftTipKey = key;
+    const el = this.giftTipEl;
+    if (!input) { el.classList.remove('on'); return; }
+    (el.children[0] as HTMLElement).textContent = input;
+    (el.children[1] as HTMLElement).textContent = text;
+    el.classList.add('on');
+  }
+  /** a cinematic finisher is playing: letterbox bars in, the transient HUD out */
+  cinematic(on: boolean) { this.root.classList.toggle('cine', on); }
 
   private objectiveEl!: HTMLElement;
   private subtitleEl!: HTMLElement;
@@ -267,6 +300,7 @@ export class HUD {
 
   update(dt: number) {
     if (this.noticeTimer > 0 && (this.noticeTimer -= dt) <= 0) { this.notice = null; this.renderTutorial(); }
+    if (this.giftTimer > 0 && (this.giftTimer -= dt) <= 0) this.giftEl.classList.remove('on');
     if (this.promptTimer > 0 && (this.promptTimer -= dt) <= 0) this.promptEl.classList.remove('on');
     if (this.messageTimer > 0 && (this.messageTimer -= dt) <= 0) this.messageEl.classList.remove('on');
     if (this.denyTimer > 0 && (this.denyTimer -= dt) <= 0) this.denyEl.classList.remove('on');

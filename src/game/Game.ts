@@ -12,7 +12,7 @@ import { AudioFX, type AmbientContext } from '../audio/Audio';
 import { realTimeTo, type AttackKind } from '../combat/CombatData';
 
 /** How heavy each attack kind sounds (0 light … 1 heavy). */
-const SWING_WEIGHT: Record<AttackKind, number> = { light: 0.15, heavy: 0.75, finisher: 0.85, kick: 0.2, bash: 0.2, air: 0.55, crouch: 0.3, sprint: 0.6 };
+const SWING_WEIGHT: Record<AttackKind, number> = { light: 0.15, heavy: 0.75, finisher: 0.85, kick: 0.2, bash: 0.2, air: 0.55, crouch: 0.3, sprint: 0.6, whirl: 0.5 };
 import { Checkpoints } from '../levels/Checkpoints';
 import { Atmosphere, installAtmosphereFog } from '../vfx/Atmosphere';
 import { FLOORS, type FloorDef, saveCarry } from '../levels/Floors';
@@ -33,6 +33,8 @@ import { Signals } from './Signals';
 import { Objectives, type Learned } from './Objectives';
 import { Dialogue } from '../audio/Dialogue';
 import { NavGrid } from '../enemies/NavGrid';
+import { ABILITY_FLOOR, ABILITY_INFO, HOLD_THRESHOLD, WHIRL_MAX, abilitiesForFloor, type AbilityId } from '../combat/Abilities';
+import { Finishers } from '../combat/Finishers';
 
 /** Loading-screen sink: fraction 0..1 of the whole operation + what is happening. */
 export type LoadSink = (f: number, label: string) => void;
@@ -109,7 +111,7 @@ export class Game {
 
   touch: TouchControls | null = null;
   /** what the tutorials have seen the player do (kept across floors) */
-  learned: Learned = { moved: 0, looked: 0, hits: 0, guarded: false, dodged: false, shifted: false, sigil: false, resonance: false, heavy: false };
+  learned: Learned = { moved: 0, looked: 0, hits: 0, guarded: false, dodged: false, shifted: false, sigil: false, resonance: false, heavy: false, crownbreaker: false, whirlwind: false };
   objectives!: Objectives;
   /** the heroine's voice + subtitles */
   dialogue: Dialogue;
@@ -119,6 +121,8 @@ export class Game {
   signals = new Signals();
   /** soft combat camera (touch) + attack magnetism (all inputs) */
   assist: TargetAssist;
+  /** cinematic last-enemy finishers (combat/Finishers.ts) */
+  finisher: Finishers;
   /** `?camassist=0|1` pins the soft camera; otherwise it follows the input mode (touch only) */
   camAssistPin: boolean | null = null;
   /** Adaptive resolution: multiplier on the device pixel-ratio cap (see updateDynRes). */
@@ -156,6 +160,7 @@ export class Game {
     const ca = new URLSearchParams(location.search).get('camassist');
     if (ca === '0' || ca === '1') this.camAssistPin = ca === '1';
     this.assist = new TargetAssist(() => this.enemyList(), () => this.level.collision, () => this.time.state);
+    this.finisher = new Finishers(this);
     this.perf = new Perf(this.renderer);
     this.audio = new AudioFX({ muted: opts.muted });
     this.dialogue = new Dialogue(this, !!opts.muted);
@@ -315,6 +320,9 @@ export class Game {
       this.player = new Player(m.get('glb:hero'));
       this.scene.add(this.player.root);
     }
+    // floor rewards follow the floor reached (Floor 2: Crownbreaker, Floor 3: + Whirlwind) — also for ?floor=N
+    this.player.abilities = abilitiesForFloor(id);
+    this.abilityRevealAt = -1;
     const man = (floorManifests as Record<string, { materials: string[]; veg: string[] }>)[id];
     this.mats = new MaterialLibrary((set) => m.get('tex:' + set));
     this.mats.createAll(man.materials);
@@ -378,6 +386,7 @@ export class Game {
   /** Tear down everything that belongs to the current floor (assets are released separately by scope). */
   private unloadFloor() {
     this.autopilot = null;
+    this.finisher.end();
     this.enemies.dispose();
     this.checkpoints.dispose();
     this.objectives.dispose();
@@ -463,11 +472,38 @@ export class Game {
     p.onAfterimage = () => this.fx.afterimage(p);
     p.events.executionTarget = () => this.enemies.executionTarget(p.pos, p.facing);
     p.events.onCharge = (level) => {
-      if (p.chargeTime < 0.02) this.audio.play('blade_ring', { rate: 0.8, vol: 0.9 });
+      if (p.chargeTime < 0.02) {
+        this.audio.play('blade_ring', { rate: 0.8, vol: 0.9 });
+        // the castle leans in: a low reversed roar under the raised blade (stopped on release)
+        if (p.attack?.shock) this.chargeHum = this.audio.play('shift_charge', { rate: 1.35, vol: 0.45 });
+      }
       this.fx.chargeGlow(p.blade.tip, p.blade.hilt, level);
+      if (p.attack?.shock) {
+        // dust and embers drawn in along the floor toward her feet, a tremble that builds with the charge
+        const at = p.pos;
+        for (let i = 0; i < 2; i++) {
+          const a = Math.random() * Math.PI * 2, r = 2.5 + Math.random() * 2.5 + level * 1.5;
+          const from = new THREE.Vector3(at.x + Math.cos(a) * r, at.y + 0.1, at.z + Math.sin(a) * r);
+          this.fx.emit(from, new THREE.Vector3(at.x - from.x, 0.4, at.z - from.z).multiplyScalar(2.2), level > 0.95 ? 0xfff0c0 : 0xffa050, 0.45, 0.05 + level * 0.04, 0);
+        }
+        this.rig.addShake(0.004 + level * 0.01);
+        if (level >= 1 && !this.chargeFull) { this.chargeFull = true; this.audio.play('blade_ring', { rate: 1.25, vol: 1 }); this.hud.flash('#ffe2a8', 0.12); Platform.haptic(18); }
+      }
+    };
+    p.events.onAbility = (id, phase) => {
+      if (id === 'crownbreaker' && phase === 'release') { this.learned.crownbreaker = true; this.stopChargeHum(); }
+      if (id === 'crownbreaker' && phase === 'start') this.chargeFull = false;
+      if (id === 'whirlwind' && phase === 'start') {
+        this.learned.whirlwind = true;
+        this.audio.play('blade_ring', { rate: 1.3, vol: 0.8 });
+        this.fx.dust(p.pos.clone().setY(p.pos.y + 0.1), 10);
+      }
+      this.signals.emit('ability', { id, phase });
     };
     p.events.onHitWindow = (a, i) => {
       if (a.charge) this.audio.swing(1, undefined, 1.1);
+      if (a.whirl) this.fx.dust(p.pos.clone().setY(p.pos.y + 0.08), 3);
+      if (a.shock) { this.crownbreakerImpact(a.hits[i].reach ?? 3.6, a.shock.reach); return; }
       // the plunge: the sword strikes the floor and a shockwave runs out (the Crownbreaker scales with its charge)
       if (a.clip === 'gs_plunge') {
         const at = p.pos.clone().addScaledVector(p.facing, 1.1);
@@ -494,6 +530,46 @@ export class Game {
       this.signals.emit('state', { to });
     };
     this.time.onGain = (amt, reason) => { if (reason !== 'hit') this.fx.resonance(this.player, amt); };
+  }
+
+  private chargeHum: AudioBufferSourceNode | null = null;
+  private chargeFull = false;
+  private stopChargeHum() {
+    const h = this.chargeHum;
+    this.chargeHum = null;
+    if (h && this.audio.ctx) { try { h.stop(this.audio.ctx.currentTime + 0.12); } catch { /* ended */ } }
+  }
+  /**
+   * The Crownbreaker lands: the blade goes into the floor a pace ahead and the ground answers — a bright ring
+   * and a slower, wider one, stone dust thrown out in a circle, sparks at the blade, a hard hit-stop and slow
+   * breath, a downward camera kick, a warm flash; the stone roars. Scales with the charge.
+   */
+  private crownbreakerImpact(reach: number, perCharge: number) {
+    const p = this.player;
+    const lvl = p.chargeLevel;
+    const at = p.pos.clone().addScaledVector(p.facing, 1.0);
+    const r = reach + lvl * perCharge;
+    this.stopChargeHum();
+    this.schedule(0.08, () => {
+      this.fx.shockwave(at, r, 0.6 + lvl * 0.4);
+      this.schedule(0.1, () => this.fx.shockwave(at, r * 1.3, 0.25));
+      for (let k = 0; k < 18; k++) {
+        const a = (k / 18) * Math.PI * 2;
+        this.fx.dust(at.clone().add(new THREE.Vector3(Math.cos(a) * 1.3, 0.12, Math.sin(a) * 1.3)), 2);
+      }
+      this.fx.sparks(p.blade.tip.clone(), 26 + Math.round(lvl * 20), 0xffd9a0);
+      this.fx.hitstop(0.06 + lvl * 0.05);
+      this.fx.slowmo(0.32, 0.5);
+      this.rig.addShake(0.45 + lvl * 0.25);
+      this.rig.punch(new THREE.Vector3(0, -1, 0), 3.2 + lvl * 2);
+      this.kickFov(3 + lvl * 4);
+      this.hud.flash('#ffd9a0', 0.14 + lvl * 0.12);
+      this.audio.play('kill_impact', { pos: at, rate: 0.62, vol: 1.3 });
+      this.audio.play('land_heavy', { pos: at, vol: 1.5 });
+      this.audio.play('rubble', { pos: at, vol: 1.1 });
+      this.audio.play('shift_boom', { pos: at, rate: 1.25, vol: 0.55 + lvl * 0.25 });
+      Platform.haptic(45 + Math.round(lvl * 30));
+    });
   }
 
   setEnvironment(state: TimeState, instant: boolean) {
@@ -537,9 +613,50 @@ export class Game {
   start() {
     if (!this.started) this.startTime = performance.now();
     this.started = true;
+    if (this.announcedFloor !== this.floorId) {
+      this.announcedFloor = this.floorId;
+      // after the floor's title card: the reward this floor's arrival brings (none on Floor 1)
+      this.schedule(4.2, () => this.announceAbilities());
+    }
     this.clock.start();
     this.renderer.setAnimationLoop(() => this.frame());
   }
+  private announcedFloor = -1;
+  /** game time of this floor's ability reveal (-1 = none yet); the persistent tip follows it */
+  private abilityRevealAt = -1;
+  /**
+   * Clearing a floor strengthened her: a short gilded reveal (name + input), a pulse of the castle's light at her
+   * feet, and one line in her own voice. The how-to then stays as a small tip until she has done it once.
+   */
+  announceAbilities() {
+    const fresh = [...this.player.abilities].filter((a) => ABILITY_FLOOR[a] === this.floorId);
+    this.abilityRevealAt = this.t;
+    if (!fresh.length) return;
+    const id = fresh[0], info = ABILITY_INFO[id];
+    this.hud.abilityReveal(info.name, info.input);
+    this.fx.shiftBurst(this.player.pos, this.time.state);
+    this.fx.resonanceFrom(this.player.pos.clone().setY(this.player.pos.y + 3), this.player, 60);
+    // core sounds only (floor-scoped ones such as the Crown's are not loaded on Floor 2)
+    this.audio.play('resonance', { vol: 0.9, rate: 0.62 });
+    this.audio.play('shift_charge', { vol: 0.3, rate: 1.5 });
+    this.audio.play('sigil', { vol: 0.7 });
+    this.rig.addShake(0.12);
+    Platform.haptic(20);
+    this.signals.emit('ability:unlock', { id });
+    this.dialogue.sayId(info.line);
+  }
+  /** the first not-yet-performed reward (newest first) gets the persistent tip */
+  private updateAbilityTip() {
+    const p = this.player;
+    let pending: AbilityId | null = null;
+    for (const a of p.abilities) if (!this.learned[a] && (!pending || ABILITY_FLOOR[a] > ABILITY_FLOOR[pending])) pending = a;
+    const show = !!pending && this.abilityRevealAt >= 0 && this.t - this.abilityRevealAt > (ABILITY_FLOOR[pending!] === this.floorId ? 4.5 : 0.5) && p.alive && !this.finisher?.active;
+    if (!show) { this.hud.abilityTip(null); this.touch?.holdHint(null); return; }
+    const info = ABILITY_INFO[pending!];
+    this.hud.abilityTip(info.input, Platform.isTouch ? info.touch : info.kbm);
+    this.touch?.holdHint(pending === 'crownbreaker' ? 'heavy' : 'light');
+  }
+
   /** Stop the frame loop (floor transitions). */
   stop() { this.renderer.setAnimationLoop(null); }
 
@@ -637,6 +754,7 @@ export class Game {
     }
     if (p.lockTarget && !p.lockTarget.alive) p.lockTarget = null;
     this.rig.lockTarget = p.lockTarget?.pos ?? null;
+    this.finisher.update(dt);
     p.update(dt, this.input, this.rig, this.level.collision, this.time.state, (kind, wish) => this.assist.meleeTarget(kind, p.pos, wish, p.facing, this.t));
     this.enemies.update(dt);
     this.time.update(dt);
@@ -661,7 +779,7 @@ export class Game {
     this.rig.inCombat = this.enemies.inCombat;
     this.rig.pullWant = this.fightPull();
     const look = this.input.consumeLook();
-    this.assist.cameraEnabled = (this.camAssistPin ?? Platform.isTouch) && !p.lockTarget && p.alive && !this.autopilot;
+    this.assist.cameraEnabled = (this.camAssistPin ?? Platform.isTouch) && !p.lockTarget && p.alive && !this.autopilot && !this.finisher.active;
     this.rig.yaw += this.assist.cameraYaw({
       dt, now: this.t, yaw: this.rig.yaw, halfHFov: Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * this.camera.aspect),
       playerPos: p.pos, camPos: this.camera.position, wish: this.wishWorld(), manual: Math.abs(look.dx) + Math.abs(look.dy) > 1e-4,
@@ -675,12 +793,14 @@ export class Game {
     this.playerLight.intensity = this.heroLight;
     this.atmo.update(dt, this.t, this.camera, p.pos, p.grounded ? p.pos.y : null, (this.scene.fog as THREE.Fog).color);
     this.level.update(dt, this.t, p.pos);
-    const swinging = p.state === 'attack' && !!p.attack && p.attack.hits.some((h) => p.attackClipTime >= h.t0 - 0.05 && p.attackClipTime <= h.t1 + 0.03);
-    this.fx.setTrail(swinging, p.blade.hilt, p.blade.tip, p.attack ? SWING_WEIGHT[p.attack.kind] : 0);
+    // the Whirlwind keeps its trail for the whole spin (a longer-lived ring of light round her)
+    const swinging = this.finisher.trailOn || (p.state === 'attack' && !!p.attack && (!!p.attack.whirl || p.attack.hits.some((h) => p.attackClipTime >= h.t0 - 0.05 && p.attackClipTime <= h.t1 + 0.03)));
+    this.fx.setTrail(swinging, p.blade.hilt, p.blade.tip, p.attack ? SWING_WEIGHT[p.attack.kind] : 0, p.attack?.whirl ? 2.4 : 1);
     this.fx.update(dt, this.t);
     if (this.gore.state !== this.time.state) this.gore.setState(this.time.state);
     this.gore.update(dt);
-    const baseFov = this.rig.baseFov;
+    // a finisher's close shot narrows the lens (eased with the camera blend)
+    const baseFov = this.rig.baseFov - this.finisher.fovOffset * this.rig.cineK;
     if (this.fovPunch > 0.01 || this.camera.fov !== baseFov) {
       this.fovPunch *= Math.max(0, 1 - dt * 9);
       if (this.fovPunch <= 0.01) this.fovPunch = 0;
@@ -698,11 +818,21 @@ export class Game {
     this.hud.update(dt);
     this.updateReticle();
     if (this.touch && Platform.isTouch) {
+      const inp = this.input, ab = p.abilities;
+      const whirling = !!p.attack?.whirl;
+      const charging = p.attack?.shock && p.state === 'attack' && p.chargeTime > 0 && p.chargeLevel < 1.001 && inp.isDown('heavy');
       this.touch.update({
         channel: p.isChanneling ? p.channelTime / p.channelDuration : 0,
         canShift: this.time.unlocked && this.time.charge >= PER_SHIFT, guarding: p.state === 'block',
+        canHold: { light: ab.has('whirlwind'), heavy: ab.has('crownbreaker') },
+        hold: {
+          light: whirling ? 1 - p.whirlT / WHIRL_MAX : ab.has('whirlwind') && inp.isDown('light') ? inp.heldFor('light') / HOLD_THRESHOLD : 0,
+          heavy: charging ? p.chargeLevel : ab.has('crownbreaker') && inp.isDown('heavy') && !p.attack?.shock ? inp.heldFor('heavy') / HOLD_THRESHOLD : p.attack?.shock && p.state === 'attack' ? 1 : 0,
+          lightOn: whirling, heavyOn: !!p.attack?.shock && p.state === 'attack',
+        },
       });
     }
+    this.updateAbilityTip();
     if (this.debug) this.hud.debugEl.textContent = this.debugText();
   }
 

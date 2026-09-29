@@ -177,59 +177,72 @@ html.input-touch .interact { display: none; }
 html.input-touch .deny { top: 50cqh; }
 html.input-touch .channel { top: 47cqh; }
 
-/* ---- touch controls (only in touch input mode). Session 7: a right-edge crescent (see TouchControls.ts) that
-   leaves a free camera pocket in the lower right; forged-iron discs with an engraved gold ring, accent per role. */
+/* ---- touch controls (only in touch input mode). Session 8: see TouchControls.ts — Attack + Jump on the right
+   edge, Heavy + Guard along the arc, Shift a small lozenge, the lower-right corner EMPTY for camera swipes. Buttons
+   are heraldic seals drawn in SVG (aged-gold rim + the role's device + an enamel field); centres from the stage's
+   bottom-right corner (--r, --b) and diameter (--d) in units of --u (stage width / 400). */
 #touch { position: absolute; inset: 0; z-index: 15; display: none; touch-action: none; --tu: 1; --u: calc(var(--tu) * 1px);
-  --rim: rgba(201,164,98,0.55); --glyph: rgba(236,224,198,0.9); font-family: 'EB Garamond', Georgia, serif; }
+  --glyph: rgba(240,228,204,0.94); font-family: 'EB Garamond', Georgia, serif; transition: opacity .35s; }
 html.input-touch #touch { display: block; }
-#touch svg { width: 44%; height: 44%; fill: var(--glyph); stroke: var(--glyph); stroke-linecap: round; stroke-linejoin: round; pointer-events: none;
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.8)); }
-.t-cluster { position: absolute; right: var(--sar); bottom: var(--sab); width: calc(200 * var(--u)); height: calc(400 * var(--u)); pointer-events: none; }
-/* every button is positioned by its CENTRE (--r, --b from the stage's right/bottom) and sized by --d */
-.t-btn { --d: 62; --r: 60; --b: 90; position: absolute; width: calc(var(--d) * var(--u)); height: calc(var(--d) * var(--u));
+#touch.cine { opacity: 0.18; }
+#touch svg.t-glyph { position: relative; width: 42%; height: 42%; fill: var(--glyph); stroke: var(--glyph); stroke-linecap: round; stroke-linejoin: round; pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.85)); margin-bottom: calc(5 * var(--u)); }
+.t-cluster { position: absolute; right: var(--sar); bottom: var(--sab); width: calc(260 * var(--u)); height: calc(360 * var(--u)); pointer-events: none; }
+.t-btn { --d: 66; --r: 60; --b: 90; position: absolute; width: calc(var(--d) * var(--u)); height: calc(var(--d) * var(--u));
   right: calc((var(--r) - var(--d) / 2) * var(--u)); bottom: calc((var(--b) - var(--d) / 2) * var(--u));
   border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: radial-gradient(circle at 50% 32%, rgba(64,50,40,0.66), rgba(16,12,11,0.74) 68%, rgba(8,6,6,0.8));
-  border: 1.5px solid var(--rim);
-  box-shadow: inset 0 0 0 calc(3 * var(--u)) rgba(0,0,0,0.32), inset 0 0 0 calc(4 * var(--u)) rgba(201,164,98,0.16), 0 3px 12px rgba(0,0,0,0.5);
-  pointer-events: auto; transition: transform .06s, background .08s, opacity .25s, box-shadow .12s; }
-.t-btn span { position: absolute; bottom: calc(6.5 * var(--u)); font-size: calc(7.6 * var(--u)); letter-spacing: 0.16em; color: rgba(236,224,198,0.72); pointer-events: none; font-weight: 500; }
-.t-btn.down { transform: scale(0.91); background: radial-gradient(circle at 50% 38%, rgba(216,179,106,0.5), rgba(70,48,26,0.7) 70%);
-  border-color: rgba(255,226,160,0.95); box-shadow: 0 0 16px rgba(255,200,120,0.4), inset 0 0 0 calc(3 * var(--u)) rgba(0,0,0,0.2); }
-.t-light { --d: 94; --r: 60; --b: 92; border-width: 2px; border-color: rgba(216,179,106,0.8);
-  background: radial-gradient(circle at 50% 36%, rgba(120,30,24,0.55), rgba(26,10,9,0.8) 66%, rgba(10,6,6,0.85));
-  box-shadow: inset 0 0 0 calc(4 * var(--u)) rgba(0,0,0,0.35), inset 0 0 0 calc(5.5 * var(--u)) rgba(216,179,106,0.28), 0 4px 16px rgba(0,0,0,0.55); }
-.t-light span { bottom: calc(9 * var(--u)); font-size: calc(8.6 * var(--u)); color: rgba(246,232,206,0.85); }
-.t-light svg { width: 42%; height: 42%; margin-bottom: calc(6 * var(--u)); }
-.t-dodge { --d: 66; --r: 156; --b: 58; }
-.t-heavy { --d: 64; --r: 46; --b: 196; --rim: rgba(226,140,70,0.6); }
-.t-guard { --d: 62; --r: 142; --b: 158; --rim: rgba(176,190,204,0.6); }
-.t-jump { --d: 56; --r: 44; --b: 282; }
-.t-shift { --d: 54; --r: 44; --b: 364; --rim: rgba(140,196,255,0.6);
-  background: radial-gradient(circle at 50% 34%, rgba(34,52,74,0.62), rgba(8,12,18,0.78) 70%); }
-.t-shift span, .t-jump span { font-size: calc(7 * var(--u)); }
-.t-guard.held { border-color: rgba(255,226,160,0.95); background: radial-gradient(circle at 50% 40%, rgba(216,179,106,0.42), rgba(36,28,20,0.72)); }
-.t-light.bash, .t-heavy.bash { border-color: rgba(255,210,140,0.95); box-shadow: 0 0 14px rgba(255,200,120,0.45); }
-.t-shift.dim { opacity: 0.38; }
+  pointer-events: auto; transition: transform .07s, opacity .25s, filter .12s; filter: drop-shadow(0 3px 7px rgba(0,0,0,0.6)); }
+.t-face { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.t-face .rim { fill: #120d0a; stroke: url(#tg-gold); stroke-width: 2.4; }
+.t-face .dev { fill: url(#tg-gold); opacity: 0.85; }
+.t-face .edge { fill: none; stroke: rgba(236,206,142,0.55); stroke-width: 1.2; }
+.t-face .gloss { fill: none; stroke: rgba(255,240,210,0.08); stroke-width: 7; }
+.t-face .prog { fill: none; stroke: #ffd48a; stroke-width: 3.6; stroke-linecap: round; stroke-dasharray: 0 100; opacity: 0.95;
+  filter: drop-shadow(0 0 3px rgba(255,190,90,0.9)); transition: opacity .15s; }
+.t-btn span { position: absolute; bottom: calc(var(--d) * 0.13 * var(--u)); font-size: calc(7.4 * var(--u)); letter-spacing: 0.2em; margin-right: -0.2em;
+  color: rgba(242,228,200,0.8); pointer-events: none; font-weight: 600; text-shadow: 0 1px 2px #000; }
+.t-btn em { position: absolute; top: calc(-9 * var(--u)); padding: calc(1 * var(--u)) calc(5 * var(--u)); font-style: normal; font-size: calc(7 * var(--u)); letter-spacing: 0.22em;
+  color: #1c1208; background: linear-gradient(180deg, #f3dca0, #c49a52); border-radius: calc(3 * var(--u)); opacity: 0; transform: translateY(3px); transition: opacity .3s, transform .3s; pointer-events: none; }
+.t-btn.down { transform: scale(0.92); filter: drop-shadow(0 0 10px rgba(255,200,120,0.55)) brightness(1.25); }
+/* the two prominent verbs */
+.t-light { --d: 92; --r: 60; --b: 196; }
+.t-light span { font-size: calc(8.6 * var(--u)); color: rgba(250,236,212,0.9); }
+.t-jump { --d: 76; --r: 58; --b: 302; }
+.t-heavy { --d: 70; --r: 148; --b: 166; }
+.t-guard { --d: 66; --r: 190; --b: 74; }
+/* Shift: a small azure lozenge up-left of Jump — rare, deliberate */
+.t-shift { --d: 54; --r: 150; --b: 276; border-radius: 0; }
+.t-shift .rim { fill: #0a0f15; stroke: rgba(150,200,255,0.75); stroke-width: 2.6; }
+.t-shift .edge { stroke: rgba(160,210,255,0.45); }
+.t-shift .prog { stroke: #bfe0ff; filter: drop-shadow(0 0 3px rgba(140,200,255,0.9)); }
+.t-shift svg.t-glyph { width: 40%; height: 40%; margin-bottom: 0; }
+.t-shift span { bottom: calc(-12 * var(--u)); font-size: calc(6.6 * var(--u)); color: rgba(190,220,255,0.8); }
+.t-shift.dim { opacity: 0.4; }
+.t-shift.channel { filter: drop-shadow(0 0 12px rgba(140,200,255,0.6)); }
+/* states */
+.t-guard.held { filter: drop-shadow(0 0 10px rgba(255,226,160,0.55)) brightness(1.2); }
+.t-light.bash, .t-heavy.bash { filter: drop-shadow(0 0 12px rgba(255,200,120,0.6)); }
+.t-btn.can-hold .rim { stroke-width: 3; }
+.t-btn.holding .prog { stroke-width: 5; stroke: #fff0c8; }
+.t-btn.holding { filter: drop-shadow(0 0 14px rgba(255,190,90,0.75)) brightness(1.2); }
 .t-btn.teach { animation: t-teach 1.3s ease-in-out infinite; }
-@keyframes t-teach { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,214,140,0.0), 0 3px 12px rgba(0,0,0,0.5); } 50% { box-shadow: 0 0 0 calc(7 * var(--u)) rgba(255,214,140,0.28), 0 0 22px rgba(255,200,120,0.55); } }
+@keyframes t-teach { 0%, 100% { filter: drop-shadow(0 3px 7px rgba(0,0,0,0.6)); } 50% { filter: drop-shadow(0 0 16px rgba(255,210,130,0.95)) brightness(1.2); } }
 .t-shift.teach { animation-name: t-teach-blue; }
-@keyframes t-teach-blue { 0%, 100% { box-shadow: 0 0 0 0 rgba(140,200,255,0); } 50% { box-shadow: 0 0 0 calc(7 * var(--u)) rgba(140,200,255,0.3), 0 0 22px rgba(140,200,255,0.6); } }
-.t-ring { position: absolute; inset: -5px; border-radius: 50%; pointer-events: none; --p: 0;
-  background: conic-gradient(rgba(190,220,255,0.95) calc(var(--p) * 360deg), transparent 0);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); }
-/* the free camera pocket: a faint hint until the player has turned the camera a few times */
-.t-look-hint { position: absolute; right: calc(var(--sar) + 90 * var(--u)); bottom: calc(var(--sab) + 214 * var(--u)); width: calc(68 * var(--u)); height: calc(68 * var(--u));
+@keyframes t-teach-blue { 0%, 100% { filter: drop-shadow(0 3px 7px rgba(0,0,0,0.6)); } 50% { filter: drop-shadow(0 0 16px rgba(140,200,255,0.95)) brightness(1.2); } }
+.t-btn.teach-hold em { opacity: 1; transform: none; }
+.t-btn.teach-hold { animation: t-teach 1.8s ease-in-out infinite; }
+/* the free camera pocket (lower-right corner): a faint hint until the player has turned the camera a few times */
+.t-look-hint { position: absolute; right: calc(var(--sar) + 22 * var(--u)); bottom: calc(var(--sab) + 40 * var(--u)); width: calc(64 * var(--u)); height: calc(64 * var(--u));
   border-radius: 50%; border: 1px dashed rgba(216,179,106,0.28); display: flex; flex-direction: column; align-items: center; justify-content: center;
   pointer-events: none; opacity: 0.75; transition: opacity 1.2s; }
-.t-look-hint svg { width: 46% !important; height: 46% !important; opacity: 0.6; }
+.t-look-hint svg.t-glyph { width: 46%; height: 46%; opacity: 0.6; margin: 0; }
 .t-look-hint span { font-size: calc(7 * var(--u)); letter-spacing: 0.18em; color: rgba(236,224,198,0.5); margin-top: calc(2 * var(--u)); }
 .t-look-hint.gone { opacity: 0; }
 #touch.sticking .t-look-hint { opacity: 0.35; }
 /* contextual interaction: a named card above the thumbs ("BLOOD SIGIL / Activate Checkpoint") */
-.t-interact { left: 50%; right: auto; bottom: calc(var(--sab) + 300 * var(--u)); transform: translateX(-50%); width: auto; height: auto; min-height: calc(50 * var(--u));
+.t-interact { left: 50%; right: auto; bottom: calc(var(--sab) + 372 * var(--u)); transform: translateX(-50%); width: auto; height: auto; min-height: calc(50 * var(--u));
   border-radius: calc(8 * var(--u)); padding: calc(6 * var(--u)) calc(20 * var(--u)) calc(7 * var(--u)); display: none; flex-direction: column; gap: 1px;
-  border-color: rgba(216,179,106,0.75); background: linear-gradient(180deg, rgba(40,20,16,0.82), rgba(12,8,8,0.86)); }
+  border: 1.5px solid rgba(216,179,106,0.75); background: linear-gradient(180deg, rgba(40,20,16,0.86), rgba(12,8,8,0.9)); filter: none; }
 .t-interact.on { display: flex; }
 .t-interact.off { opacity: 0.55; border-color: rgba(160,150,140,0.5); }
 .t-interact.down { transform: translateX(-50%) scale(0.95); }
@@ -237,7 +250,7 @@ html.input-touch #touch { display: block; }
 .t-interact b:empty { display: none; }
 .t-interact span { position: static; font-size: calc(13.5 * var(--u)); letter-spacing: 0.06em; color: #f4e8cf; white-space: nowrap; font-weight: 500; }
 .t-pause { position: absolute; top: calc(var(--sat) + 1.6cqh); right: calc(var(--sar) + 3cqw); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(8,6,5,0.45); border: 1px solid rgba(216,179,106,0.35); }
-.t-pause svg { width: 52% !important; height: 52% !important; }
+.t-pause svg.t-glyph { width: 52%; height: 52%; margin: 0; }
 .t-stick-home { position: absolute; left: calc(var(--sal) + 34 * var(--u)); bottom: calc(var(--sab) + 58 * var(--u)); width: calc(116 * var(--u)); height: calc(116 * var(--u)); border-radius: 50%;
   border: 1.5px dashed rgba(216,179,106,0.24); pointer-events: none; transition: opacity .2s; }
 #touch.sticking .t-stick-home { opacity: 0; }
@@ -246,3 +259,30 @@ html.input-touch #touch { display: block; }
 .t-stick.on { display: block; }
 .t-stick.sprint { border-color: rgba(255,214,140,0.95); box-shadow: 0 0 18px rgba(255,190,110,0.35); }
 .t-knob { position: absolute; left: 50%; top: 50%; width: 44%; height: 44%; margin: -22% 0 0 -22%; border-radius: 50%; background: radial-gradient(circle at 45% 38%, rgba(236,214,172,0.8), rgba(128,98,62,0.7)); border: 1px solid rgba(255,235,200,0.65); box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+
+/* ---- floor rewards (HUD.abilityReveal / abilityTip): a gilded reveal, then a compact persistent "HOLD …" tip */
+.gift { position: absolute; left: 50%; top: 34%; transform: translateX(-50%); text-align: center; opacity: 0; pointer-events: none; font-family: 'EB Garamond', Georgia, serif; }
+.gift.on { animation: gift-in 4.4s ease-out forwards; }
+@keyframes gift-in { 0% { opacity: 0; transform: translateX(-50%) scale(1.06); letter-spacing: 0.1em; } 10% { opacity: 1; transform: translateX(-50%) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; } }
+.gift small { display: block; font-size: 11px; letter-spacing: 0.42em; color: #cdbb95; margin-bottom: 6px; }
+.gift b { display: block; font-weight: 500; font-size: 30px; letter-spacing: 0.3em; margin-right: -0.3em; color: #f2d58e;
+  text-shadow: 0 0 18px rgba(255,190,90,0.55), 0 2px 3px #000; }
+.gift b::before, .gift b::after { content: ''; display: block; height: 1px; margin: 7px auto; width: 70%; background: linear-gradient(90deg, transparent, rgba(216,179,106,0.9), transparent); }
+.gift .gift-key { display: inline-block; margin-top: 4px; padding: 3px 12px 2px; font-size: 13px; letter-spacing: 0.3em; color: #1c1208;
+  background: linear-gradient(180deg, #f3dca0, #c49a52); border-radius: 3px; box-shadow: 0 0 14px rgba(255,190,90,0.35); }
+.gift-tip { position: absolute; left: 50%; bottom: 17%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; width: max-content; max-width: min(78%, 620px);
+  padding: 6px 14px 7px 8px; opacity: 0; transition: opacity .4s; pointer-events: none; font-family: 'EB Garamond', Georgia, serif;
+  background: linear-gradient(180deg, rgba(26,17,10,0.78), rgba(10,7,6,0.72)); border: 1px solid rgba(216,179,106,0.5); border-radius: 6px; }
+.gift-tip.on { opacity: 1; }
+.gift-tip b { flex: none; font-weight: 600; font-size: 11px; letter-spacing: 0.24em; color: #1c1208; padding: 3px 8px 2px; border-radius: 3px; background: linear-gradient(180deg, #f3dca0, #c49a52); }
+.gift-tip span { font-size: 14px; line-height: 1.35; color: #efe3c6; }
+html.view-portrait .gift { top: 36cqh; width: 92cqw; }
+html.view-portrait .gift b { font-size: clamp(18px, 7cqw, 30px); }
+html.view-portrait .gift small { font-size: clamp(8.5px, 2.6cqw, 11px); }
+html.view-portrait .gift-tip { bottom: auto; top: calc(var(--sat) + 27cqh); max-width: 90cqw; }
+html.view-portrait .gift-tip span { font-size: clamp(11px, 3.4cqw, 14px); }
+/* a cinematic finisher: letterbox bars slide in, the transient HUD steps back */
+#hud::before, #hud::after { content: ''; position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 5; transition: height .28s ease; }
+#hud::before { top: 0; } #hud::after { bottom: 0; }
+#hud.cine::before, #hud.cine::after { height: 9%; }
+#hud.cine .objective, #hud.cine .tutorial, #hud.cine .gift-tip, #hud.cine .prompt, #hud.cine .offscreen { opacity: 0 !important; }

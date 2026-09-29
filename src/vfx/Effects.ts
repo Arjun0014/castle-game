@@ -83,12 +83,14 @@ export class Effects {
   hitstopTime = 0;
   // blade trail
   private trailGeo = new THREE.BufferGeometry();
-  private trailN = 28;
+  private trailN = 48;
   private trailPos = new Float32Array(this.trailN * 2 * 3);
   private trailAlpha = new Float32Array(this.trailN * 2);
   private trailMesh: THREE.Mesh;
   private trailHist: { h: THREE.Vector3; t: THREE.Vector3; age: number }[] = [];
   private trailWeight = 0;
+  /** trail lifetime multiplier (the Whirlwind keeps a longer ring of light) */
+  private trailLifeMul = 1;
   trailOn = false;
   private glintTex = starTexture();
   private glints: { sprite: THREE.Sprite; bone: THREE.Object3D; life: number; max: number; size: number }[] = [];
@@ -365,10 +367,11 @@ export class Effects {
    * heavy swings — and fast swings are sub-sampled so the arc stays smooth at 50–60 m/s tip speeds.
    * weight 0 (light, pale steel) .. 1 (heavy/finisher, warm and longer).
    */
-  setTrail(on: boolean, hilt?: THREE.Vector3, tip?: THREE.Vector3, weight = 0) {
+  setTrail(on: boolean, hilt?: THREE.Vector3, tip?: THREE.Vector3, weight = 0, lifeMul = 1) {
     this.trailOn = on;
     if (!on || !hilt || !tip) return;
     this.trailWeight = weight;
+    this.trailLifeMul = lifeMul;
     const prev = this.trailHist[0];
     if (prev) {
       const gap = prev.t.distanceTo(tip);
@@ -454,7 +457,7 @@ export class Effects {
     }
     this.rings = this.rings.filter((r) => r.life > 0);
     // blade trail (time-based fade; see setTrail)
-    const life = 0.1 + this.trailWeight * 0.09;
+    const life = (0.1 + this.trailWeight * 0.09) * this.trailLifeMul;
     for (const e of this.trailHist) e.age += dt;
     while (this.trailHist.length && this.trailHist[this.trailHist.length - 1].age > life) this.trailHist.pop();
     const hist = this.trailHist;

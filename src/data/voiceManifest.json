@@ -601,6 +601,18 @@
    "bytes": 48177,
    "dur": 8.64,
    "source": "discovery_2"
+  },
+  "ab_crownbreaker": {
+   "url": "assets/voice/ab_crownbreaker.ogg",
+   "bytes": 26779,
+   "dur": 4.64,
+   "source": "ability_0"
+  },
+  "ab_whirlwind": {
+   "url": "assets/voice/ab_whirlwind.ogg",
+   "bytes": 25643,
+   "dur": 4.38,
+   "source": "ability_0"
   }
  }
 }

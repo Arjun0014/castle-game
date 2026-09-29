@@ -76,6 +76,15 @@ export class CameraRig {
   private shiftFull = 0;
   /** eased downward nudge keeping the camera clear of ceilings the boom rays did not touch */
   private ceilDrop = 0;
+  /**
+   * Cinematic override (combat/Finishers.ts): while set, the camera eases onto this world position / look target
+   * (fast in); when cleared it eases back to the gameplay camera (slower out). The director updates it per frame.
+   */
+  cine: { pos: THREE.Vector3; look: THREE.Vector3 } | null = null;
+  /** 0 = gameplay camera, 1 = fully on the cinematic shot */
+  cineK = 0;
+  private cineLast = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
+  private cineLook = new THREE.Vector3();
 
   constructor(public camera: THREE.PerspectiveCamera) {}
 
@@ -215,6 +224,16 @@ export class CameraRig {
     }
     this.camera.position.copy(pos);
     this.camera.lookAt(pivot.x, pivot.y - P.lookDrop, pivot.z);
+    // cinematic blend (smoothstep) between the gameplay shot and the director's shot
+    const want = this.cine ? 1 : 0;
+    this.cineK += (want - this.cineK) * Math.min(1, dt * (want ? 8 : 3));
+    if (this.cine) { this.cineLast.pos.copy(this.cine.pos); this.cineLast.look.copy(this.cine.look); }
+    if (this.cineK > 0.002) {
+      const k = this.cineK * this.cineK * (3 - 2 * this.cineK);
+      this.cineLook.set(pivot.x, pivot.y - P.lookDrop, pivot.z).lerp(this.cineLast.look, k);
+      this.camera.position.lerp(this.cineLast.pos, k);
+      this.camera.lookAt(this.cineLook);
+    } else this.cineK = 0;
     // hit kick: critically-damped spring in camera space
     this.kickVel.addScaledVector(this.kick, -260 * dt);
     this.kickVel.multiplyScalar(Math.max(0, 1 - 22 * dt));

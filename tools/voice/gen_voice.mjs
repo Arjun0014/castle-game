@@ -41,11 +41,13 @@ function batches(lines) {
     groups.get(k).push(l);
   }
   const out = [];
+  // a later run must never overwrite an existing batch (session 8: new lines were written over story_0)
+  const free = (k, part) => { while (fs.existsSync(path.join(OUT, `${k}_${part}.json`))) part++; return part; };
   for (const [k, list] of groups) {
-    let cur = [], n = 0, part = 0;
+    let cur = [], n = 0, part = free(k, 0);
     for (const l of list) {
       const c = say(l.tts).length + 2;
-      if (cur.length && n + c > 330) { out.push({ name: `${k}_${part++}`, lines: cur }); cur = []; n = 0; }
+      if (cur.length && n + c > 330) { out.push({ name: `${k}_${part}`, lines: cur }); part = free(k, part + 1); cur = []; n = 0; }
       cur.push(l); n += c;
     }
     if (cur.length) out.push({ name: `${k}_${part}`, lines: cur });

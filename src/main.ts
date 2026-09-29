@@ -3,6 +3,7 @@ import { AutoPilot } from './game/AutoPilot';
 import { FLOORS, takeCarry } from './levels/Floors';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { Platform } from './platform/Platform';
+import { applyDevStart, devFloor } from './game/DevStart';
 
 const stage = document.getElementById('stage')!;
 // portrait stage + input mode first: the renderer sizes itself from the stage
@@ -22,19 +23,17 @@ const game = new Game(app, hud, { muted: automated, stage });
 // automated runs measure fixed quality; adaptive resolution is for players
 if (automated) game.dynResEnabled = false;
 const loader = new LoadingScreen(overlay);
-const floorId = FLOORS[Number(params.get('floor'))] ? Number(params.get('floor')) : 1;
+// dev server only: ?floor=N / ?at=<warp> (game/DevStart.ts); production always starts at Floor 1
+const floorId = devFloor(params) ?? 1;
 const floor = FLOORS[floorId];
 const carry = takeCarry();
 (window as any).__loader = loader;
 
 loader.showInitial(floor);
 game.boot(floorId, (f, label) => loader.progress(f, label)).then(() => {
-  if (floorId > 1) {
-    // a direct ?floor=N start gets a fair minimum (and a legacy carry if one was stored)
-    game.time.unlocked = true;
-    game.time.charge = Math.max(100, carry?.charge ?? 100);
-    if (carry) game.player.hp = Math.max(game.player.maxHp * 0.5, carry.hp);
-  }
+  // a dev ?floor=N / ?at= start gets the progression state of a real player there (and a legacy carry if stored)
+  applyDevStart(game, params);
+  if (floorId > 1 && carry) { game.time.charge = Math.max(game.time.charge, carry.charge); game.player.hp = Math.max(game.player.maxHp * 0.5, carry.hp); }
   loader.ready(floor.readyText);
   (window as any).__ready = true;
   if (params.has('autostart') || params.has('autopilot')) begin();

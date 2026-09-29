@@ -39,7 +39,7 @@ function hot(e: Enemy) {
 }
 
 /** attack magnetism reach by attack kind (m, horizontal) */
-const REACH: Record<AttackKind, number> = { light: 5.0, heavy: 5.0, finisher: 5.0, kick: 4.2, bash: 4.2, crouch: 4.2, sprint: 6.8, air: 3.2 };
+const REACH: Record<AttackKind, number> = { light: 5.0, heavy: 5.0, finisher: 5.0, kick: 4.2, bash: 4.2, crouch: 4.2, sprint: 6.8, air: 3.2, whirl: 0 };
 
 export interface CameraAssistInput {
   dt: number;

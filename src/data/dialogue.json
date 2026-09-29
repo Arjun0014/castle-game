@@ -118,6 +118,8 @@
     { "id": "idle_8", "floor": 0, "cat": "idle", "pri": 1, "pool": "idle", "trigger": "idle", "text": "Too quiet. I don't trust quiet in this place.", "tts": "Too quiet. I don't trust quiet in this place." },
     { "id": "idle_9", "floor": 0, "cat": "idle", "pri": 1, "pool": "idle", "trigger": "idle", "text": "Standing still won't find me any answers.", "tts": "Standing still won't find me any answers." },
     { "id": "idle_10", "floor": 3, "cat": "idle", "pri": 1, "pool": "idle", "trigger": "idle", "text": "Almost there. Wherever there is.", "tts": "Almost there. [dryly] Wherever there is." },
-    { "id": "idle_11", "floor": 3, "cat": "idle", "pri": 1, "pool": "idle", "trigger": "idle", "text": "Cold up here. Even the stone feels tired.", "tts": "Cold up here. Even the stone feels tired." }
+    { "id": "idle_11", "floor": 3, "cat": "idle", "pri": 1, "pool": "idle", "trigger": "idle", "text": "Cold up here. Even the stone feels tired.", "tts": "Cold up here. Even the stone feels tired." },
+    { "id": "ab_crownbreaker", "floor": 2, "cat": "story", "pri": 5, "trigger": "ability:crownbreaker", "text": "My blade's heavier. As if the keep is lending me its weight.", "tts": "[quietly] My blade's heavier... as if the keep is lending me its weight." },
+    { "id": "ab_whirlwind", "floor": 3, "cat": "story", "pri": 5, "trigger": "ability:whirlwind", "text": "The castle turns when I turn now. I'll use that.", "tts": "[low] The castle turns when I turn now... [steady] I'll use that." }
   ]
 }

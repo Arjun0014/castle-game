@@ -7,7 +7,7 @@ import floorManifests from '../data/floorManifests.json';
 import voiceManifest from '../data/voiceManifest.json';
 import assetSizes from '../data/assetSizes.json';
 import audioManifest from '../data/audioManifest.json';
-import { ARCHETYPES, type ArchetypeId, type AssetId } from '../enemies/EnemyTypes';
+import { ARCHETYPES, PAST_COUNTERPART, type ArchetypeId, type AssetId } from '../enemies/EnemyTypes';
 import { materialTextureSets } from '../levels/Materials';
 
 /**
@@ -237,8 +237,12 @@ export class GameAssets {
       const arch = ARCHETYPES[a as ArchetypeId];
       if (!arch) throw new Error(`Floor ${id} references unknown archetype "${a}"`);
       rigs.add(arch.asset);
+      // a monster placed in the Past is replaced by its living counterpart at spawn (EnemyManager.spawnEnemy)
+      const past = PAST_COUNTERPART[a as ArchetypeId];
+      if (past) rigs.add(ARCHETYPES[past].asset);
     }
-    if (man.markers.fissure) rigs.add(ARCHETYPES.remnant.asset);
+    // fissure Echoes: Remnants (Present) and remembered guards (Past)
+    if (man.markers.fissure) { rigs.add(ARCHETYPES.remnant.asset); rigs.add(ARCHETYPES.remnant_guard.asset); }
     if (man.markers.statue) rigs.add('knight');
     if (man.markers.imprint) rigs.add('archer');
     keys.push(...[...rigs].sort().map((r) => 'glb:enemy:' + r));

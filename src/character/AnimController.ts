@@ -117,12 +117,15 @@ export class AnimController {
   }
 
   /** Play a one-shot (or looping) overlay clip, cross-fading from the previous overlay. */
-  play(id: string, opts: { fade?: number; speed?: number; loop?: boolean; start?: number; clamp?: boolean } = {}) {
+  play(id: string, opts: { fade?: number; speed?: number; loop?: boolean; start?: number; clamp?: boolean; freezeOut?: boolean } = {}) {
     const clip = this.overlayClip(id);
     const fade = opts.fade ?? 0.12;
     if (this.current) {
       this.current.target = 0;
       this.current.speed = 1 / Math.max(0.02, fade);
+      // the outgoing clip holds its last pose while it fades (a spin that kept turning under a fast spin would
+      // drift past 180° from it and flip the quaternion blend: the Whirlwind's segment seams)
+      if (opts.freezeOut) this.current.action.timeScale = 0;
     }
     const a = this.mixer.clipAction(clip);
     a.reset();

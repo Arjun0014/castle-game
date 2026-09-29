@@ -5,7 +5,7 @@
  */
 import { clip } from '../data/animationManifest';
 
-export type AttackKind = 'light' | 'heavy' | 'finisher' | 'kick' | 'bash' | 'air' | 'crouch' | 'sprint';
+export type AttackKind = 'light' | 'heavy' | 'finisher' | 'kick' | 'bash' | 'air' | 'crouch' | 'sprint' | 'whirl';
 
 export interface HitWindow {
   t0: number; t1: number;
@@ -34,6 +34,10 @@ export interface AttackDef {
   next?: { light?: string; heavy?: string; kick?: string; pause?: string };
   /** hold the heavy button: the clip freezes at `at` (sword raised) for up to `max` s; hits scale with the charge */
   charge?: { at: number; max: number };
+  /** ground shockwave: radial reach grows by `reach` m at full charge; damage falls off to (1 - falloff) at the rim */
+  shock?: { reach: number; falloff: number };
+  /** Whirlwind segment (hold light): ends at endAt and chains into the next segment while light is held */
+  whirl?: boolean;
   /** two-handed Great Sword technique (trail colour / tooling) */
   twoHanded?: boolean;
   /** max extra forward speed (m/s) used during the wind-up to close the gap to the target (magnetism) */
@@ -57,6 +61,7 @@ const PACE: Record<AttackKind, Pace> = {
   air: { windup: 1.0, strike: 1.15, follow: 0.85, recover: 1.1 },
   kick: { windup: 1.2, strike: 1.1, follow: 0.85, recover: 1.25 },
   bash: { windup: 1.2, strike: 1.1, follow: 0.85, recover: 1.25 },
+  whirl: { windup: 1, strike: 1, follow: 1, recover: 1 },
 };
 
 /** Playback speed at clip time t (windup before each hit window, strike inside it, follow until cancelAt). */
@@ -92,6 +97,8 @@ export const FEEL: Record<AttackKind, Feel> = {
   air: { stop: 0.09, shake: 0.26, punch: 3.0, fov: 1.8, buzz: 20, lean: 0.3 },
   kick: { stop: 0.07, shake: 0.18, punch: 2.2, fov: 0.8, buzz: 14, lean: 0.3 },
   bash: { stop: 0.07, shake: 0.18, punch: 2.0, fov: 0.8, buzz: 14, lean: 0.26 },
+  // many quick radial hits: a short bite each (a long stop per hit would stutter the spin)
+  whirl: { stop: 0.03, shake: 0.08, punch: 0.9, fov: 0.3, buzz: 7, lean: 0.24 },
 };
 
 function peakWindow(clipId: string, i: number, pad0 = 0.05, pad1 = 0.07): [number, number] {
@@ -326,6 +333,67 @@ export const ATTACKS: Record<string, AttackDef> = {
     hits: [{ t0: 2.26, t1: 2.62, damage: 40, poise: 140, knock: 6.0, shape: 'radial', reach: 3.4, knockdown: true, guardBreak: true }],
     inputFrom: 3.0, cancelAt: 3.15, endAt: 3.3, recoveryCancel: 2.85, rootScale: 0, track: 0.9,
     hyperArmor: [0.3, 2.7], resonance: 8, pace: { windup: 1.1, strike: 1.3, follow: 0.8, recover: 1.35 },
+  },
+  /**
+   * CROWNBREAKER (Floor 1 reward, "HOLD HEAVY"): the H3 plunge promoted to a neutral move. Holding heavy past
+   * the tap threshold turns the opening heavy into this: the Great Sword is raised (hyper armour), the charge
+   * builds for up to 1 s while held (released early = a weaker blow), then the kneeling plunge sends a
+   * shockwave: everything within 3.6 m (+2.2 m at full charge) is struck, staggered and thrown down; damage
+   * falls off toward the rim. Guard break. Presentation in Game (onCharge / onHitWindow).
+   */
+  CROWNBREAKER: {
+    id: 'CROWNBREAKER', clip: 'gs_plunge', kind: 'finisher', speed: 1.8, start: 0.55, twoHanded: true, charge: { at: 1.0, max: 1.0 },
+    hits: [{ t0: 2.26, t1: 2.62, damage: 46, poise: 170, knock: 7.0, shape: 'radial', reach: 3.6, knockdown: true, guardBreak: true }],
+    shock: { reach: 2.2, falloff: 0.45 },
+    inputFrom: 3.0, cancelAt: 3.15, endAt: 3.25, recoveryCancel: 2.8, rootScale: 0, track: 0.8,
+    hyperArmor: [0.55, 2.7], resonance: 10, pace: { windup: 1.15, strike: 1.35, follow: 0.75, recover: 1.4 },
+  },
+  /**
+   * WHIRLWIND (Floor 2 reward, "HOLD LIGHT"): a sustained 360° spin built from the real Great Sword spins, chained
+   * one turn at a time while light is held (≤ 5 s; see Player.updateWhirl and combat/Abilities.ts): every
+   * segment below is one full turn of the hips (measured: they all turn the same way and start/end within
+   * ~10° of each other, so the chain reads as one continuous spin; the root yaw absorbs the residue).
+   * WHIRL_IN continues L1's own clip (atk_whirlwind) into its spin, so a held light flows out of the first slash.
+   */
+  WHIRL_IN: {
+    id: 'WHIRL_IN', clip: 'atk_whirlwind', kind: 'whirl', speed: 1.55, start: 0.86, whirl: true,
+    hits: [
+      { t0: 1.12, t1: 1.34, damage: 9, poise: 16, knock: 1.7, shape: 'radial', reach: 2.8 },
+      { t0: 1.75, t1: 2.05, damage: 9, poise: 16, knock: 1.7, shape: 'radial', reach: 2.8 },
+      { t0: 2.2, t1: 2.56, damage: 9, poise: 16, knock: 1.7, shape: 'radial', reach: 2.8 },
+    ],
+    inputFrom: 99, cancelAt: 2.6, endAt: 2.6, recoveryCancel: 0.86, rootScale: 0, track: 0, hyperArmor: [0.86, 2.6],
+  },
+  WHIRL_A: {
+    id: 'WHIRL_A', clip: 'gs_spin_double', kind: 'whirl', speed: 1.5, start: 0.1, twoHanded: true, whirl: true,
+    hits: [
+      { t0: 0.45, t1: 0.72, damage: 9, poise: 16, knock: 1.7, shape: 'radial', reach: 2.9 },
+      { t0: 0.76, t1: 1.0, damage: 9, poise: 16, knock: 1.7, shape: 'radial', reach: 2.9 },
+    ],
+    inputFrom: 99, cancelAt: 1.0, endAt: 1.0, recoveryCancel: 0.1, rootScale: 0, track: 0, hyperArmor: [0.1, 1.0],
+  },
+  WHIRL_C: {
+    id: 'WHIRL_C', clip: 'gs_rampage', kind: 'whirl', speed: 1.6, start: 1.95, twoHanded: true, whirl: true,
+    hits: [
+      { t0: 2.05, t1: 2.36, damage: 9, poise: 16, knock: 1.7, shape: 'radial', reach: 2.9 },
+      { t0: 2.42, t1: 2.8, damage: 10, poise: 18, knock: 2.0, shape: 'radial', reach: 3.0 },
+    ],
+    inputFrom: 99, cancelAt: 3.1, endAt: 3.1, recoveryCancel: 1.95, rootScale: 0, track: 0, hyperArmor: [1.95, 3.1],
+  },
+  WHIRL_W: {
+    id: 'WHIRL_W', clip: 'atk_whirlwind', kind: 'whirl', speed: 1.55, start: 1.6, whirl: true,
+    hits: [
+      { t0: 1.75, t1: 2.05, damage: 9, poise: 16, knock: 1.7, shape: 'radial', reach: 2.8 },
+      { t0: 2.2, t1: 2.56, damage: 9, poise: 16, knock: 1.7, shape: 'radial', reach: 2.8 },
+    ],
+    inputFrom: 99, cancelAt: 2.6, endAt: 2.6, recoveryCancel: 1.6, rootScale: 0, track: 0, hyperArmor: [1.6, 2.6],
+  },
+  /** the release: the spin's overshoot and an overhead finishing cut (gs_spin_double's own ending) */
+  WHIRL_END: {
+    id: 'WHIRL_END', clip: 'gs_spin_double', kind: 'finisher', speed: 1.35, start: 1.0, twoHanded: true,
+    hits: [{ t0: 1.2, t1: 1.52, damage: 24, poise: 70, knock: 4.2, shape: 'radial', reach: 3.1, knockdown: true }],
+    inputFrom: 1.6, cancelAt: 1.62, endAt: 1.75, recoveryCancel: 1.52, rootScale: 0, track: 0.2, resonance: 6,
+    next: { light: 'L1', heavy: 'H1' },
   },
   /** Heavy beside a reeling enemy under 45 % HP: a two-handed plunge through it. */
   EXECUTE: {

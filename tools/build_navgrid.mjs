@@ -11,9 +11,12 @@
 // path round props, through doors and up stairs in the memory that is actually present — and know when the hero
 // cannot be reached at all.
 //
-// File: "NAV2" · u32 header length · JSON header {cell, x0, z0, nx, nz, variants:[{key, flags, offset, nodes}]} ·
+// File: "NAV3" · u32 header length · JSON header {cell, x0, z0, nx, nz, variants:[{key, flags, offset, nodes}]} ·
 // per variant: Uint8 layer count per column (padded to even), Int16 heights in cm (three.js y, column order), Uint8
-// clearance per node in cm (free radius at knee/waist/chest, capped at 2.55 m — big enemies only use wide nodes).
+// clearance per node in cm (free radius at knee/waist/chest, capped at 2.55 m — big enemies only use wide nodes)
+// (padded to even), Uint8 CLIFF mask per node (session 8): bit k set = walking from this node toward DIRS[k] meets a
+// vertical rise (a dais edge, a plinth skirt, a bunk, a table) that the capsule physics cannot climb — there is no
+// step-up: only ramps rise. The runtime never routes UP across a cliff edge (down is always fine).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +26,10 @@ import { NodeIO } from '@gltf-transform/core';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CELL = 0.5, RADIUS = 0.3, HEADROOM = 1.75, MIN_UP = 0.6;
+/** must match src/enemies/NavGrid.ts */
+const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+/** a rise steeper than this per 0.1 m of travel is a cliff (the capsule treats > ~57° as wall) */
+const CLIFF_RISE = 0.15;
 const io = new NodeIO();
 
 function parseGroup(g) {
@@ -81,7 +88,7 @@ async function bake(id) {
     const bvh = new MeshBVH(merged);
     const vv = voids.filter((q) => q.state === v.state || q.state === 'BOTH');
     const counts = new Uint8Array(nx * nz + ((nx * nz) & 1));
-    const heights = [], clearCm = [];
+    const heights = [], clearCm = [], cliffs = [];
     const ray = new THREE.Ray(), down = new THREE.Vector3(0, -1, 0), up = new THREE.Vector3(0, 1, 0);
     const probe = new THREE.Vector3(), target = {};
     let nodes = 0;
@@ -106,7 +113,10 @@ async function bake(id) {
         for (const h of [0.45, 0.95, 1.45]) {
           probe.set(x, hy + h, z);
           const near = bvh.closestPointToPoint(probe, target, 0, RADIUS);
-          if (near && near.distance < RADIUS) { ok = false; break; }
+          // the top edge of something LOWER than the knee (a dais, a skirt, a bunk) is not a wall: the cell beside
+          // it is standable (it used to be dropped, which cut a seam in front of every low platform and stranded
+          // whatever stood on it — the E10 Royal Warden on the chapel dais). Cliff bits stop routes going UP it.
+          if (near && near.distance < RADIUS && !(h === 0.45 && near.point.y < probe.y - 0.04)) { ok = false; break; }
         }
         if (!ok) continue;
         // clearance = horizontal distance to the nearest wall / prop (8 directions at shin and chest height):
@@ -122,6 +132,23 @@ async function bake(id) {
         if (vv.some((q) => q.box.containsPoint(probe))) continue;
         col.push(Math.round(hy * 100));
         clearCm.push(Math.min(255, Math.round(free * 100)));
+        // cliff mask: march 0.1 m at a time toward each neighbour centre following the ground from this height;
+        // a rise of more than CLIFF_RISE between samples is an edge the capsule cannot walk up
+        let mask = 0;
+        for (let k = 0; k < 8; k++) {
+          const [dx, dz] = DIRS[k];
+          const len = Math.hypot(dx, dz) * CELL, n = Math.round(len / 0.1);
+          let gy = hy;
+          for (let i = 1; i <= n; i++) {
+            const t = (i / n) * CELL;
+            ray.origin.set(x + dx * t, gy + 0.6, z + dz * t); ray.direction.copy(down);
+            const g = bvh.raycastFirst(ray, THREE.DoubleSide, 0, 0.6 + 1.7);
+            if (!g || !g.face || g.face.normal.y < MIN_UP) continue; // a drop or a wall: not a rise
+            if (g.point.y - gy > CLIFF_RISE) { mask |= 1 << k; break; }
+            gy = g.point.y;
+          }
+        }
+        cliffs.push(mask);
         if (++layers >= 6) break;
       }
       counts[iz * nx + ix] = col.length;
@@ -131,16 +158,18 @@ async function bake(id) {
     const hArr = new Int16Array(heights);
     const cArr = new Uint8Array(clearCm.length + (clearCm.length & 1));
     cArr.set(clearCm);
+    const kArr = new Uint8Array(cliffs.length + (cliffs.length & 1));
+    kArr.set(cliffs);
     header.variants.push({ key: v.key, state: v.state, flags: v.flags, offset, nodes });
-    chunks.push(Buffer.from(counts.buffer), Buffer.from(hArr.buffer), Buffer.from(cArr.buffer));
-    offset += counts.byteLength + hArr.byteLength + cArr.byteLength;
+    chunks.push(Buffer.from(counts.buffer), Buffer.from(hArr.buffer), Buffer.from(cArr.buffer), Buffer.from(kArr.buffer));
+    offset += counts.byteLength + hArr.byteLength + cArr.byteLength + kArr.byteLength;
     merged.dispose();
     console.log(`floor ${id} ${v.key}: ${nodes} walkable nodes (${(Date.now() - t0) / 1000}s)`);
   }
   const hj = Buffer.from(JSON.stringify(header), 'utf8');
   const pad = (4 - ((8 + hj.length) % 4)) % 4;
   const head = Buffer.alloc(8);
-  head.write('NAV2', 0, 'ascii');
+  head.write('NAV3', 0, 'ascii');
   head.writeUInt32LE(hj.length + pad, 4);
   const out = Buffer.concat([head, hj, Buffer.alloc(pad, 0x20), ...chunks]);
   const file = path.join(ROOT, `public/assets/levels/floor${tag}_nav.bin`);

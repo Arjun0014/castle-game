@@ -8,6 +8,7 @@ import type { AssistTarget } from '../combat/TargetAssist';
 import { ATTACKS, type AttackDef, type AttackKind, type HitWindow, DODGE, PARRY_WINDOW, BLOCK_ARC_DEG, BLOCK_DAMAGE_SCALE, PLAYER_HP, PAUSE_GRACE, COUNTER_WINDOW, speedAt } from '../combat/CombatData';
 import { HERO_CLIPS, JUMP_PHASES, LOOPING, rootAt } from '../data/animationManifest';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
+import { HOLD_THRESHOLD, WHIRL_COOLDOWN, WHIRL_CYCLE, WHIRL_MAX, WHIRL_MOVE, yawBridge, type AbilityId } from '../combat/Abilities';
 
 export type PState = 'move' | 'crouch' | 'air' | 'land' | 'dodge' | 'attack' | 'block' | 'hit' | 'channel' | 'interact' | 'dead';
 
@@ -29,6 +30,8 @@ export interface PlayerEvents {
   onCharge?(level: number): void;
   /** a staggered enemy low enough to execute, in front of the hero (heavy from neutral = EXECUTE) */
   executionTarget?(): THREE.Vector3 | null;
+  /** a floor reward was performed (tutorial: the unlock card stays until then) */
+  onAbility?(id: AbilityId, phase: 'start' | 'release' | 'end'): void;
 }
 
 const RADIUS = 0.35;
@@ -51,8 +54,8 @@ const PAUSE_DELAY = 0.25;
  * attack has no explicit `lunge`, and the most ground one swing may close on its own (m). Root motion still
  * plays on top; nothing ever teleports.
  */
-const MAGNET_SPEED: Record<AttackKind, number> = { light: 5.5, heavy: 4.5, finisher: 4.5, kick: 4.5, bash: 4.5, crouch: 3.5, sprint: 7.5, air: 0 };
-const MAGNET_BUDGET: Record<AttackKind, number> = { light: 1.6, heavy: 1.5, finisher: 1.5, kick: 1.3, bash: 1.3, crouch: 1.1, sprint: 2.4, air: 0 };
+const MAGNET_SPEED: Record<AttackKind, number> = { light: 5.5, heavy: 4.5, finisher: 4.5, kick: 4.5, bash: 4.5, crouch: 3.5, sprint: 7.5, air: 0, whirl: 0 };
+const MAGNET_BUDGET: Record<AttackKind, number> = { light: 1.6, heavy: 1.5, finisher: 1.5, kick: 1.3, bash: 1.3, crouch: 1.1, sprint: 2.4, air: 0, whirl: 0 };
 /** how fast the hero turns onto the chosen target during an attack's start-up (rad/s; ~0.1 s for 180°) */
 const ATTACK_TURN = 30;
 const _v = new THREE.Vector3();
@@ -116,6 +119,17 @@ export class Player {
   events: PlayerEvents = {};
   private contact: CapsuleResult = { grounded: false, groundNormal: new THREE.Vector3(), hitCeiling: false, hitWall: false, push: new THREE.Vector3() };
   godMode = false;
+  /** floor rewards available now (Game sets it from the floor reached: combat/Abilities.ts) */
+  abilities = new Set<AbilityId>();
+  /** Whirlwind: seconds spun, next segment of the cycle, earliest input time a new spin may start */
+  whirlT = 0;
+  private whirlIdx = 0;
+  private whirlStart = 0;
+  private whirlReadyAt = -10;
+  /** the stick / WASD wish this frame (the Whirlwind drifts along it) */
+  private wishNow = new THREE.Vector3();
+  /** input clock (s), for cooldowns set outside update() */
+  private clockNow = 0;
   hipsBone: THREE.Bone | null = null;
   headBone: THREE.Bone | null = null;
   /** afterimage hook for dodge VFX */
@@ -219,11 +233,23 @@ export class Player {
     this.world = world;
     this.tstate = tstate;
     this.stateTime += dt;
+    if (this.scripted) {
+      // a cinematic finisher poses her (combat/Finishers.ts): animation only — no input, no physics
+      this.clockNow = input.now;
+      this.root.position.copy(this.pos);
+      this.root.rotation.y = this.yaw;
+      this.anim.update(dt);
+      this.model.updateMatrixWorld(true);
+      this.updateBlade();
+      return;
+    }
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
     this.invuln = Math.max(0, this.invuln - dt);
     const wish = this.wishDir(input, cam);
     const moving = wish.lengthSq() > 0.01;
     const lock = this.lockTarget?.alive ? this.lockTarget.pos : null;
+    this.wishNow.copy(wish);
+    this.clockNow = input.now;
 
     // buffered inputs
     if (input.wasPressed('light')) this.buffered = { kind: input.isDown('block') ? 'bash' : 'light', t: input.now };
@@ -361,6 +387,7 @@ export class Player {
       }
       case 'attack': {
         this.pickTarget = (k) => pickTarget(k, wish);
+        this.checkHolds(input);
         hv = this.updateAttack(dt, input, lock, world, tstate);
         break;
       }
@@ -627,6 +654,7 @@ export class Player {
       if (back) id = 'run_back';
       else this.yaw = Math.atan2(this.dodgeDir.x, this.dodgeDir.z);
     }
+    if (this.attack?.whirl) { this.whirlReadyAt = this.clockNow + WHIRL_COOLDOWN; this.events.onAbility?.('whirlwind', 'end'); }
     this.attack = null;
     this.setState('dodge');
     this.anim.play(id, { speed: 2.1, fade: 0.05, loop: true });
@@ -641,7 +669,7 @@ export class Player {
   /** ground closed by magnetism during this swing (m) */
   private magnetUsed = 0;
 
-  beginAttack(def: AttackDef, target: AssistTarget | THREE.Vector3 | null) {
+  beginAttack(def: AttackDef, target: AssistTarget | THREE.Vector3 | null, fade = 0.09, freezeOut = false) {
     this.attackTarget = target instanceof THREE.Vector3 ? { pos: target, radius: 0.45, valid: () => true } : target;
     this.magnetUsed = 0;
     this.attack = def;
@@ -655,7 +683,7 @@ export class Player {
     this.hitCue = -1;
     this.lastRoot = rootAt(def.clip, def.start);
     this.setState('attack');
-    this.anim.play(def.clip, { start: def.start, speed: speedAt(def, def.start), fade: 0.09 });
+    this.anim.play(def.clip, { start: def.start, speed: speedAt(def, def.start), fade, freezeOut });
     // a very close target behind the hero gets an instant turn (the blade would otherwise open away from it);
     // anything else is turned onto quickly during the wind-up (updateAttack)
     const tg = this.attackTarget;
@@ -674,9 +702,11 @@ export class Player {
     const prevT = this.attackClipTime;
     this.attackClipTime = this.anim.overlayTime;
     const t = this.attackClipTime;
-    // hold-to-charge: the clip freezes at the raised pose while heavy stays held (up to charge.max seconds)
+    if (def.whirl) return this.updateWhirl(dt, input, t, world, tstate);
+    // hold-to-charge: the clip freezes at the raised pose while heavy stays held (up to charge.max seconds) —
+    // only once the Crownbreaker is unlocked (Floor 1 cleared); before that H3 is a plain plunge
     if (def.charge && !this.charged && t >= def.charge.at) {
-      if (input.isDown('heavy') && this.chargeTime < def.charge.max) {
+      if (this.abilities.has('crownbreaker') && input.isDown('heavy') && this.chargeTime < def.charge.max) {
         this.chargeTime += dt;
         this.chargeLevel = Math.min(1, this.chargeTime / def.charge.max);
         this.anim.setOverlaySpeed(0);
@@ -685,6 +715,7 @@ export class Player {
         return new THREE.Vector3();
       }
       this.charged = true;
+      if (def.id === 'CROWNBREAKER') this.events.onAbility?.('crownbreaker', 'release');
     }
     // pacing: quick anticipation, accelerated strike, a beat of hang on the follow-through, fast recovery
     this.anim.setOverlaySpeed(speedAt(def, t));
@@ -760,6 +791,79 @@ export class Player {
     return hv;
   }
 
+  // ------------------------------------------------------------------ floor rewards (combat/Abilities.ts)
+  /**
+   * Tap vs hold. The attack a press starts plays at once (taps stay instant); if the same press is still held
+   * after HOLD_THRESHOLD the attack turns into the unlocked hold move: an opening heavy becomes the Crownbreaker's
+   * raise, a light attack becomes the Whirlwind (out of L1 it continues L1's own clip into the spin).
+   */
+  private checkHolds(input: Input) {
+    const a = this.attack;
+    if (!a || this.state !== 'attack' || this.crouching) return;
+    if (this.abilities.has('whirlwind') && a.kind === 'light' && input.isDown('light') && input.heldFor('light') >= HOLD_THRESHOLD && input.now >= this.whirlReadyAt) {
+      this.beginWhirl(a);
+      return;
+    }
+    if (this.abilities.has('crownbreaker') && a === ATTACKS.H1 && input.isDown('heavy') && input.heldFor('heavy') >= HOLD_THRESHOLD && !this.charged) {
+      this.beginAttack(ATTACKS.CROWNBREAKER, this.attackTarget, 0.16);
+      this.events.onAbility?.('crownbreaker', 'start');
+    }
+  }
+
+  private beginWhirl(from: AttackDef) {
+    this.whirlT = 0;
+    this.whirlStart = this.clockNow;
+    this.whirlIdx = 0;
+    this.whirlReadyAt = this.clockNow + 0.6;
+    const into = ATTACKS.WHIRL_IN;
+    if (from === ATTACKS.L1 && this.attackClipTime < into.endAt - 0.3) {
+      // L1 is atk_whirlwind: keep the clip running and carry on into its spin (no seam at all)
+      this.attack = into;
+      this.attackSerial++;
+      this.hitsDone.clear();
+      this.hitCue = -1;
+      this.lastRoot = rootAt(into.clip, this.attackClipTime);
+      for (let i = 0; i < into.hits.length; i++) if (this.attackClipTime >= into.hits[i].t0) this.hitCue = i;
+      this.events.onAttackStart?.(into);
+    } else {
+      this.yaw += yawBridge(from.clip, this.attackClipTime, ATTACKS.WHIRL_A.clip, ATTACKS.WHIRL_A.start);
+      this.beginAttack(ATTACKS.WHIRL_A, null, 0.08, true);
+    }
+    this.events.onAbility?.('whirlwind', 'start');
+  }
+
+  /** One segment of the spin: drift along the stick, chain the next turn while light is held, release = finish. */
+  private updateWhirl(dt: number, input: Input, t: number, world: CollisionWorld, tstate: TimeState): THREE.Vector3 {
+    const def = this.attack!;
+    // real seconds (the input clock): hit-stops must not stretch the 5 s spin
+    this.whirlT = input.now - this.whirlStart;
+    void dt;
+    this.anim.setOverlaySpeed(def.speed);
+    for (let i = this.hitCue + 1; i < def.hits.length && t >= def.hits[i].t0; i++) { this.hitCue = i; this.events.onHitWindow?.(def, i); }
+    const hv = new THREE.Vector3(this.wishNow.x, 0, this.wishNow.z);
+    const m = Math.min(1, hv.length());
+    if (m > 0.05) hv.normalize().multiplyScalar(WHIRL_MOVE * m);
+    else hv.set(0, 0, 0);
+    if (hv.lengthSq() > 0.01 && this.grounded && !world.hasFooting(this.pos.clone().addScaledVector(hv.clone().normalize(), 0.6), 1.2, tstate)) hv.set(0, 0, 0);
+    const held = input.isDown('light') && this.whirlT < WHIRL_MAX;
+    if (!held) { this.endWhirl(t); return hv; }
+    if (t >= def.endAt - 0.02 || !this.anim.overlayId) {
+      const next = ATTACKS[WHIRL_CYCLE[this.whirlIdx++ % WHIRL_CYCLE.length]];
+      this.yaw += yawBridge(def.clip, t, next.clip, next.start);
+      this.beginAttack(next, null, 0.05, true);
+    }
+    return hv;
+  }
+
+  /** Let go (or 5 s): the spin's overshoot and an overhead finishing cut, then the cooldown. */
+  private endWhirl(t: number) {
+    const def = this.attack!;
+    this.yaw += yawBridge(def.clip, t, ATTACKS.WHIRL_END.clip, ATTACKS.WHIRL_END.start);
+    this.whirlReadyAt = this.clockNow + WHIRL_COOLDOWN;
+    this.beginAttack(ATTACKS.WHIRL_END, this.pickTarget?.('finisher') ?? null, 0.06, true);
+    this.events.onAbility?.('whirlwind', 'end');
+  }
+
   /** Active hit windows this frame (for the combat system). */
   activeHits(): { win: HitWindow; index: number }[] {
     if (this.state !== 'attack' || !this.attack) return [];
@@ -828,6 +932,7 @@ export class Player {
     if (this.state === 'channel' && damage >= 10) this.cancelChannel();
     if (this.hp <= 0) { this.die(); return 'hit'; }
     if (this.hasHyperArmor() && !opts.heavy) return 'hit';
+    if (this.attack?.whirl) { this.whirlReadyAt = now + WHIRL_COOLDOWN; this.events.onAbility?.('whirlwind', 'end'); }
     this.attack = null;
     this.buffered = null;
     const heavy = opts.heavy || damage >= 22 || opts.guardBreak;
@@ -880,6 +985,30 @@ export class Player {
     this.anim.overlays = [];
     this.anim.current = null;
     this.teleport(p, yaw);
+  }
+
+  /** a cinematic finisher owns the hero (combat/Finishers.ts) */
+  scripted = false;
+  beginScripted() {
+    if (this.attack?.whirl) this.whirlReadyAt = this.clockNow + WHIRL_COOLDOWN;
+    this.scripted = true;
+    this.attack = null;
+    this.buffered = null;
+    this.dodgeBuffered = -1;
+    this.lockTarget = null;
+    if (this.crouching && this.world && this.tryStand(this.world, this.tstate)) this.crouching = false;
+    this.vel.set(0, 0, 0);
+    this.setState('interact');
+    this.interactTime = 99;
+  }
+  endScripted() {
+    if (!this.scripted) return;
+    this.scripted = false;
+    this.attack = null;
+    this.vel.set(0, 0, 0);
+    this.setState('land');
+    this.stateTime = 0;
+    this.anim.release(0.3);
   }
 
   /** Kneel at a sigil (power_up clip). */

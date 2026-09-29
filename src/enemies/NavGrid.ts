@@ -7,6 +7,9 @@ import type { TimeState } from '../levels/Materials';
  * One variant per memory (and per broken fracture): the grid enemies use is always the memory that is present.
  * Nodes are (column, layer); neighbours connect when their heights differ by at most STEP (stairs, ramps, rubble),
  * diagonals never cut corners, and nodes next to walls/edges cost more so paths keep off walls and pit lips.
+ * Session 8 (NAV3): a per-node CLIFF mask marks the directions in which the ground rises as a vertical edge (a dais,
+ * a plinth skirt, a bunk): nothing walks UP those (the capsule physics has no step-up; only ramps rise), so routes
+ * and straight chases never send an enemy running into a step it cannot climb. Stepping down is always allowed.
  */
 const STEP = 0.45;
 /** walkers may step DOWN this far (off a tomb lid, a rubble mound, a low ledge) — never up */
@@ -21,6 +24,8 @@ interface Variant {
   clear: Uint8Array;
   /** per node: 0 unknown, 1 open, 2 near an edge/wall */
   edge: Uint8Array;
+  /** per node: bit k = a vertical rise toward DIRS[k] (cannot be walked up) */
+  cliff: Uint8Array;
 }
 
 export class NavGrid {
@@ -41,7 +46,7 @@ export class NavGrid {
   constructor(buf: ArrayBuffer) {
     const dv = new DataView(buf);
     const magic = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3));
-    if (magic !== 'NAV2') throw new Error('Not a nav grid v2 (magic ' + magic + ') — run node tools/build_navgrid.mjs');
+    if (magic !== 'NAV3') throw new Error('Not a nav grid v3 (magic ' + magic + ') — run node tools/build_navgrid.mjs');
     const hlen = dv.getUint32(4, true);
     const header = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 8, hlen)));
     this.cell = header.cell; this.x0 = header.x0; this.z0 = header.z0; this.nx = header.nx; this.nz = header.nz;
@@ -53,8 +58,10 @@ export class NavGrid {
       const prefix = new Uint32Array(cols + 1);
       for (let i = 0; i < cols; i++) prefix[i + 1] = prefix[i] + counts[i];
       const heights = new Int16Array(buf.slice(base + padded, base + padded + prefix[cols] * 2));
-      const clear = new Uint8Array(buf, base + padded + prefix[cols] * 2, prefix[cols]);
-      this.variants.push({ key: v.key, state: v.state, flags: v.flags, counts, heights, prefix, nodes: prefix[cols], edge: new Uint8Array(prefix[cols]), clear });
+      const nodes = prefix[cols];
+      const clear = new Uint8Array(buf, base + padded + nodes * 2, nodes);
+      const cliff = new Uint8Array(buf, base + padded + nodes * 2 + nodes + (nodes & 1), nodes);
+      this.variants.push({ key: v.key, state: v.state, flags: v.flags, counts, heights, prefix, nodes, edge: new Uint8Array(nodes), clear, cliff });
       maxNodes = Math.max(maxNodes, prefix[cols]);
     }
     this.g = new Float32Array(maxNodes);
@@ -139,11 +146,21 @@ export class NavGrid {
   private body = 0;
   private fits(n: number) { return n >= 0 && this.cur.clear[n] >= this.body ? n : -1; }
 
-  private neighbour(col: number, y: number, dx: number, dz: number) {
+  /** bit index of a unit step (dx, dz) in DIRS */
+  private static dirBit(dx: number, dz: number) {
+    for (let k = 0; k < 8; k++) if (DIRS[k][0] === dx && DIRS[k][1] === dz) return k;
+    return -1;
+  }
+  /**
+   * The node reached from `from` (at column col, height y) by one step (dx, dz): the layer within a step, never UP
+   * across a cliff edge of `from`; else the highest layer below within DROP (stepping/dropping down is fine).
+   */
+  private neighbour(col: number, y: number, dx: number, dz: number, from = -1) {
     const ix = col % this.nx + dx, iz = ((col / this.nx) | 0) + dz;
     if (ix < 0 || iz < 0 || ix >= this.nx || iz >= this.nz) return -1;
     const c = iz * this.nx + ix;
-    const n = this.fits(this.layerNear(c, y, STEP));
+    let n = this.fits(this.layerNear(c, y, STEP));
+    if (n >= 0 && from >= 0 && this.h(n) > y + 0.1 && (this.cur.cliff[from] >> NavGrid.dirBit(dx, dz)) & 1) n = -1;
     if (n >= 0) return n;
     // one-way drop: the highest layer below within DROP
     const v = this.cur;
@@ -160,7 +177,7 @@ export class NavGrid {
     if (v.edge[node]) return v.edge[node];
     const y = this.h(node);
     let e = 1;
-    for (let k = 0; k < 4; k++) if (this.neighbour(col, y, DIRS[k][0], DIRS[k][1]) < 0) { e = 2; break; }
+    for (let k = 0; k < 4; k++) if (this.neighbour(col, y, DIRS[k][0], DIRS[k][1], node) < 0) { e = 2; break; }
     v.edge[node] = e;
     return e;
   }
@@ -178,11 +195,19 @@ export class NavGrid {
     const dx = b.x - a.x, dz = b.z - a.z;
     const len = Math.hypot(dx, dz);
     const steps = Math.ceil(len / (this.cell * 0.5));
+    let pc = this.colOfNode(n);
     for (let i = 1; i <= steps; i++) {
       const t = i / steps;
       const c = this.colOf(a.x + dx * t, a.z + dz * t);
       if (c < 0) return false;
+      if (c === pc) continue;
       let m = this.fits(this.layerNear(c, y, STEP));
+      // never straight up a vertical edge (the dais, a plinth skirt): the capsule cannot climb it
+      if (m >= 0 && this.h(m) > y + 0.1) {
+        const sx = Math.sign(c % this.nx - pc % this.nx), sz = Math.sign(((c / this.nx) | 0) - ((pc / this.nx) | 0));
+        const k = NavGrid.dirBit(sx, sz);
+        if (k >= 0 && (this.cur.cliff[n] >> k) & 1) return false;
+      }
       if (m < 0) {
         // a short drop is still a straight walk (off a tomb, down a rubble lip)
         const v = this.cur;
@@ -191,8 +216,35 @@ export class NavGrid {
         if (m < 0) return false;
       }
       y = this.h(m);
+      n = m; pc = c;
     }
     return Math.abs(y - b.y) < 1.2;
+  }
+
+  /**
+   * How many nodes can be walked to from p (breadth-first, same step/cliff/drop/body rules as A*), stopping at
+   * `limit`. A spawn whose count stays small is an island (inside a tent's collision box, a fenced pocket).
+   */
+  reachableCount(p: THREE.Vector3, limit = 400, radius = 0.3): number {
+    const s = this.nodeAt(p, 0.9, 1);
+    if (s < 0) return 0;
+    this.body = Math.max(0, Math.round(radius * 100) - 6);
+    const gen = ++this.gen;
+    const queue = [s];
+    this.closed[s] = gen;
+    let count = 0;
+    while (queue.length && count < limit) {
+      const n = queue.shift()!;
+      count++;
+      const col = this.colOfNode(n), y = this.h(n);
+      for (let k = 0; k < 4; k++) {
+        const m = this.neighbour(col, y, DIRS[k][0], DIRS[k][1], n);
+        if (m < 0 || this.closed[m] === gen) continue;
+        this.closed[m] = gen;
+        queue.push(m);
+      }
+    }
+    return count;
   }
 
   /** true when the last path() reached its goal; false = it leads to the closest reachable point instead */
@@ -232,9 +284,9 @@ export class NavGrid {
       const col = this.colOfNode(n), y = this.h(n);
       for (let k = 0; k < 8; k++) {
         const [dx, dz] = DIRS[k];
-        const m = this.neighbour(col, y, dx, dz);
+        const m = this.neighbour(col, y, dx, dz, n);
         if (m < 0) continue;
-        if (k >= 4 && (this.neighbour(col, y, dx, 0) < 0 || this.neighbour(col, y, 0, dz) < 0)) continue; // no corner cutting
+        if (k >= 4 && (this.neighbour(col, y, dx, 0, n) < 0 || this.neighbour(col, y, 0, dz, n) < 0)) continue; // no corner cutting
         const mc = col + dz * this.nx + dx;
         const cost = (k >= 4 ? 1.414 : 1) * (this.edgeOf(m, mc) === 2 ? 1.8 : 1) + Math.abs(this.h(m) - y) * 1.5;
         const ng = this.g[n] + cost;

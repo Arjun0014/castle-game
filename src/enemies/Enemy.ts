@@ -13,7 +13,7 @@ const WEAPON_BONE = /^(HandR_\d+|mixamorigRightHand_\d+|mixamorigLeftHand)$/;
 const TORSO_BONE = /^(Torso_\d+|mixamorigSpine2(_\d+)?)$/;
 const SASH = { offset: new THREE.Vector3(0, 0.3, 0.01), radius: 0.33, depth: 0.52, tilt: 0.78 };
 
-export type EState = 'dormant' | 'hidden' | 'rise' | 'idle' | 'chase' | 'circle' | 'windup' | 'attack' | 'recover' | 'block' | 'hit' | 'dead' | 'shoot' | 'dive' | 'lunge';
+export type EState = 'dormant' | 'hidden' | 'rise' | 'idle' | 'chase' | 'circle' | 'windup' | 'attack' | 'recover' | 'block' | 'hit' | 'dead' | 'shoot' | 'dive' | 'lunge' | 'finisher';
 
 const _v = new THREE.Vector3();
 const _w = new THREE.Vector3();
@@ -139,6 +139,15 @@ export class Enemy {
   private navGoal = new THREE.Vector3(1e9, 0, 0);
   private navCheckT = Math.random() * 0.3;
   private navPlanAt = -99;
+  /** stall watchdog (see navigate): window timer, window start, consecutive stalls, forced-route time */
+  private wdT = 0;
+  private wdFrom = new THREE.Vector3();
+  stalls = 0;
+  private forcePathT = 0;
+  /** set by the manager each frame: the hero stands inside this enemy's (triggered) encounter volume */
+  heroInArena = false;
+  /** flyers: seconds without a line of sight to the hero (they give up instead of pressing into a floor) */
+  private blindT = 0;
   /** forget the current route (the memory changed, the enemy was moved) */
   navReset() { this.navMode = 'direct'; this.navPath.length = 0; this.navIdx = 0; this.navCheckT = 0; this.navGoal.set(1e9, 0, 0); }
 
@@ -246,13 +255,51 @@ export class Enemy {
     this.mixer.update(0);
   }
 
+  /**
+   * Wake up. A hidden riser shows itself with its rise clip already posed (weight 1, sampled once): a body is
+   * never drawn in the bind (T) pose, even for one frame. Visibility is re-derived by the manager every frame
+   * (an Echo of the other memory stays invisible and paused until the hero shifts there).
+   */
   activate() {
     if (this.triggered || !this.alive) return;
     this.triggered = true;
     this.events.push('alert');
-    if (this.state === 'hidden') { this.root.visible = true; this.setState('rise'); this.once(this.arch.clips.rise ?? this.arch.clips.idle, 1.3, 0, 0.05)?.stopFading().setEffectiveWeight(1); }
+    if (this.state === 'hidden') {
+      this.root.visible = true;
+      this.setState('rise');
+      this.once(this.arch.clips.rise ?? this.arch.clips.idle, 1.3, 0, 0)?.stopFading().setEffectiveWeight(1);
+      this.mixer.update(0);
+    }
     else if (this.state === 'dormant') { this.setState('rise'); this.once(this.arch.clips.rise ?? this.arch.clips.idle, 1.1, 0, 0.3); }
     else this.setState('chase');
+  }
+
+  /** true when some animation drives the skeleton (otherwise it would render in its bind/T pose) */
+  get posed() { return !!this.cur && this.cur.enabled && this.cur.isScheduled(); }
+  /** Safety net for a drawn body without any animation: pose its idle at once (a dead one is simply gone). */
+  repose() {
+    if (!this.alive) { this.removed = true; this.root.visible = false; return; }
+    const a = this.actions.get(this.arch.clips.idle);
+    if (!a) return;
+    this.mixer.stopAllAction();
+    a.reset().setLoop(THREE.LoopRepeat, Infinity).setEffectiveWeight(1).play();
+    a.timeScale = 1;
+    this.cur = a; this.curName = this.arch.clips.idle;
+    this.mixer.update(0);
+  }
+
+  /**
+   * Leave the fight without a death presentation: bodies that were never shown (hidden risers, kneelers of an
+   * unwoken wave) or that belong to the other memory when their encounter ends. Nothing is left standing.
+   */
+  vanish() {
+    this.hp = 0;
+    this.attack = null;
+    this.setState('dead');
+    this.removed = true;
+    this.root.visible = false;
+    this.settled = true;
+    this.shatterAt = 0;
   }
 
   // ------------------------------------------------------------------ AI
@@ -280,6 +327,11 @@ export class Enemy {
         this.mixer.update(0);
         this.syncRoot();
         return;
+      case 'finisher':
+        // caught in a cinematic finisher (combat/Finishers.ts): the director poses it; no AI, no movement
+        this.mixer.update(dt);
+        this.syncRoot();
+        return;
       case 'rise': {
         const clipLen = this.cur?.getClip().duration ?? 1;
         if (this.stateTime > clipLen / 1.2 - 0.1) { this.setState('chase'); this.loop(a.clips.idle, 1); }
@@ -288,6 +340,10 @@ export class Enemy {
       case 'idle': {
         this.loop(a.clips.idle, 1);
         if (this.triggered) this.setState('chase');
+        // a wraith that lost the hero drifts back to where it haunted
+        else if (this.isFlying && Math.hypot(this.home.x - this.pos.x, this.home.z - this.pos.z) > 1) {
+          move = new THREE.Vector3(this.home.x - this.pos.x, 0, this.home.z - this.pos.z).normalize().multiplyScalar(a.walkSpeed);
+        }
         break;
       }
       case 'chase':
@@ -296,7 +352,16 @@ export class Enemy {
         // wraiths and archers left far behind give up too (walkers: see navigate())
         if ((this.isFlying || this.isRanged) && !a.boss) {
           if (dist > (this.isRanged ? 38 : 30)) this.leashT += dt; else this.leashT = 0;
-          if (this.leashT > 6) { this.leashT = 0; this.triggered = false; this.setState('idle'); if (this.hasSlot) { ctx.releaseSlot(this); this.hasSlot = false; } break; }
+          // a wraith cannot see through floors: the hero gone to another level out of sight (the crypt below the
+          // hall) is lost after a few seconds instead of being pressed against the stone above her
+          if (this.isFlying) {
+            this.thinkT -= dt;
+            if (this.thinkT <= 0) { this.thinkT = 0.3; this.losOk = ctx.lineOfSight(this.center.clone(), ctx.playerPos.clone().setY(ctx.playerPos.y + 1.2)); }
+            // blind but following a route (through the door she took) is still a chase
+            this.blindT = this.losOk || this.flyRoute ? 0 : this.blindT + dt;
+            if (this.blindT > 4 && !this.heroInArena) this.leashT = 99;
+          }
+          if (this.leashT > 6) { this.leashT = 0; this.blindT = 0; this.triggered = false; this.setState('idle'); if (this.hasSlot) { ctx.releaseSlot(this); this.hasSlot = false; } break; }
         }
         if (this.isRanged) { move = this.rangedThink(dt, dist, dirP, ctx); break; }
         if (this.isFlying) { move = this.flyThink(dt, dist, dirP, ctx); break; }
@@ -310,20 +375,27 @@ export class Enemy {
           break;
         }
         const atk = this.pickAttack(dist);
+        // she may stand on a crate, a tomb lid or a low ledge the grid calls unreachable: a sword still reaches her
+        const inReach = !!atk && dist <= atk.range + 0.2 && Math.abs(dy) < 1.8;
+        const holding = this.navMode === 'hold' && !inReach;
         // an enemy that cannot reach the hero (holding) never takes one of the few attack slots from those who can
-        if (this.navMode === 'hold' && this.hasSlot) { ctx.releaseSlot(this); this.hasSlot = false; }
-        if (atk && this.cooldown <= 0 && this.navMode !== 'hold' && (this.hasSlot || ctx.requestSlot(this, a.slotCost))) {
+        if (holding && this.hasSlot) { ctx.releaseSlot(this); this.hasSlot = false; }
+        if (atk && this.cooldown <= 0 && !holding && (this.hasSlot || ctx.requestSlot(this, a.slotCost))) {
           this.hasSlot = true;
-          if (dist <= atk.range + 0.2 && Math.abs(dy) < 1.8) { this.beginAttack(atk); break; }
+          if (inReach) { this.beginAttack(atk); break; }
           // close in
           move = dirP.clone().multiplyScalar(a.runSpeed);
           this.loop(a.clips.run, a.runSpeed / 4.06);
+        } else if (holding) {
+          // unreachable (a gallery above, a stair it cannot climb): it waits at the closest spot, facing her, in its
+          // combat idle — never running or strafing on the spot
+          this.loop(a.clips.idle, 1);
         } else {
           // hold a ring around the player and strafe
           const ring = 4.2 + (this.id % 3) * 0.7;
           const tangent = new THREE.Vector3().crossVectors(UP, dirP).multiplyScalar(this.circleDir);
           if (dist > ring + 1.5) { move = dirP.clone().multiplyScalar(a.runSpeed * 0.85); this.loop(a.clips.run, a.runSpeed * 0.85 / 4.06); }
-          else if (dist < ring - 1.2) { move = dirP.clone().multiplyScalar(-a.walkSpeed).addScaledVector(tangent, a.walkSpeed * 0.4); this.loop(a.clips.back ?? a.clips.walk, 1); }
+          else if (dist < ring - 1.2 && !this.backBlocked(dirP, dt, ctx)) { move = dirP.clone().multiplyScalar(-a.walkSpeed).addScaledVector(tangent, a.walkSpeed * 0.4); this.loop(a.clips.back ?? a.clips.walk, 1); }
           else {
             move = tangent.multiplyScalar(a.walkSpeed * 0.9);
             this.loop((this.circleDir > 0 ? a.clips.strafeL : a.clips.strafeR) ?? a.clips.walk, 1);
@@ -475,12 +547,31 @@ export class Enemy {
 
   private integrateFlying(dt: number, hv: THREE.Vector3, ctx: EnemyCtx) {
     const g = ctx.world.groundBelow(this.pos.clone().setY(this.pos.y + 1), 12, ctx.state);
-    const want = this.state === 'dive' ? ctx.playerPos.y + 0.6 : (g !== null ? g + this.arch.flying!.altitude : this.baseAlt);
+    // over a pit a wraith keeps to the hero's level (it drifted down into the Ward sinkhole and "died" on its own);
+    // only a knocked, reeling wraith sinks — a kick off the lip still sends it into the void
+    let floor = g ?? this.baseAlt - this.arch.flying!.altitude;
+    if (this.state !== 'hit' && this.state !== 'dead') floor = Math.max(floor, Math.min(this.baseAlt - this.arch.flying!.altitude, ctx.playerPos.y) - 0.6);
+    const want = this.state === 'dive' ? ctx.playerPos.y + 0.6 : floor + this.arch.flying!.altitude;
     const vy = (want - this.pos.y) * 3;
     this.pos.x += hv.x * dt;
     this.pos.z += hv.z * dt;
     this.pos.y += (this.state === 'dead' ? -3 : vy) * dt;
     ctx.world.resolveCapsule(this.pos, this.radius, this.height * 0.8, ctx.state);
+  }
+
+  /**
+   * Backing off to its ring while it waits for an attack slot: a wall, a tent or a cart right behind it turns the
+   * back-step into circling (it used to walk backwards on the spot into the Ward tents). Checked 5×/s.
+   */
+  private backT = 0;
+  private backHit = false;
+  private backBlocked(dirP: THREE.Vector3, dt: number, ctx: EnemyCtx) {
+    this.backT -= dt;
+    if (this.backT <= 0) {
+      this.backT = 0.2;
+      this.backHit = !!ctx.world.raycast(this.pos.clone().setY(this.pos.y + 0.6), dirP.clone().negate(), this.radius + 0.9, ctx.state);
+    }
+    return this.backHit;
   }
 
   /**
@@ -524,8 +615,9 @@ export class Enemy {
   private navigate(move: THREE.Vector3, dirP: THREE.Vector3, dy: number, dt: number, ctx: EnemyCtx): THREE.Vector3 {
     const nav = ctx.nav!;
     // leash: a melee Echo left far behind (another wing, another level) stops chasing and stands where it is;
-    // it wakes again when it sees the hero (EnemyManager aggro-on-sight)
-    if (!this.arch.boss && this.pos.distanceTo(ctx.playerPos) > 26) this.leashT += dt; else this.leashT = 0;
+    // it wakes again when it sees the hero (EnemyManager aggro-on-sight). Never while she is inside its own arena
+    // (a 44 m yard is one fight: its far side is not "another wing").
+    if (!this.arch.boss && !this.heroInArena && this.pos.distanceTo(ctx.playerPos) > 26) this.leashT += dt; else this.leashT = 0;
     if (this.leashT > 6) {
       this.leashT = 0;
       this.triggered = false;
@@ -534,22 +626,45 @@ export class Enemy {
       if (this.hasSlot) { ctx.releaseSlot(this); this.hasSlot = false; }
       return new THREE.Vector3();
     }
-    const speed = move.length();
+    const holding = this.navMode === 'hold';
+    // a holder stands still, but keeps re-planning on its timer (she may come down / the way may open)
+    const speed = holding ? this.arch.runSpeed : move.length();
     // last-resort recovery: pushed into a slot no body fits (between a tomb and a wall) and not moving → step to
     // the nearest walkable spot (at most 1.5 m, never through a wall: the spot is on the same level)
     if (speed > 0.3 && this.navMoved < 0.05 && this.navExpected > 0.8 && !nav.walkable(this.pos, 0.5)) {
       const q = nav.nearestWalkable(this.pos, 3);
       if (q && q.distanceTo(this.pos) < 1.6) { this.pos.set(q.x, q.y + 0.02, q.z); this.navReset(); this.navMoved = this.navExpected = 0; }
     }
-    if (speed < 0.3 || move.x * dirP.x + move.z * dirP.z < 0.2 * speed) {
+    if (!holding && (speed < 0.3 || move.x * dirP.x + move.z * dirP.z < 0.2 * speed)) {
       // strafing / backing off round the hero: local steering handles it
-      if (this.navMode === 'hold') return new THREE.Vector3();
       return move;
     }
+    // stall watchdog: chasing "directly" but not getting anywhere (a prop the straight line clips, a body in the
+    // way, the pack pushing it into a corner) → follow a real A* route for a while instead of re-trying the line
+    this.wdT += dt;
+    if (this.wdT >= 1.5) {
+      const moved = Math.hypot(this.pos.x - this.wdFrom.x, this.pos.z - this.wdFrom.z);
+      const far = Math.hypot(ctx.playerPos.x - this.pos.x, ctx.playerPos.z - this.pos.z) > 3.2;
+      if (!holding && far && moved < 0.3) {
+        this.stalls++;
+        this.forcePathT = 3.5;
+        this.navCheckT = 0;
+        this.navMode = 'direct';
+        this.navGoal.set(1e9, 0, 0);
+        // stuck a second time in a row even on a route: nudge onto the nearest open node (never through a wall)
+        if (this.stalls >= 2) {
+          const q = nav.nearestWalkable(this.pos.clone().addScaledVector(dirP, 0.6), 2);
+          if (q && q.distanceTo(this.pos) < 1.2 && Math.abs(q.y - this.pos.y) < 0.5) this.pos.set(q.x, q.y + 0.02, q.z);
+        }
+      } else if (moved > 0.6) this.stalls = 0;
+      this.wdT = 0;
+      this.wdFrom.copy(this.pos);
+    }
+    if (this.forcePathT > 0) this.forcePathT -= dt;
     this.navCheckT -= dt;
     if (this.navCheckT <= 0) {
       this.navCheckT = 0.3 + Math.random() * 0.1;
-      const direct = Math.abs(dy) < 1.2 && nav.clearLine(this.pos, ctx.playerPos, this.radius);
+      const direct = this.forcePathT <= 0 && Math.abs(dy) < 1.2 && nav.clearLine(this.pos, ctx.playerPos, this.radius);
       if (direct) this.navMode = 'direct';
       else if ((this.navMode === 'direct' || this.navGoal.distanceTo(ctx.playerPos) > 1.5 || ctx.now - this.navPlanAt > 3) && ctx.navBudget()) {
         this.navPlanAt = ctx.now;
@@ -801,7 +916,33 @@ export class Enemy {
   }
 
   // ------------------------------------------------------------------ flying (wraith)
+  /** a blind wraith follows the ground route under it (A* on the grid) through doors, at its altitude */
+  private flyRoute = false;
+  private flyPlanT = 0;
+  private flyPath(dt: number, ctx: EnemyCtx): THREE.Vector3 | null {
+    const nav = ctx.nav;
+    if (!nav || this.losOk) { this.flyRoute = false; return null; }
+    this.flyPlanT -= dt;
+    if (this.flyPlanT <= 0 && ctx.navBudget()) {
+      this.flyPlanT = 0.8;
+      const ground = this.pos.clone().setY(this.pos.y - this.arch.flying!.altitude);
+      const p = nav.path(ground, ctx.playerPos, this.navPath, 0.3);
+      this.navIdx = 0;
+      this.flyRoute = !!p && p.length > 0 && nav.reached;
+    }
+    if (!this.flyRoute) return null;
+    const path = this.navPath;
+    while (this.navIdx < path.length && Math.hypot(path[this.navIdx].x - this.pos.x, path[this.navIdx].z - this.pos.z) < 0.8) this.navIdx++;
+    if (this.navIdx >= path.length) { this.flyRoute = false; return null; }
+    const wp = path[this.navIdx];
+    const dir = new THREE.Vector3(wp.x - this.pos.x, 0, wp.z - this.pos.z).normalize();
+    this.turnToward(dir, this.arch.turnRate, dt);
+    return dir.multiplyScalar(this.arch.runSpeed * 0.8);
+  }
+
   private flyThink(dt: number, dist: number, dirP: THREE.Vector3, ctx: EnemyCtx) {
+    const route = this.flyPath(dt, ctx);
+    if (route) return route;
     this.turnToward(dirP, this.arch.turnRate, dt);
     const tangent = new THREE.Vector3().crossVectors(UP, dirP).multiplyScalar(this.circleDir);
     if (this.cooldown <= 0 && dist < 9 && (this.hasSlot || ctx.requestSlot(this, 1))) {
@@ -880,6 +1021,8 @@ export class Enemy {
 
   die() {
     if (this.state === 'dead') return;
+    // a riser that never showed itself has no body to collapse: it simply is not there (no bind-pose death)
+    if (this.state === 'hidden') { this.vanish(); return; }
     this.hp = 0;
     this.attack = null;
     this.setState('dead');

@@ -2,64 +2,128 @@ import type { Action, Input } from '../game/Input';
 import { Platform } from '../platform/Platform';
 
 /**
- * Touch HUD (shown only while Platform.inputMode === 'touch'). Layout (session 7, portrait thumbs):
+ * Touch HUD (shown only while Platform.inputMode === 'touch'). Layout (session 8, portrait thumbs; the user's
+ * ergonomic sketch as reference):
  *
- *                                   (SHIFT)   temporal, rare: top of the right column, out of the prime zone
- *                                   (JUMP)
- *       [ free camera pocket ]      (HEAVY)   above Attack along the right edge
- *                   (GUARD)                   up-left of Attack: slides onto Attack (bash) / Heavy (kick)
- *        (DODGE)          [ATTACK]            Attack = the right thumb's resting spot; Dodge = a flick left
- *
+ *                              ◇SHIFT        (JUMP)      temporal and rare: small, up-left of Jump
+ *                                          [ATTACK]      the two prominent verbs on the right edge
+ *                             (HEAVY)                    left of Attack, a thumb-roll away
+ *                  (GUARD)         · · · · · · · · ·     bottom of the arc: slides onto Heavy (kick) / Attack (bash)
+ *                                 [ camera pocket ]      the lower-right corner stays EMPTY for camera swipes
  *   left thumb   floating joystick (lower-left zone); pushing to the rim sprints
- *   right thumb  drag any empty area - the pocket above Guard / left of the column is kept clear for it
  *
- * The soft combat camera (combat/TargetAssist) keeps the important enemy framed, so there is no lock-on button.
+ * There is no Dodge button on touch (desktop keeps its Shift-tap / key dodge). The soft combat camera
+ * (combat/TargetAssist) keeps the fight framed, so there is no lock-on button either.
  * Every pointer is owned by exactly one role (stick / look / button) from pointerdown to pointerup, and holds
- * are registered with Input per pointer id, so one finger can never release or cancel another's input:
- * move + look, move + attack, move + guard, look + attack all work together.
+ * are registered with Input per pointer id, so one finger can never release or cancel another's input.
  *
- * Guard + attack with one thumb: a finger that went down on Guard keeps guarding while it slides; sliding onto
- * Attack (shield bash) or Heavy (kick) fires that attack once. A second finger tapping them works too.
+ * HOLD moves (floor rewards: Crownbreaker = hold HEAVY, Whirlwind = hold ATTACK): a gold arc fills round the
+ * button while it is held; once the hold move engages the arc turns solid (the charge / the spin time left), so a
+ * hold is never mistaken for a tap.
+ *
+ * The buttons are drawn as heraldic seals (SVG): an aged-gold rim with the role's device — battlements for
+ * Attack, rivets for Heavy, a shield-boss bead ring for Guard, a pointed arch for Jump — over an enamel field
+ * tinted per role; Shift is a small azure lozenge with an hourglass.
  */
 type Role =
   | { kind: 'stick'; ox: number; oy: number }
   | { kind: 'look'; x: number; y: number }
   | { kind: 'button'; action: Action; el: HTMLElement; slid: Set<HTMLElement> };
 
-const ICONS: Record<string, string> = {
-  light: '<path d="M9 39 L35 13 L41 7 L39 14 L13 42 Z"/><path d="M8 30 l10 10 M5 43 l4 -4" stroke-width="3" fill="none"/>',
-  heavy: '<path d="M7 41 L32 9 L41 5 L38 14 L11 44 Z"/><path d="M4 31 l14 14 M13 27 L21 35" stroke-width="3" fill="none"/><path d="M40 27 a15 15 0 0 1 -13 16" fill="none" stroke-width="2.6"/><path d="M44 21 a21 21 0 0 1 -9 22" fill="none" stroke-width="1.8" opacity=".6"/>',
-  block: '<path d="M11 40 L37 8" stroke-width="4" fill="none"/><path d="M6 33 l9 9" stroke-width="3.2" fill="none"/><path d="M26 7 C33 9 38 12 41 15" stroke-width="2.4" fill="none" opacity=".75"/><path d="M42 21 C43 27 41 33 37 38" stroke-width="2.4" fill="none" opacity=".75"/>',
-  dodge: '<path d="M9 31 C16 17 29 12 41 15" fill="none" stroke-width="3.6"/><path d="M34 8 L42 15 L33 21" fill="none" stroke-width="3.6"/><path d="M5 38 h11 M9 44 h9" stroke-width="2.6" opacity=".7"/>',
-  jump: '<path d="M11 28 L24 15 L37 28" fill="none" stroke-width="4"/><path d="M24 17 V41" stroke-width="3.4"/><path d="M15 44 h18" stroke-width="2.4" opacity=".6"/>',
-  shift: '<path d="M14 6 H34 M14 42 H34 M16 6 C16 18 32 20 32 24 C32 28 16 30 16 42 M32 6 C32 18 16 20 16 24 C16 28 32 30 32 42" fill="none" stroke-width="2.8"/><path d="M20 38 C22 33 26 33 28 38 Z" stroke-width="1"/>',
+const GLYPHS: Record<string, string> = {
+  light: '<path d="M10 38 L34 14 L40 8 L38 15 L14 41 Z"/><path d="M9 29 l10 10 M6 42 l4 -4" stroke-width="3" fill="none"/>',
+  heavy: '<path d="M8 40 L31 10 L40 6 L37 15 L12 43 Z"/><path d="M5 31 l13 13 M13 27 L21 35" stroke-width="3" fill="none"/><path d="M40 28 a15 15 0 0 1 -13 15" fill="none" stroke-width="2.6"/>',
+  block: '<path d="M24 5 L39 11 V23 C39 33 32 40 24 44 C16 40 9 33 9 23 V11 Z" fill="none" stroke-width="3"/><path d="M15 34 L33 12" stroke-width="3.2" fill="none"/>',
+  jump: '<path d="M12 27 L24 14 L36 27" fill="none" stroke-width="4"/><path d="M15 37 L24 28 L33 37" fill="none" stroke-width="3" opacity=".7"/>',
+  shift: '<path d="M15 7 H33 M15 41 H33 M17 7 C17 18 31 20 31 24 C31 28 17 30 17 41 M31 7 C31 18 17 20 17 24 C17 28 31 30 31 41" fill="none" stroke-width="2.8"/><path d="M20 37 C22 32 26 32 28 37 Z" stroke-width="1"/>',
   pause: '<path d="M15 10 H21 V38 H15 Z M27 10 H33 V38 H27 Z"/>',
   look: '<path d="M10 24 a14 14 0 0 1 28 0" fill="none" stroke-width="2.6"/><path d="M34 18 l4 6 l-7 1" fill="none" stroke-width="2.6"/><path d="M38 28 a14 14 0 0 1 -28 0" fill="none" stroke-width="2.6" opacity=".55"/>',
 };
 
-const BUTTONS: { action: Action; icon: string; label: string; cls: string }[] = [
-  { action: 'light', icon: 'light', label: 'ATTACK', cls: 't-light' },
-  { action: 'heavy', icon: 'heavy', label: 'HEAVY', cls: 't-heavy' },
-  { action: 'block', icon: 'block', label: 'GUARD', cls: 't-guard' },
-  { action: 'dodge', icon: 'dodge', label: 'DODGE', cls: 't-dodge' },
-  { action: 'jump', icon: 'jump', label: 'JUMP', cls: 't-jump' },
-  { action: 'shift', icon: 'shift', label: 'SHIFT', cls: 't-shift' },
+/** the role's device on the rim (drawn in a 100×100 box, centre 50,50) */
+function device(kind: string): string {
+  const pts = (n: number, r: number, f: (x: number, y: number, a: number) => string) => {
+    let s = '';
+    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 - Math.PI / 2; s += f(50 + Math.cos(a) * r, 50 + Math.sin(a) * r, a); }
+    return s;
+  };
+  if (kind === 'light') {
+    // battlements: a crenellated ring (merlons) round the seal — the castle's own crown
+    let d = '';
+    const n = 16;
+    for (let i = 0; i < n; i++) {
+      const a0 = (i / n) * Math.PI * 2, a1 = a0 + (Math.PI * 2) / n * 0.55;
+      const p = (a: number, r: number) => `${(50 + Math.cos(a) * r).toFixed(2)} ${(50 + Math.sin(a) * r).toFixed(2)}`;
+      d += `M${p(a0, 44)} L${p(a0, 48.5)} A48.5 48.5 0 0 1 ${p(a1, 48.5)} L${p(a1, 44)} Z `;
+    }
+    return `<path class="dev" d="${d}"/>`;
+  }
+  if (kind === 'heavy') return pts(8, 45.6, (x, y) => `<circle class="dev" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.3"/>`);
+  if (kind === 'block') return pts(20, 45.6, (x, y) => `<circle class="dev" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="1.25"/>`);
+  if (kind === 'jump') return '<path class="dev" d="M50 1.5 L55 8 L45 8 Z M50 98.5 L55 92 L45 92 Z M1.5 50 L8 45 L8 55 Z M98.5 50 L92 45 L92 55 Z"/>';
+  return '';
+}
+
+const BUTTONS: { action: Action; icon: string; label: string; cls: string; shape: 'seal' | 'lozenge' }[] = [
+  { action: 'light', icon: 'light', label: 'ATTACK', cls: 't-light', shape: 'seal' },
+  { action: 'jump', icon: 'jump', label: 'JUMP', cls: 't-jump', shape: 'seal' },
+  { action: 'heavy', icon: 'heavy', label: 'HEAVY', cls: 't-heavy', shape: 'seal' },
+  { action: 'block', icon: 'block', label: 'GUARD', cls: 't-guard', shape: 'seal' },
+  { action: 'shift', icon: 'shift', label: 'SHIFT', cls: 't-shift', shape: 'lozenge' },
 ];
+
+/** shared gradients (document-global SVG defs) */
+const DEFS = `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="tg-gold" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0" stop-color="#f3dca0"/><stop offset=".45" stop-color="#c49a52"/><stop offset="1" stop-color="#6e5025"/></linearGradient>
+  <radialGradient id="tg-light" cx=".5" cy=".36" r=".7"><stop offset="0" stop-color="#8e2a22"/><stop offset=".62" stop-color="#3a0d0b"/><stop offset="1" stop-color="#170605"/></radialGradient>
+  <radialGradient id="tg-heavy" cx=".5" cy=".36" r=".7"><stop offset="0" stop-color="#8a4a1c"/><stop offset=".62" stop-color="#34190b"/><stop offset="1" stop-color="#140905"/></radialGradient>
+  <radialGradient id="tg-block" cx=".5" cy=".36" r=".7"><stop offset="0" stop-color="#4c5866"/><stop offset=".62" stop-color="#1b2027"/><stop offset="1" stop-color="#0b0d10"/></radialGradient>
+  <radialGradient id="tg-jump" cx=".5" cy=".36" r=".7"><stop offset="0" stop-color="#6d6352"/><stop offset=".62" stop-color="#27231d"/><stop offset="1" stop-color="#0e0c0a"/></radialGradient>
+  <radialGradient id="tg-shift" cx=".5" cy=".36" r=".72"><stop offset="0" stop-color="#2f5577"/><stop offset=".64" stop-color="#0f1e2d"/><stop offset="1" stop-color="#070c12"/></radialGradient>
+</defs></svg>`;
+
+function face(b: typeof BUTTONS[number]): string {
+  if (b.shape === 'lozenge') {
+    return `<svg class="t-face" viewBox="0 0 100 100" aria-hidden="true">
+      <path class="rim" d="M50 2 L98 50 L50 98 L2 50 Z"/>
+      <path class="field" d="M50 11 L89 50 L50 89 L11 50 Z" fill="url(#tg-shift)"/>
+      <path class="edge" d="M50 11 L89 50 L50 89 L11 50 Z"/>
+      <path class="prog" pathLength="100" d="M50 2 L98 50 L50 98 L2 50 Z"/>
+    </svg>`;
+  }
+  const grad = b.action === 'block' ? 'tg-block' : `tg-${b.action}`;
+  return `<svg class="t-face" viewBox="0 0 100 100" aria-hidden="true">
+    <circle class="rim" cx="50" cy="50" r="43.6"/>
+    ${device(b.action)}
+    <circle class="field" cx="50" cy="50" r="39.5" fill="url(#${grad})"/>
+    <circle class="edge" cx="50" cy="50" r="39.5"/>
+    <circle class="gloss" cx="50" cy="50" r="33"/>
+    ${b.action === 'light' || b.action === 'heavy' ? '<circle class="prog" pathLength="100" cx="50" cy="50" r="46.8" transform="rotate(-90 50 50)"/>' : ''}
+  </svg>`;
+}
 
 /** the look hint fades for good once the player has turned the camera this far (px of drag) */
 const LOOK_LEARNED_PX = 900;
 const LOOK_KEY = 'tcr-look-learned';
 
-const svg = (id: string) => `<svg viewBox="0 0 48 48" aria-hidden="true">${ICONS[id]}</svg>`;
+const svg = (id: string) => `<svg class="t-glyph" viewBox="0 0 48 48" aria-hidden="true">${GLYPHS[id]}</svg>`;
+
+export interface TouchState {
+  channel: number; canShift: boolean; guarding: boolean;
+  /** hold progress on Attack / Heavy (0..1 toward the hold threshold), and whether the hold move is running */
+  hold?: { light: number; heavy: number; lightOn: boolean; heavyOn: boolean };
+  /** which buttons have an unlocked HOLD move */
+  canHold?: { light: boolean; heavy: boolean };
+}
 
 export class TouchControls {
   root: HTMLElement;
   private stickBase: HTMLElement;
   private stickKnob: HTMLElement;
   private interactEl: HTMLElement;
-  private shiftRing: HTMLElement;
   private pointers = new Map<number, Role>();
   private buttons = new Map<Action, HTMLElement>();
+  private progs = new Map<Action, SVGElement>();
   /** stick radius in CSS px (recomputed on layout) */
   private radius = 58;
   private stickId = -1;
@@ -68,10 +132,10 @@ export class TouchControls {
   constructor(stage: HTMLElement, private input: Input) {
     const root = document.createElement('div');
     root.id = 'touch';
-    root.innerHTML = `
+    root.innerHTML = `${DEFS}
       <div class="t-stick-home"></div>
       <div class="t-stick"><div class="t-knob"></div></div>
-      <div class="t-cluster">${BUTTONS.map((b) => `<div class="t-btn ${b.cls}" data-a="${b.action}">${svg(b.icon)}${b.label ? `<span>${b.label}</span>` : ''}</div>`).join('')}</div>
+      <div class="t-cluster">${BUTTONS.map((b) => `<div class="t-btn ${b.cls}" data-a="${b.action}">${face(b)}${svg(b.icon)}<span>${b.label}</span><em>HOLD</em></div>`).join('')}</div>
       <div class="t-look-hint">${svg('look')}<span>LOOK</span></div>
       <div class="t-interact t-btn" data-a="interact"><b></b><span></span></div>
       <div class="t-pause" role="button" aria-label="Pause">${svg('pause')}</div>`;
@@ -83,10 +147,11 @@ export class TouchControls {
     this.lookHint = root.querySelector('.t-look-hint') as HTMLElement;
     try { this.lookLearned = localStorage.getItem(LOOK_KEY) === '1'; } catch { /* storage unavailable */ }
     this.lookHint.classList.toggle('gone', this.lookLearned);
-    root.querySelectorAll<HTMLElement>('.t-btn').forEach((el) => this.buttons.set(el.dataset.a as Action, el));
-    this.shiftRing = document.createElement('i');
-    this.shiftRing.className = 't-ring';
-    this.buttons.get('shift')!.appendChild(this.shiftRing);
+    root.querySelectorAll<HTMLElement>('.t-btn').forEach((el) => {
+      this.buttons.set(el.dataset.a as Action, el);
+      const prog = el.querySelector('.prog') as SVGElement | null;
+      if (prog) this.progs.set(el.dataset.a as Action, prog);
+    });
     root.addEventListener('pointerdown', this.onDown, { passive: false });
     root.addEventListener('pointermove', this.onMove, { passive: false });
     root.addEventListener('pointerup', this.onUp);
@@ -124,14 +189,40 @@ export class TouchControls {
   highlight(action: Action | null) {
     for (const [a, el] of this.buttons) el.classList.toggle('teach', a === action);
   }
+  /** Teach a HOLD move on a button (the unlock tip): its HOLD tag shows and the rim breathes; null clears. */
+  holdHint(action: Action | null) {
+    for (const [a, el] of this.buttons) el.classList.toggle('teach-hold', a === action);
+  }
+  /** a cinematic finisher is playing: the controls dim and ignore nothing (holds are released by the game) */
+  cinematic(on: boolean) { this.root.classList.toggle('cine', on); }
 
-  /** Per-frame HUD state: guard/shift feedback, shift channel ring. */
-  update(state: { channel: number; canShift: boolean; guarding: boolean }) {
-    this.shiftRing.style.setProperty('--p', String(state.channel));
+  private progKey = new Map<Action, string>();
+  private setProg(a: Action, f: number) {
+    const el = this.progs.get(a);
+    if (!el) return;
+    const v = Math.max(0, Math.min(1, f));
+    const key = v.toFixed(3);
+    if (this.progKey.get(a) === key) return;
+    this.progKey.set(a, key);
+    el.setAttribute('stroke-dasharray', `${(v * 100).toFixed(2)} 100`);
+  }
+
+  /** Per-frame HUD state: guard/shift feedback, shift channel, hold progress. */
+  update(state: TouchState) {
+    this.setProg('shift', state.channel);
     this.buttons.get('shift')!.classList.toggle('dim', !state.canShift);
+    this.buttons.get('shift')!.classList.toggle('channel', state.channel > 0);
     this.buttons.get('block')!.classList.toggle('held', state.guarding);
     this.buttons.get('light')!.classList.toggle('bash', state.guarding);
     this.buttons.get('heavy')!.classList.toggle('bash', state.guarding);
+    const h = state.hold, c = state.canHold;
+    for (const a of ['light', 'heavy'] as const) {
+      const el = this.buttons.get(a)!;
+      el.classList.toggle('can-hold', !!c?.[a]);
+      const on = !!h?.[a === 'light' ? 'lightOn' : 'heavyOn'];
+      el.classList.toggle('holding', on);
+      this.setProg(a, h ? h[a] : 0);
+    }
   }
 
   // ------------------------------------------------------------------ pointer routing
@@ -153,9 +244,9 @@ export class TouchControls {
     const r = this.stageRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
     // left-lower zone owns the stick (one stick finger at a time); everything else turns the camera
-    if (this.stickId < 0 && x < r.width * 0.5 && y > r.height * 0.42) {
+    if (this.stickId < 0 && x < r.width * 0.46 && y > r.height * 0.42) {
       const R = this.radius;
-      const ox = Math.max(R + 8, Math.min(r.width * 0.5 - R * 0.4, x));
+      const ox = Math.max(R + 8, Math.min(r.width * 0.46 - R * 0.4, x));
       const oy = Math.max(r.height * 0.42 + R * 0.5, Math.min(r.height - R - 8, y));
       this.stickId = e.pointerId;
       this.pointers.set(e.pointerId, { kind: 'stick', ox, oy });
