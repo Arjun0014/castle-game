@@ -2,7 +2,7 @@
 //   const F = await import('/dev/finisherProbe.js'); await F.ready();
 //   F.run('stab')                 last E5 Hollow killed by a light blow in open floor → the stab finisher
 //   F.run('kick', { at: [x,y,z] }) stage it somewhere else (blueprint coords of the foe)
-//   F.all()                        every variant + a wall case + a hole case + a non-last kill + a between-waves kill
+//   F.all()                        every variant (5) + wall cases + a mid-fight kill (others hold back)
 // Checks: played / refused (and why), kill credited exactly once, resonance gained once, encounter cleared once,
 // camera never inside geometry and never behind a wall from the pair, hero back in control, camera handed back.
 let g, p, V;
@@ -50,7 +50,7 @@ export function run(id, opts = {}) {
   g.rig.snapBehind(p.yaw);
   e.hp = 1; e.state = 'idle'; e.stun = 0; e.cooldown = 99;
   e.yaw = Math.atan2(-dir.x, -dir.z);
-  g.finisher.force = id; g.finisher.cooldown = 0; g.finisher.chance = 1;
+  g.finisher.force = id; g.finisher.lastAt = -99;
   const kills0 = g.enemies.killCount;
   g.time.charge = 40;
   const charge0 = g.time.charge;
@@ -84,8 +84,11 @@ export function run(id, opts = {}) {
   };
 }
 
-/** A kill that is NOT encounter-ending must never play a finisher. */
-export function notLast() {
+/**
+ * Session 9: a kill in the MIDDLE of a fight may play a finisher too. Forced variant, others alive around her:
+ * it plays, the others hold (no enemy attack starts while it runs), kill credited once, the fight goes on.
+ */
+export function midFight(id = 'headsman') {
   const em = g.enemies, E = em.encounters.get('E5');
   if (g.time.state !== E.state) g.forceState(E.state);
   E.cleared = false; E.triggered = false; E.wave = 0;
@@ -96,12 +99,23 @@ export function notLast() {
   const e = alive[0];
   p.revive(e.pos.clone().add(new V(-1.9, 0, 0)), Math.PI / 2);
   e.hp = 1; e.cooldown = 99;
-  g.finisher.force = 'stab'; g.finisher.cooldown = 0;
+  g.finisher.force = id; g.finisher.lastAt = -99;
   const n = g.finisher.log.length;
+  const kills0 = em.killCount;
+  let attacksDuring = 0, played = false, frames = 0;
+  const others = E.enemies.filter((x) => x !== e);
+  const busy = new Map(others.map((x) => [x, x.state]));
   g.input.tapVirtual('light');
-  step(60);
+  for (let i = 0; i < 300; i++) {
+    step();
+    if (g.finisher.active) {
+      played = true; frames++;
+      for (const x of others) { if ((x.state === 'attack' || x.state === 'windup' || x.state === 'dive') && busy.get(x) !== x.state && frames > 3) attacksDuring++; busy.set(x, x.state); }
+    } else if (played) break;
+  }
   g.finisher.force = null;
-  return { active: g.finisher.active, log: g.finisher.log.slice(n).map((l) => l.result), waveBefore: E.wave };
+  return { played, log: g.finisher.log.slice(n).map((l) => l.result), attacksStartedDuring: attacksDuring, killDelta: em.killCount - kills0,
+    othersAlive: others.filter((x) => x.alive).length, encounterCleared: E.cleared, heroInvulnAfter: +p.invuln.toFixed(2) };
 }
 
 export function all() {
@@ -110,12 +124,16 @@ export function all() {
   out.stab = run('stab', open);
   out.frenzy = run('frenzy', open);
   out.kick = run('kick', open);
+  out.headsman = run('headsman', open);
+  out.passing = run('passing', open);
   // against the barracks' south wall (y = -27): the foe 1.1 m from it, the hero coming from the north
   const wall = { at: [28, -25.9, 0], dir: new V(0, 0, 1) };
   out.wallKick = run('kick', wall);
   out.wallStab = run('stab', wall);
   out.wallFrenzy = run('frenzy', wall);
-  out.notLast = notLast();
+  out.wallPassing = run('passing', wall);
+  out.wallHeadsman = run('headsman', wall);
+  out.midFight = midFight('headsman');
   return out;
 }
 
@@ -136,7 +154,7 @@ export function stage(id, at, dir, secs) {
   keep.place(B(...at)); keep.hp = 1; keep.state = 'idle'; keep.cooldown = 99; keep.yaw = Math.atan2(-dir.x, -dir.z);
   p.revive(keep.pos.clone().addScaledVector(dir, -1.9), Math.atan2(dir.x, dir.z)); g.rig.snapBehind(p.yaw);
   step(20);
-  g.finisher.force = id; g.finisher.cooldown = 0;
+  g.finisher.force = id; g.finisher.lastAt = -99;
   g.input.tapVirtual('light');
   let t = 0;
   while (t < secs) { step(); t += 1 / 60; if (!g.finisher.active && t > 0.5) break; }

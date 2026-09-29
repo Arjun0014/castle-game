@@ -32,6 +32,13 @@ export interface Archetype {
   clips: { idle: string; walk: string; run: string; strafeL?: string; strafeR?: string; back?: string; hitL: string; hitH: string; death: string[]; block?: string; blockHit?: string; rise?: string; kneel?: string };
   slotCost: number;       // how many melee attack slots it occupies
   boss?: boolean;
+  /** which cinematic finishers can take it (combat/Finishers.ts): humanoid rigs (default) every variant,
+   *  beasts only the stab + passing cut, 'none' never (flyers, the serpent, bosses) */
+  finisher?: 'humanoid' | 'beast' | 'none';
+  /** blood colour of its wounds (default: dark red; Hollows darker) */
+  blood?: number;
+  /** titled mini-boss: a boss bar with this name while its fight runs (not a floor boss) */
+  miniBoss?: string;
 }
 
 /**

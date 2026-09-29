@@ -122,7 +122,7 @@ function touchLayout() {
 
 function finishers() {
   const open = { at: [31, -8, 0], dir: new V(1, 0, 0) };
-  for (const id of ['stab', 'frenzy', 'kick']) {
+  for (const id of ['stab', 'frenzy', 'kick', 'headsman', 'passing']) {
     const r = FP.run(id, open);
     check(`Finisher ${id}: plays on the true last enemy`, r.played && r.seconds > 1 && r.seconds < 3.4, { log: r.log, seconds: r.seconds });
     check(`Finisher ${id}: kill + resonance + clear exactly once`, r.killCountDelta === 1 && r.killSignals === 1 && r.encounterClears === 1 && r.resonanceGain === r.reward, { kills: r.killCountDelta, signals: r.killSignals, clears: r.encounterClears, res: r.resonanceGain });
@@ -136,8 +136,8 @@ function finishers() {
   const reasons = [];
   for (const d of [0.8, 1.6, 2.6]) { e.pos.set(-4 + d, 0, 20); p.pos.set(-4 + d + 1.9, 0, 20); reasons.push(['stab', 'frenzy', 'kick'].map((id) => fin.plan(id, e) ?? 'OK')); }
   check('Finisher near a hole: refused within 1.6 m of the Ward sinkhole, no kick over it', reasons[0].every((r) => /hole/.test(r)) && reasons[1].every((r) => /hole/.test(r)) && reasons[2][2] !== 'OK', reasons);
-  const nl = FP.notLast();
-  check('Finisher never between waves / not on the last', !nl.active && nl.log.every((l) => /refused/.test(l)), nl.log);
+  const mf = FP.midFight('headsman');
+  check('Finisher mid-fight: plays, the others hold back, one kill, the fight goes on', mf.played && mf.attacksStartedDuring === 0 && mf.killDelta === 1 && mf.othersAlive > 0 && !mf.encounterCleared && mf.heroInvulnAfter > 0.2, mf);
 }
 
 // ---------------------------------------------------------------- Floors 2 / 3

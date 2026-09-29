@@ -35,6 +35,8 @@ export interface EnemyCtx {
   nav: NavGrid | null;
   /** may this enemy run an A* plan this frame? (a few per frame across all enemies) */
   navBudget(): boolean;
+  /** a cinematic finisher is playing: nobody starts an attack or closes in (they wait, weapons ready) */
+  hold?: boolean;
 }
 
 export class Enemy {
@@ -349,6 +351,13 @@ export class Enemy {
       case 'chase':
       case 'circle': {
         if (!ctx.playerAlive) { this.loop(a.clips.idle, 1); break; }
+        // a finisher is playing: the others hold where they are, facing her, weapons ready (no blow, no approach)
+        if (ctx.hold) {
+          this.turnToward(dirP, a.turnRate, dt);
+          if (!this.isFlying) this.loop(a.clips.idle, 1, 0.3);
+          this.cooldown = Math.max(this.cooldown, 0.35);
+          break;
+        }
         // wraiths and archers left far behind give up too (walkers: see navigate())
         if ((this.isFlying || this.isRanged) && !a.boss) {
           if (dist > (this.isRanged ? 38 : 30)) this.leashT += dt; else this.leashT = 0;
@@ -435,6 +444,8 @@ export class Enemy {
         break;
       }
       case 'shoot': {
+        // an archer still drawing when a finisher begins lowers the bow (a loosed arrow still flies)
+        if (ctx.hold && this.shootPhase < 2) { this.shootPhase = 0; this.cooldown = Math.max(this.cooldown, 0.8); this.setState('chase'); break; }
         move = this.updateShoot(dt, dist, dirP, ctx);
         break;
       }

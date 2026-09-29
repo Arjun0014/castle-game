@@ -205,13 +205,13 @@ html.input-touch #touch { display: block; }
   color: #1c1208; background: linear-gradient(180deg, #f3dca0, #c49a52); border-radius: calc(3 * var(--u)); opacity: 0; transform: translateY(3px); transition: opacity .3s, transform .3s; pointer-events: none; }
 .t-btn.down { transform: scale(0.92); filter: drop-shadow(0 0 10px rgba(255,200,120,0.55)) brightness(1.25); }
 /* the two prominent verbs */
-.t-light { --d: 92; --r: 60; --b: 196; }
+.t-light { --d: 90; --r: 64; --b: 228; }
 .t-light span { font-size: calc(8.6 * var(--u)); color: rgba(250,236,212,0.9); }
-.t-jump { --d: 76; --r: 58; --b: 302; }
-.t-heavy { --d: 70; --r: 148; --b: 166; }
-.t-guard { --d: 66; --r: 190; --b: 74; }
+.t-jump { --d: 74; --r: 60; --b: 334; }
+.t-heavy { --d: 70; --r: 160; --b: 198; }
+.t-guard { --d: 66; --r: 210; --b: 112; }
 /* Shift: a small azure lozenge up-left of Jump — rare, deliberate */
-.t-shift { --d: 54; --r: 150; --b: 276; border-radius: 0; }
+.t-shift { --d: 54; --r: 156; --b: 304; border-radius: 0; }
 .t-shift .rim { fill: #0a0f15; stroke: rgba(150,200,255,0.75); stroke-width: 2.6; }
 .t-shift .edge { stroke: rgba(160,210,255,0.45); }
 .t-shift .prog { stroke: #bfe0ff; filter: drop-shadow(0 0 3px rgba(140,200,255,0.9)); }
@@ -232,7 +232,7 @@ html.input-touch #touch { display: block; }
 .t-btn.teach-hold em { opacity: 1; transform: none; }
 .t-btn.teach-hold { animation: t-teach 1.8s ease-in-out infinite; }
 /* the free camera pocket (lower-right corner): a faint hint until the player has turned the camera a few times */
-.t-look-hint { position: absolute; right: calc(var(--sar) + 22 * var(--u)); bottom: calc(var(--sab) + 40 * var(--u)); width: calc(64 * var(--u)); height: calc(64 * var(--u));
+.t-look-hint { position: absolute; right: calc(var(--sar) + 46 * var(--u)); bottom: calc(var(--sab) + 42 * var(--u)); width: calc(78 * var(--u)); height: calc(78 * var(--u));
   border-radius: 50%; border: 1px dashed rgba(216,179,106,0.28); display: flex; flex-direction: column; align-items: center; justify-content: center;
   pointer-events: none; opacity: 0.75; transition: opacity 1.2s; }
 .t-look-hint svg.t-glyph { width: 46%; height: 46%; opacity: 0.6; margin: 0; }
@@ -240,7 +240,7 @@ html.input-touch #touch { display: block; }
 .t-look-hint.gone { opacity: 0; }
 #touch.sticking .t-look-hint { opacity: 0.35; }
 /* contextual interaction: a named card above the thumbs ("BLOOD SIGIL / Activate Checkpoint") */
-.t-interact { left: 50%; right: auto; bottom: calc(var(--sab) + 372 * var(--u)); transform: translateX(-50%); width: auto; height: auto; min-height: calc(50 * var(--u));
+.t-interact { left: 50%; right: auto; bottom: calc(var(--sab) + 400 * var(--u)); transform: translateX(-50%); width: auto; height: auto; min-height: calc(50 * var(--u));
   border-radius: calc(8 * var(--u)); padding: calc(6 * var(--u)) calc(20 * var(--u)) calc(7 * var(--u)); display: none; flex-direction: column; gap: 1px;
   border: 1.5px solid rgba(216,179,106,0.75); background: linear-gradient(180deg, rgba(40,20,16,0.86), rgba(12,8,8,0.9)); filter: none; }
 .t-interact.on { display: flex; }

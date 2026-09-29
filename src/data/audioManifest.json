@@ -1098,7 +1098,7 @@
   },
   "amb_drips": {
    "bus": "amb",
-   "gain": -10,
+   "gain": -21,
    "loop": true,
    "files": [
     "assets/audio/amb_drips.ogg"
@@ -1106,7 +1106,7 @@
    "durations": [
     8.134
    ],
-   "use": "Present undercroft/crypt water.",
+   "use": "Present undercroft/crypt water (distant, low-passed).",
    "sources": [
     "100 CC0 SFX #2 loop_water_02 (CC0)"
    ]

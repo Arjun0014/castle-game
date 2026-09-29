@@ -2,14 +2,14 @@ import type { Action, Input } from '../game/Input';
 import { Platform } from '../platform/Platform';
 
 /**
- * Touch HUD (shown only while Platform.inputMode === 'touch'). Layout (session 8, portrait thumbs; the user's
- * ergonomic sketch as reference):
+ * Touch HUD (shown only while Platform.inputMode === 'touch'). Layout (session 9: the camera pocket grew ~40 %
+ * — the whole cluster sits a little higher and Guard moved left — and swipes turn the camera much faster):
  *
  *                              ◇SHIFT        (JUMP)      temporal and rare: small, up-left of Jump
  *                                          [ATTACK]      the two prominent verbs on the right edge
  *                             (HEAVY)                    left of Attack, a thumb-roll away
- *                  (GUARD)         · · · · · · · · ·     bottom of the arc: slides onto Heavy (kick) / Attack (bash)
- *                                 [ camera pocket ]      the lower-right corner stays EMPTY for camera swipes
+ *                  (GUARD)                               bottom of the arc: slides onto Heavy (kick) / Attack (bash)
+ *                               [  camera pocket  ]      the lower-right corner (≈177 × 163 u) stays EMPTY for swipes
  *   left thumb   floating joystick (lower-left zone); pushing to the rim sprints
  *
  * There is no Dodge button on touch (desktop keeps its Shift-tap / key dodge). The soft combat camera
@@ -27,7 +27,7 @@ import { Platform } from '../platform/Platform';
  */
 type Role =
   | { kind: 'stick'; ox: number; oy: number }
-  | { kind: 'look'; x: number; y: number }
+  | { kind: 'look'; x: number; y: number; t: number; v: number }
   | { kind: 'button'; action: Action; el: HTMLElement; slid: Set<HTMLElement> };
 
 const GLYPHS: Record<string, string> = {
@@ -102,6 +102,10 @@ function face(b: typeof BUTTONS[number]): string {
   </svg>`;
 }
 
+/** touch camera: radians of yaw per stage width of slow drag (fast flicks gain up to 2x this) */
+const LOOK_GAIN = 5.2;
+/** touch look smoothing time constant (s): irons out 60-120 Hz touch-event jitter, never feels laggy */
+const LOOK_SMOOTH = 0.03;
 /** the look hint fades for good once the player has turned the camera this far (px of drag) */
 const LOOK_LEARNED_PX = 900;
 const LOOK_KEY = 'tcr-look-learned';
@@ -207,6 +211,18 @@ export class TouchControls {
     el.setAttribute('stroke-dasharray', `${(v * 100).toFixed(2)} 100`);
   }
 
+  /** swipe rotation not yet handed to the camera (released smoothly each frame by flushLook) */
+  private lookBuf = { dx: 0, dy: 0 };
+  /** Per frame (touch mode): feed the buffered swipe into the camera with a short exponential ease. */
+  flushLook(dt: number) {
+    const b = this.lookBuf;
+    if (Math.abs(b.dx) + Math.abs(b.dy) < 1e-6) { b.dx = b.dy = 0; return; }
+    const k = 1 - Math.exp(-Math.max(0, dt) / LOOK_SMOOTH);
+    this.input.virtualLook.dx += b.dx * k;
+    this.input.virtualLook.dy += b.dy * k;
+    b.dx *= 1 - k; b.dy *= 1 - k;
+  }
+
   /** Per-frame HUD state: guard/shift feedback, shift channel, hold progress. */
   update(state: TouchState) {
     this.setProg('shift', state.channel);
@@ -257,7 +273,7 @@ export class TouchControls {
       this.moveStick(e.pointerId, x, y);
       return;
     }
-    this.pointers.set(e.pointerId, { kind: 'look', x: e.clientX, y: e.clientY });
+    this.pointers.set(e.pointerId, { kind: 'look', x: e.clientX, y: e.clientY, t: e.timeStamp, v: 0 });
   };
 
   private onMove = (e: PointerEvent) => {
@@ -268,10 +284,17 @@ export class TouchControls {
       const r = this.stageRect();
       this.moveStick(e.pointerId, e.clientX - r.left, e.clientY - r.top);
     } else if (role.kind === 'look') {
-      // resolution independent: a swipe across the whole stage turns ~150°
-      const k = 2.6 / Math.max(240, Platform.width);
-      this.input.virtualLook.dx += (e.clientX - role.x) * k;
-      this.input.virtualLook.dy += (e.clientY - role.y) * k * 0.75;
+      // resolution independent and fast (session 9 playtest: "I have to swipe too much"): a slow swipe across a
+      // third of the stage already turns ~90°; quick flicks gain up to 2× more (swipe acceleration), so a short
+      // thumb flick spins the camera round while slow drags stay precise. Vertical is gentler (pitch is clamped).
+      const dx = e.clientX - role.x, dy = e.clientY - role.y;
+      const dt = Math.max(0.004, Math.min(0.1, (e.timeStamp - role.t) / 1000));
+      const speed = Math.hypot(dx, dy) / dt / Math.max(240, Platform.width);   // stage widths per second
+      role.v += (speed - role.v) * 0.5;
+      const k = LOOK_GAIN / Math.max(240, Platform.width) * (1 + Math.min(1, Math.max(0, role.v - 0.6) / 2.4));
+      this.lookBuf.dx += dx * k;
+      this.lookBuf.dy += dy * k * 0.62;
+      role.t = e.timeStamp;
       if (!this.lookLearned) {
         this.lookPx += Math.abs(e.clientX - role.x) + Math.abs(e.clientY - role.y);
         if (this.lookPx > LOOK_LEARNED_PX) {
@@ -343,6 +366,7 @@ export class TouchControls {
 
   /** Drop every touch hold (switching to keyboard/mouse, pausing, rotating). */
   releaseAll() {
+    this.lookBuf.dx = this.lookBuf.dy = 0;
     for (const [id, role] of this.pointers) {
       this.input.releaseSource('touch:' + id);
       if (role.kind === 'button') role.el.classList.remove('down');

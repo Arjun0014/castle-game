@@ -361,7 +361,7 @@ export class Game {
   /** Force every drawable of the floor visible and render it for both time states (see assets/Warmup.ts). */
   private async warmGpu(onProgress: (f: number, label: string) => void) {
     const at = this.player.pos.clone();
-    const kits = [this.enemies.warmKit(at), this.fx.warmKit(at), this.gore.warmKit(at), this.atmo.warmKit(at)];
+    const kits = [this.enemies.warmKit(at), this.fx.warmKit(at), this.gore.warmKit(at), this.atmo.warmKit(at), this.finisher.warmKit(at)];
     for (const k of kits) for (const o of k.objects) this.scene.add(o);
     stabilizeShadowDepth(this.scene); // catch-all for any caster added without it
     const restoreEnemies = this.enemies.forceVisible();
@@ -778,6 +778,8 @@ export class Game {
     this.sun.target.position.copy(p.pos);
     this.rig.inCombat = this.enemies.inCombat;
     this.rig.pullWant = this.fightPull();
+    // touch swipes reach the camera through a short ease on real time (hit-stop never makes looking sluggish)
+    if (this.touch && Platform.isTouch) this.touch.flushLook(this.realDt);
     const look = this.input.consumeLook();
     this.assist.cameraEnabled = (this.camAssistPin ?? Platform.isTouch) && !p.lockTarget && p.alive && !this.autopilot && !this.finisher.active;
     this.rig.yaw += this.assist.cameraYaw({
@@ -872,7 +874,8 @@ export class Game {
     const k = Math.min(1, dt * 2);
     c.openSky += (this.ambSky - c.openSky) * k;
     c.fire += (this.ambFire - c.fire) * k;
-    c.underground += ((p.y < -2.5 ? 1 : 0) - c.underground) * k;
+    // depth below the ground floor (crypt, excavation): a ramp, not a switch, so the water bed swells in gently
+    c.underground += (THREE.MathUtils.clamp((-1.5 - p.y) / 3, 0, 1) - c.underground) * k;
   }
 
   private updateReticle() {

@@ -522,6 +522,7 @@ export class EnemyManager {
       shoot: (e) => this.shoot(e),
       nav: this.nav,
       navBudget: () => this.navPlans++ < 3,
+      hold: g.finisher.holding,
       lineOfSight: (a, b) => {
         const dir = b.clone().sub(a);
         const len = dir.length();
@@ -952,6 +953,17 @@ export class EnemyManager {
     e.vel.set(0, 0, 0);
     e.tumble = 0; e.tumbleRate = 0; e.settled = false; e.shatterAt = -1; e.deadTime = 0;
     if (e.hasSlot) { this.releaseSlot(e); e.hasSlot = false; }
+  }
+
+  /**
+   * A finisher ended: the Echoes that waited come back in, staggered (a short random delay each), so control is
+   * never handed back into a simultaneous volley of blows.
+   */
+  releaseFinisherHold() {
+    for (const e of [...this.enemies, ...this.remnants]) {
+      if (!e.alive || !e.triggered) continue;
+      e.cooldown = Math.max(e.cooldown, 0.45 + Math.random() * 0.8);
+    }
   }
 
   /**

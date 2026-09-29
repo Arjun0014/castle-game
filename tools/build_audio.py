@@ -335,8 +335,11 @@ sound('amb_present', 'amb', -4, 'Present bed: low wind through the ruin + drips.
 sound('amb_wind', 'amb', -8, 'Present: wind where the sky is open (Ward, collapsed roofs).',
       [lambda: loopify(V('wind_woosh_loop.ogg', stereo=True, trim=False, fin=0, fout=0), 0.8)],
       ['wind whoosh loop (SketchMan3, CC0)'], loop=True, stereo=True)
-sound('amb_drips', 'amb', -10, 'Present undercroft/crypt water.',
-      [lambda: loopify(V(SFX100 + 'loop_water_02.ogg', stereo=True, trim=False, fin=0, fout=0), 0.6)],
+# session 9: the running-water loop was broadband and ~10 dB hotter than the other beds; in the Floor 1 crypt /
+# excavation it swamped the whole mix. Now low-passed (distant water in the dark, not a torrent) and 11 dB quieter;
+# Audio.update also ramps it in with depth and ducks it in combat.
+sound('amb_drips', 'amb', -21, 'Present undercroft/crypt water (distant, low-passed).',
+      [lambda: loopify(V(SFX100 + 'loop_water_02.ogg', stereo=True, trim=False, fin=0, fout=0, af='highpass=f=110,lowpass=f=1700'), 0.6)],
       ['100 CC0 SFX #2 loop_water_02 (CC0)'], loop=True, stereo=True)
 sound('amb_fire', 'amb', -3, 'Past: torches, braziers and hearths (volume follows the nearest flame).',
       [lambda: loopify(V('fireplace_loop.wav', stereo=True, trim=False, fin=0, fout=0), 1.5)],

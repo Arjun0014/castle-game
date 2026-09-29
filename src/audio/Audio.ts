@@ -287,7 +287,8 @@ export class AudioFX {
     const target: Partial<Record<SoundId, number>> = {
       amb_present: P ? 1 * duck : 0,
       amb_wind: (P ? 0.25 + 0.75 * amb.openSky : 0.2 * amb.openSky) * duck,
-      amb_drips: P ? amb.underground : amb.underground * 0.4,
+      // distant water under the floors: fades in with depth, steps back in a fight (it used to drown the mix)
+      amb_drips: (P ? 1 : 0.4) * amb.underground * duck,
       amb_fire: P ? 0 : 0.18 + 0.82 * amb.fire,
       amb_past: P ? 0 : 1 * duck,
     };
