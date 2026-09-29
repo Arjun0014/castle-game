@@ -35,6 +35,7 @@ export interface TexSet { map: THREE.Texture; normal: THREE.Texture; arm: THREE.
 const ENEMY_URL: Record<AssetId, string> = {
   knight: 'assets/characters/knight.glb', hollow: 'assets/characters/hollow.glb',
   archer: 'assets/characters/archer.glb', ghost: 'assets/characters/ghost.glb',
+  lastcrown: 'assets/characters/lastcrown.glb',
 };
 const VEG_URL: Record<string, { url: string; height: number; emissive?: number }> = {
   grass: { url: 'assets/vegetation/low_poly_grass.glb', height: 0.42 },
@@ -48,7 +49,12 @@ const SOUNDS = audioManifest.sounds as unknown as Record<SoundId, { files: strin
 /** ambience beds (≈87 MB decoded): scope "ambience", skipped entirely in automation mute mode */
 export const AMBIENCE_SOUNDS: SoundId[] = ['amb_present', 'amb_wind', 'amb_drips', 'amb_fire', 'amb_past'];
 /** sounds only one floor uses */
-export const FLOOR_SOUNDS: Record<number, SoundId[]> = { 1: ['hatch_slam'] };
+export const FLOOR_SOUNDS: Record<number, SoundId[]> = {
+  1: ['hatch_slam'],
+  // the Last Crown's voice and magic (tools/elevenlabs_sfx.json): only Floor 3 loads them
+  3: (['mage_charge', 'mage_bolt', 'mage_impact', 'mage_nova', 'mage_teleport', 'mage_beam', 'mage_ward', 'mage_rune', 'crown_resonance', 'boss_scream', 'boss_death', 'final_collapse'] as string[])
+    .filter((id) => id in audioManifest.sounds) as SoundId[],
+};
 const FLOOR_ONLY = new Set<string>(Object.values(FLOOR_SOUNDS).flat());
 
 export class GameAssets {

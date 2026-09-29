@@ -1140,6 +1140,222 @@
    "sources": [
     "Loopable Dungeon Ambience (JaggedStone, CC0), low-passed"
    ]
+  },
+  "mage_charge": {
+   "bus": "sfx",
+   "gain": -9,
+   "loop": false,
+   "files": [
+    "assets/audio/mage_charge_0.ogg",
+    "assets/audio/mage_charge_1.ogg",
+    "assets/audio/mage_charge_2.ogg"
+   ],
+   "durations": [
+    1.139,
+    1.2,
+    1.07
+   ],
+   "use": "Last Crown: gathering a spell (cast tell).",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "mage_bolt": {
+   "bus": "sfx",
+   "gain": -7,
+   "loop": false,
+   "files": [
+    "assets/audio/mage_bolt_0.ogg",
+    "assets/audio/mage_bolt_1.ogg",
+    "assets/audio/mage_bolt_2.ogg",
+    "assets/audio/mage_bolt_3.ogg"
+   ],
+   "durations": [
+    0.487,
+    0.468,
+    0.556,
+    0.586
+   ],
+   "use": "Last Crown: bolt leaves the hand.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "mage_impact": {
+   "bus": "sfx",
+   "gain": -8,
+   "loop": false,
+   "files": [
+    "assets/audio/mage_impact_0.ogg",
+    "assets/audio/mage_impact_1.ogg",
+    "assets/audio/mage_impact_2.ogg",
+    "assets/audio/mage_impact_3.ogg"
+   ],
+   "durations": [
+    0.88,
+    0.88,
+    0.88,
+    0.88
+   ],
+   "use": "Magic bolt / orb bursting.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "mage_nova": {
+   "bus": "sfx",
+   "gain": -6,
+   "loop": false,
+   "files": [
+    "assets/audio/mage_nova_0.ogg",
+    "assets/audio/mage_nova_1.ogg"
+   ],
+   "durations": [
+    1.352,
+    1.76
+   ],
+   "use": "Radial burst / repel / ground wave.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "mage_teleport": {
+   "bus": "sfx",
+   "gain": -8,
+   "loop": false,
+   "files": [
+    "assets/audio/mage_teleport_0.ogg",
+    "assets/audio/mage_teleport_1.ogg",
+    "assets/audio/mage_teleport_2.ogg"
+   ],
+   "durations": [
+    0.79,
+    0.765,
+    0.848
+   ],
+   "use": "Blink out / in.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "mage_beam": {
+   "bus": "sfx",
+   "gain": -8,
+   "loop": false,
+   "files": [
+    "assets/audio/mage_beam_0.ogg",
+    "assets/audio/mage_beam_1.ogg"
+   ],
+   "durations": [
+    3.0,
+    2.878
+   ],
+   "use": "Channelled beam.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "mage_ward": {
+   "bus": "sfx",
+   "gain": -8,
+   "loop": false,
+   "files": [
+    "assets/audio/mage_ward_0.ogg",
+    "assets/audio/mage_ward_1.ogg"
+   ],
+   "durations": [
+    1.2,
+    1.2
+   ],
+   "use": "Ward forming / shattering, binding.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "mage_rune": {
+   "bus": "sfx",
+   "gain": -8,
+   "loop": false,
+   "files": [
+    "assets/audio/mage_rune_0.ogg",
+    "assets/audio/mage_rune_1.ogg",
+    "assets/audio/mage_rune_2.ogg"
+   ],
+   "durations": [
+    1.203,
+    1.287,
+    1.36
+   ],
+   "use": "Rune circle erupting (bombardment).",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "crown_resonance": {
+   "bus": "sfx",
+   "gain": -6,
+   "loop": false,
+   "files": [
+    "assets/audio/crown_resonance_0.ogg",
+    "assets/audio/crown_resonance_1.ogg"
+   ],
+   "durations": [
+    4.0,
+    4.0
+   ],
+   "use": "Crownheart resonance: slips, phase breaks.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "boss_scream": {
+   "bus": "sfx",
+   "gain": -8,
+   "loop": false,
+   "files": [
+    "assets/audio/boss_scream_0.ogg",
+    "assets/audio/boss_scream_1.ogg",
+    "assets/audio/boss_scream_2.ogg"
+   ],
+   "durations": [
+    1.48,
+    1.48,
+    1.48
+   ],
+   "use": "Last Crown pain / fury cry.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "boss_death": {
+   "bus": "sfx",
+   "gain": -5,
+   "loop": false,
+   "files": [
+    "assets/audio/boss_death.ogg"
+   ],
+   "durations": [
+    3.757
+   ],
+   "use": "Last Crown death.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "final_collapse": {
+   "bus": "sfx",
+   "gain": -5,
+   "loop": false,
+   "files": [
+    "assets/audio/final_collapse.ogg"
+   ],
+   "durations": [
+    4.953
+   ],
+   "use": "The Crownheart falls silent (ending).",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
   }
  }
 }

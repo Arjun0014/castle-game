@@ -126,5 +126,56 @@
    "veg": 112,
    "void": 8
   }
+ },
+ "3": {
+  "level": "assets/levels/floor03.glb",
+  "collision": "assets/levels/floor03_collision.glb",
+  "materials": [
+   "candle",
+   "fabric_banner",
+   "fabric_gold",
+   "fx_crown",
+   "fx_ember",
+   "fx_fissure",
+   "fx_flame",
+   "fx_sigil",
+   "fx_void",
+   "iron",
+   "iron_rust",
+   "marble",
+   "rock",
+   "rust",
+   "stone_block",
+   "stone_wall",
+   "timber",
+   "wood_fine",
+   "wood_planks"
+  ],
+  "archetypes": [
+   "echo_archer",
+   "hollow",
+   "hollow_warden",
+   "last_crown",
+   "remnant"
+  ],
+  "veg": [],
+  "markers": {
+   "boss_lens": 1,
+   "boss_point": 8,
+   "encounter": 4,
+   "enemy": 11,
+   "exit": 1,
+   "fire": 8,
+   "fissure": 2,
+   "imprint": 4,
+   "light": 32,
+   "pillar": 4,
+   "prompt": 6,
+   "sigil": 2,
+   "spawn": 1,
+   "trace": 2,
+   "void": 8,
+   "wedge": 4
+  }
  }
 }

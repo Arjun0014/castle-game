@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { Enemy, type EnemyCtx } from './Enemy';
+import { LastCrown } from './LastCrown';
 import { ARCHETYPES, type ArchetypeId, type AssetId, type EnemyAttack } from './EnemyTypes';
 import type { Game } from '../game/Game';
 import type { TimeState } from '../levels/Materials';
@@ -164,11 +165,12 @@ export class EnemyManager {
       m.position.copy(at).add(new THREE.Vector3(0.4, 1.4, -1.5));
       objects.push(m);
     }
+    const spellKits = this.enemies.filter((e): e is LastCrown => e instanceof LastCrown).map((e) => e.spells.warmKit(at));
     return {
       objects,
       // the materials stay alive until the floor unloads: three frees a program when its last material is
       // disposed, and these are the only users of the fade variants until the first corpse fades
-      dispose: () => { for (const o of objects) o.removeFromParent(); for (const sk of skins) sk.dispose(); this.keepAlive.push(...mats); },
+      dispose: () => { for (const o of objects) o.removeFromParent(); for (const sk of skins) sk.dispose(); this.keepAlive.push(...mats); for (const k of spellKits) k.dispose(); },
     };
   }
 
@@ -246,7 +248,9 @@ export class EnemyManager {
     const { model, clips } = this.instantiate(arch.asset);
     // Blender yaw (about +Z) → three.js yaw (about +Y): character forward is -Y in Blender = +Z three
     const yaw = (p.yaw ?? 0) + Math.PI;
-    const e = new Enemy(arch, model, clips, p.encounter, p.state, p.wave ?? 1, { rise: !!p.rise, kneel: !!p.kneel, perch: !!p.perch, yaw, tint: p.tint });
+    const e = arch.id === 'last_crown'
+      ? new LastCrown(arch, model, clips, p.encounter, p.state, p.wave ?? 1, { yaw }, this.g)
+      : new Enemy(arch, model, clips, p.encounter, p.state, p.wave ?? 1, { rise: !!p.rise, kneel: !!p.kneel, perch: !!p.perch, yaw, tint: p.tint });
     e.place(m.pos);
     this.g.scene.add(e.root);
     this.enemies.push(e);
@@ -320,10 +324,10 @@ export class EnemyManager {
     const st = this.g.time.state;
     let best: Enemy | null = null, bestScore = Infinity;
     for (const e of [...this.enemies, ...this.remnants]) {
-      if (!this.liveIn(st)(e) || e.state === 'hidden') continue;
+      if (!this.liveIn(st)(e) || e.state === 'hidden' || e.untargetable) continue;
       const to = _a.subVectors(e.pos, from);
       const d = to.length();
-      if (d > 20) continue;
+      if (d > (e.arch.boss ? 30 : 20)) continue;
       const ang = camFwd.angleTo(to.setY(0).normalize());
       const score = d + ang * 8;
       if (score < bestScore) { bestScore = score; best = e; }
@@ -477,7 +481,7 @@ export class EnemyManager {
       const hot = e.triggered || d < 38;
       if (!hot && e.alive) continue;
       // bosses are never lost to a void: a kick toward the edge staggers them instead (blueprint E10)
-      if (e.arch.boss && e.alive && e.state !== 'hit' && (Math.abs(e.vel.x) + Math.abs(e.vel.z)) > 1 && e.catchAtEdge(ctx)) {
+      if (e.arch.boss && e.arch.id !== 'last_crown' && e.alive && e.state !== 'hit' && (Math.abs(e.vel.x) + Math.abs(e.vel.z)) > 1 && e.catchAtEdge(ctx)) {
         g.hud.prompt('The Captain reels at the edge!', 1.5);
         g.fx.dust(e.pos.clone(), 8);
       }
@@ -585,7 +589,7 @@ export class EnemyManager {
     if (enc.bossFight && !enc.finale) {
       const boss = enc.enemies.find((e) => e.arch.boss);
       if (boss) { this.boss = boss; this.bossName = enc.title ?? this.bossName; }
-      this.g.hud.message(enc.title ?? 'A GUARDIAN WAKES', 'Echo of the royal guard', 3.5);
+      this.g.hud.message(enc.title ?? 'A GUARDIAN WAKES', boss?.arch.id === 'last_crown' ? "Aldren's imprint, wearing the Queen's face" : 'Echo of the royal guard', 3.5);
       this.g.audio.bossSting();
     }
     if (enc.finale) {
@@ -698,7 +702,7 @@ export class EnemyManager {
     const hits = p.activeHits();
     if (!hits.length) return;
     const st = g.time.state;
-    const targets = [...this.enemies, ...this.remnants].filter((e) => this.liveIn(st)(e) && e.state !== 'hidden');
+    const targets = [...this.enemies, ...this.remnants].filter((e) => this.liveIn(st)(e) && e.state !== 'hidden' && !e.untargetable);
     const f = p.facing.clone();
     for (const { win, index } of hits) {
       for (const e of targets) {
@@ -790,6 +794,8 @@ export class EnemyManager {
     const g = this.g, p = g.player;
     const away = e.pos.clone().sub(p.pos).setY(0).normalize();
     if (res === 'blocked') { g.fx.sparks(contact, 18, 0xffd090); return; }
+    // the Last Crown is the Crownheart's making: she bleeds light, not blood (her death is her own sequence)
+    if (e.arch.asset === 'lastcrown') { g.fx.sparks(contact, 22, g.time.state === 'PAST' ? 0xffc060 : 0xc05aff); g.fx.ashBurst(contact, dir, 8); return; }
     const kind = p.attack?.kind;
     const power = res === 'dead' ? (kind && HEAVY_KINDS.has(kind) ? 1 : damage >= 28 ? 0.75 : 0.35) : 0;
     const amount = Math.min(1.5, damage / 28) + (res === 'dead' ? 0.35 + power * 0.4 : 0);
@@ -913,6 +919,35 @@ export class EnemyManager {
       g.fx.shiftBurst(f.pos, g.time.state);
       break;
     }
+  }
+
+  /** Boss adds: pooled remnants rising around `near` (on footing, never in a hole). */
+  summonRemnants(n: number, near: THREE.Vector3) {
+    const g = this.g, st = g.time.state;
+    for (let i = 0; i < n; i++) {
+      const e = this.remnantPool.pop();
+      if (!e) return;
+      let at = near.clone();
+      for (let k = 0; k < 12; k++) {
+        const a = Math.random() * Math.PI * 2, r = 6 + Math.random() * 3;
+        const q = near.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
+        if (g.level.collision.hasFooting(q.clone().setY(q.y + 1), 2, st) && !g.level.collision.inVoid(q.clone().setY(q.y - 0.5), st)) { at = q; break; }
+      }
+      e.owner = st;
+      e.yaw = Math.random() * 6.28;
+      e.place(at);
+      g.scene.add(e.root);
+      e.activate();
+      this.remnants.push(e);
+      g.fx.shiftBurst(at, st);
+    }
+  }
+
+  /** The Last Crown's death sequence finished: the ending follows (Game.endGame). */
+  onBossDefeated(e: Enemy) {
+    this.killCount++;
+    this.g.time.gain(e.arch.reward, 'kill');
+    this.g.schedule(4.5, () => this.g.endGame());
   }
 
   /** Aim tracers for archers in their aim phase (current state, visible, alive). */

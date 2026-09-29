@@ -398,6 +398,8 @@ export class Game {
       this.fx.channelStop();
       const v = this.time.commit(p);
       if (!v.ok) { this.audio.channelStop(); this.hud.deny(v.reason); this.audio.deny(); return; }
+      // the Last Crown's wards and bindings exist in one memory only: the hero's own shift breaks them
+      for (const e of this.enemies.enemies) (e as { onPlayerShift?: () => void }).onPlayerShift?.();
     };
     p.events.onInteract = () => this.checkpoints.interact();
     p.events.onDeath = () => this.onPlayerDeath();
@@ -536,7 +538,10 @@ export class Game {
   /** Portrait: pull the camera back when a fight crowds the narrow frame (a melee pack, a boss). */
   private fightPull() {
     if (!Platform.isPortrait || !this.enemies.inCombat) return 0;
-    let near = 0, boss = false;
+    let near = 0;
+    const b = this.enemies.boss;
+    // a boss anywhere in a 16 m fight (the Last Crown fights at range) widens the frame
+    let boss = !!b && b.triggered && b.alive && b.pos.distanceTo(this.player.pos) < 16;
     for (const e of this.enemies.threats(this.player.pos, 9, 0)) {
       if (e.arch.boss) boss = true;
       else if (!e.isRanged) near++;
@@ -545,6 +550,7 @@ export class Game {
   }
 
   private threatList: Threat[] = [];
+  private incoming: THREE.Vector3[] = [];
   private _tv = new THREE.Vector3();
   private _tp = new THREE.Vector3();
   /**
@@ -567,6 +573,15 @@ export class Game {
         const hot = e.isRanged ? e.state === 'shoot' && e.shootPhase === 1 : e.state === 'attack' || e.state === 'windup' || e.state === 'dive' || e.state === 'lunge';
         out.push({ x: right, y: -ahead, ranged: e.isRanged, hot });
         if (out.length >= 6) break;
+      }
+      // spells flying in from outside the frame (the Last Crown's bolts)
+      const lc = this.enemies.boss as { spells?: { incoming(from: THREE.Vector3, out: THREE.Vector3[]): THREE.Vector3[] } } | null;
+      if (lc?.spells) for (const q of lc.spells.incoming(pp, this.incoming)) {
+        if (out.length >= 6) break;
+        const v = this._tp.copy(q).project(this.camera);
+        if (v.z < 1 && Math.abs(v.x) < 0.92 && Math.abs(v.y) < 0.9) continue;
+        const dx = q.x - pp.x, dz = q.z - pp.z;
+        out.push({ x: dx * -fz + dz * fx, y: -(dx * fx + dz * fz), ranged: true, hot: true });
       }
     }
     this.hud.setThreats(out);
@@ -761,13 +776,30 @@ export class Game {
       this.respawning = false;
       p.hp -= p.maxHp * (p.godMode ? 0 : 0.25);
       if (p.hp <= 0) { p.die(); return; }
-      p.teleport(p.lastSafe.clone());
+      p.teleport(this.safeSpot(p.lastSafe));
       this.hud.fade(false);
       this.hud.deny('The memory gives way beneath you.');
       this.falls++;
     });
   }
   falls = 0;
+
+  /**
+   * lastSafe may have been recorded in the other memory (a forced slip opened a hole under it): search outward
+   * for footing in the current state, else fall back to the last Blood Sigil.
+   */
+  private safeSpot(want: THREE.Vector3) {
+    const col = this.level.collision, st = this.time.state;
+    const ok = (q: THREE.Vector3) => col.hasFooting(q.clone().setY(q.y + 0.5), 1.5, st) && !col.inVoid(q.clone().setY(q.y - 0.4), st)
+      && col.overlap(q, this.player.radius, this.player.height, st) < 0.05;
+    if (ok(want)) return want.clone();
+    for (let r = 1; r <= 8; r += 1) for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      const q = want.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
+      if (ok(q)) return q;
+    }
+    return this.checkpoints.save?.pos.clone() ?? this.level.marker('spawn', 'SPAWN').pos.clone();
+  }
 
   private onPlayerDeath() {
     this.deaths++;
@@ -781,6 +813,9 @@ export class Game {
     });
   }
 
+  /** The last floor's ending (the Last Crown's death sequence calls it). */
+  endGame() { if (!this.finished) this.finish(); }
+
   private finish() {
     this.finished = true;
     if (this.floor.next) {
@@ -790,6 +825,11 @@ export class Game {
       return;
     }
     const secs = (performance.now() - this.startTime) / 1000;
+    if (this.floorId === 3) {
+      (this.hud.endEl.querySelector('h1') as HTMLElement).textContent = 'THE CROWNHEART IS SILENT';
+      const ps = this.hud.endEl.querySelectorAll('p');
+      ps[ps.length - 1].textContent = 'Caer Veyr is only stone now — and stone can fall. The Uncrowned walks down through the one castle that remains.';
+    }
     const sub = this.hud.endEl.querySelector('.end-sub') as HTMLElement;
     sub.textContent = `Time ${Math.floor(secs / 60)}m ${Math.floor(secs % 60)}s · Echoes released ${this.enemies.killCount} · Shifts ${this.time.shiftCount} · Deaths ${this.deaths}`;
     this.hud.endEl.classList.add('on');

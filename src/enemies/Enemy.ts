@@ -109,6 +109,8 @@ export class Enemy {
   lastSeen = new THREE.Vector3();
   voiceT = 2 + Math.random() * 5;
   castsShadow = true;
+  /** not hittable / lockable right now (the Last Crown mid-blink or dying) */
+  untargetable = false;
   /** death presentation: tumble while flung, shatter after settling */
   tumble = 0;
   tumbleRate = 0;
@@ -218,7 +220,7 @@ export class Enemy {
     a.time = start;
     return a;
   }
-  private setState(s: EState) { this.state = s; this.stateTime = 0; }
+  protected setState(s: EState) { this.state = s; this.stateTime = 0; }
   /**
    * Hold a static pose (dormant kneelers). No fade: dormant enemies only get mixer.update(0), so a fade-in
    * would never advance and they would stand in the bind (T) pose until woken.
@@ -417,7 +419,7 @@ export class Enemy {
     if (this.shakeT > 0) this.shakeT = Math.max(0, this.shakeT - dt);
   }
 
-  private syncRoot() {
+  protected syncRoot() {
     this.root.position.copy(this.pos);
     this.root.rotation.y = this.yaw;
     this.root.rotation.x = -this.tumble + this.lean.x;

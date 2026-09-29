@@ -346,6 +346,25 @@ sound('amb_past', 'amb', -9, 'Past bed: the inhabited keep\'s room tone (warm, l
       ['Loopable Dungeon Ambience (JaggedStone, CC0), low-passed'], loop=True, stereo=True)
 
 
+
+# ---- Floor 3: the Last Crown (mage boss) — ElevenLabs sound generation, build-time only (session 5).
+_EL_SRC = ['ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)']
+for _id, _n, _gain, _fout, _desc in [
+    ('mage_charge', 3, -9, 0.2, 'Last Crown: gathering a spell (cast tell).'),
+    ('mage_bolt', 4, -7, 0.1, 'Last Crown: bolt leaves the hand.'),
+    ('mage_impact', 4, -8, 0.15, 'Magic bolt / orb bursting.'),
+    ('mage_nova', 2, -6, 0.3, 'Radial burst / repel / ground wave.'),
+    ('mage_teleport', 3, -8, 0.15, 'Blink out / in.'),
+    ('mage_beam', 2, -8, 0.4, 'Channelled beam.'),
+    ('mage_ward', 2, -8, 0.2, 'Ward forming / shattering, binding.'),
+    ('mage_rune', 3, -8, 0.2, 'Rune circle erupting (bombardment).'),
+    ('crown_resonance', 2, -6, 0.8, 'Crownheart resonance: slips, phase breaks.'),
+    ('boss_scream', 3, -8, 0.2, 'Last Crown pain / fury cry.'),
+    ('boss_death', 1, -5, 0.8, 'Last Crown death.'),
+    ('final_collapse', 1, -5, 1.0, 'The Crownheart falls silent (ending).'),
+]:
+    sound(_id, 'sfx', _gain, _desc, [lambda i=i, _id=_id, _fout=_fout: V(EL + f'{_id}_{i}.mp3', fout=_fout) for i in range(_n)], _EL_SRC)
+
 def main():
     only = set(sys.argv[1:])
     manifest = {'_generatedBy': 'tools/build_audio.py', 'sounds': {}}

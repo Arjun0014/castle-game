@@ -37,8 +37,14 @@ export const FLOORS: Record<number, FloorDef> = {
   },
   2: {
     id: 2, title: 'THE ROYAL FLOOR', subtitle: 'Floor II — Complicity',
-    loadingText: 'Preparing the Royal Floor', readyText: "The Royal Stair ends at the court's own rooms.", next: null, autopilot: true,
+    loadingText: 'Preparing the Royal Floor', readyText: "The Royal Stair ends at the court's own rooms.", next: 3, autopilot: true,
     // the Present royal floor is mostly roofless: open sky instead of shafts, except the chancery's roof hole
+    moonHoles: [],
+  },
+  3: {
+    id: 3, title: 'THE CROWN', subtitle: 'Floor III — The Crownheart',
+    loadingText: 'Preparing the Crown', readyText: 'The bell chamber. Above it, the Crown is waiting.', next: null, autopilot: false,
+    // the Present summit is open to the storm sky (no shafts needed)
     moonHoles: [],
   },
 };

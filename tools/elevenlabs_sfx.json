@@ -1,12 +1,121 @@
 [
- { "id": "gore_splat", "variants": 4, "duration": 0.8, "influence": 0.6,
-   "prompt": "Wet visceral gore splat, a blade cutting through flesh with a thick blood spray, close, dry studio, no music, no voice" },
- { "id": "kill_impact", "variants": 3, "duration": 1.0, "influence": 0.6,
-   "prompt": "Heavy killing sword blow landing on an armoured body: deep meaty thud with a crunch of chainmail and bone, short tail, no music" },
- { "id": "bone_crunch", "variants": 3, "duration": 0.7, "influence": 0.6,
-   "prompt": "Brutal bone crunch and snap, close and punchy, for a finishing blow in a dark fantasy fight, no music, no voice" },
- { "id": "echo_shatter", "variants": 3, "duration": 1.6, "influence": 0.5,
-   "prompt": "A ghostly spectral body shattering: a cold glassy breath that breaks apart into crackling embers and drifting ash, eerie, no music" },
- { "id": "blood_splash", "variants": 3, "duration": 0.6, "influence": 0.6,
-   "prompt": "Blood splashing onto a stone floor, short wet slap and patter of droplets, close, no music" }
+ {
+  "id": "gore_splat",
+  "variants": 4,
+  "duration": 0.8,
+  "influence": 0.6,
+  "prompt": "Wet visceral gore splat, a blade cutting through flesh with a thick blood spray, close, dry studio, no music, no voice"
+ },
+ {
+  "id": "kill_impact",
+  "variants": 3,
+  "duration": 1.0,
+  "influence": 0.6,
+  "prompt": "Heavy killing sword blow landing on an armoured body: deep meaty thud with a crunch of chainmail and bone, short tail, no music"
+ },
+ {
+  "id": "bone_crunch",
+  "variants": 3,
+  "duration": 0.7,
+  "influence": 0.6,
+  "prompt": "Brutal bone crunch and snap, close and punchy, for a finishing blow in a dark fantasy fight, no music, no voice"
+ },
+ {
+  "id": "echo_shatter",
+  "variants": 3,
+  "duration": 1.6,
+  "influence": 0.5,
+  "prompt": "A ghostly spectral body shattering: a cold glassy breath that breaks apart into crackling embers and drifting ash, eerie, no music"
+ },
+ {
+  "id": "blood_splash",
+  "variants": 3,
+  "duration": 0.6,
+  "influence": 0.6,
+  "prompt": "Blood splashing onto a stone floor, short wet slap and patter of droplets, close, no music"
+ },
+ {
+  "id": "mage_charge",
+  "variants": 3,
+  "duration": 1.2,
+  "influence": 0.6,
+  "prompt": "Dark sorceress gathering magic: a rising crackling hum of arcane energy with a glassy shimmer, building tension, no voice, no music"
+ },
+ {
+  "id": "mage_bolt",
+  "variants": 4,
+  "duration": 0.7,
+  "influence": 0.6,
+  "prompt": "Magic bolt launched: a sharp whooshing crack of violet arcane fire leaving a hand, fast, punchy, no voice, no music"
+ },
+ {
+  "id": "mage_impact",
+  "variants": 4,
+  "duration": 0.9,
+  "influence": 0.6,
+  "prompt": "Arcane projectile exploding on stone: a crisp magical burst with a glassy crackle and a short low thump, no voice, no music"
+ },
+ {
+  "id": "mage_nova",
+  "variants": 2,
+  "duration": 1.8,
+  "influence": 0.6,
+  "prompt": "Huge radial magic shockwave bursting outward from a sorceress: deep booming whoomp, rushing wind and shimmering crackle, no voice, no music"
+ },
+ {
+  "id": "mage_teleport",
+  "variants": 3,
+  "duration": 0.9,
+  "influence": 0.6,
+  "prompt": "Sorceress vanishing in a burst of dark smoke and reappearing: inverted suck-in whoosh then a soft magical pop, no voice, no music"
+ },
+ {
+  "id": "mage_beam",
+  "variants": 2,
+  "duration": 3.0,
+  "influence": 0.5,
+  "prompt": "Sustained searing magic beam: intense electric humming roar of a continuous arcane ray, steady, no voice, no music"
+ },
+ {
+  "id": "mage_ward",
+  "variants": 2,
+  "duration": 1.2,
+  "influence": 0.6,
+  "prompt": "Magical ward shield forming then shattering like crystal glass with a resonant chime, no voice, no music"
+ },
+ {
+  "id": "mage_rune",
+  "variants": 3,
+  "duration": 1.4,
+  "influence": 0.6,
+  "prompt": "Glowing rune circle igniting on a stone floor then erupting in a pillar of magical fire, delayed blast, no voice, no music"
+ },
+ {
+  "id": "crown_resonance",
+  "variants": 2,
+  "duration": 4.0,
+  "influence": 0.5,
+  "prompt": "Ancient temporal mechanism awakening: a vast low resonant drone with ringing bell harmonics and deep stone rumble, ominous, no voice, no music"
+ },
+ {
+  "id": "boss_scream",
+  "variants": 3,
+  "duration": 1.5,
+  "influence": 0.6,
+  "prompt": "Otherworldly queenly sorceress cry of pain and fury, echoing and distorted with a supernatural layered voice, no words"
+ },
+ {
+  "id": "boss_death",
+  "variants": 1,
+  "duration": 4.5,
+  "influence": 0.6,
+  "prompt": "A supernatural sorceress dying: long fading distorted wail dissolving into shattering crystal and a collapsing temporal hum, no words, no music"
+ },
+ {
+  "id": "final_collapse",
+  "variants": 1,
+  "duration": 5.0,
+  "influence": 0.5,
+  "prompt": "The heart of an ancient castle falls silent: massive deep rumble of stone settling, crystal shards tinkling, then a long quiet exhale of wind, no music"
+ }
 ]

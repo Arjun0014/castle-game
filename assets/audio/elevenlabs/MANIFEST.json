@@ -142,5 +142,275 @@
   "generated": "2026-09-29T00:37:33.606Z",
   "bytes": 10493,
   "source": "ElevenLabs sound-generation API"
+ },
+ "mage_charge_0.mp3": {
+  "id": "mage_charge",
+  "prompt": "Dark sorceress gathering magic: a rising crackling hum of arcane energy with a glassy shimmer, building tension, no voice, no music",
+  "duration": 1.2,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:40.999Z",
+  "bytes": 20106,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_charge_1.mp3": {
+  "id": "mage_charge",
+  "prompt": "Dark sorceress gathering magic: a rising crackling hum of arcane energy with a glassy shimmer, building tension, no voice, no music",
+  "duration": 1.2,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:43.354Z",
+  "bytes": 20106,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_charge_2.mp3": {
+  "id": "mage_charge",
+  "prompt": "Dark sorceress gathering magic: a rising crackling hum of arcane energy with a glassy shimmer, building tension, no voice, no music",
+  "duration": 1.2,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:44.780Z",
+  "bytes": 20106,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_bolt_0.mp3": {
+  "id": "mage_bolt",
+  "prompt": "Magic bolt launched: a sharp whooshing crack of violet arcane fire leaving a hand, fast, punchy, no voice, no music",
+  "duration": 0.7,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:46.212Z",
+  "bytes": 12164,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_bolt_1.mp3": {
+  "id": "mage_bolt",
+  "prompt": "Magic bolt launched: a sharp whooshing crack of violet arcane fire leaving a hand, fast, punchy, no voice, no music",
+  "duration": 0.7,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:47.768Z",
+  "bytes": 12164,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_bolt_2.mp3": {
+  "id": "mage_bolt",
+  "prompt": "Magic bolt launched: a sharp whooshing crack of violet arcane fire leaving a hand, fast, punchy, no voice, no music",
+  "duration": 0.7,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:49.293Z",
+  "bytes": 12164,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_bolt_3.mp3": {
+  "id": "mage_bolt",
+  "prompt": "Magic bolt launched: a sharp whooshing crack of violet arcane fire leaving a hand, fast, punchy, no voice, no music",
+  "duration": 0.7,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:50.867Z",
+  "bytes": 12164,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_impact_0.mp3": {
+  "id": "mage_impact",
+  "prompt": "Arcane projectile exploding on stone: a crisp magical burst with a glassy crackle and a short low thump, no voice, no music",
+  "duration": 0.9,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:52.571Z",
+  "bytes": 15090,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_impact_1.mp3": {
+  "id": "mage_impact",
+  "prompt": "Arcane projectile exploding on stone: a crisp magical burst with a glassy crackle and a short low thump, no voice, no music",
+  "duration": 0.9,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:54.166Z",
+  "bytes": 15090,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_impact_2.mp3": {
+  "id": "mage_impact",
+  "prompt": "Arcane projectile exploding on stone: a crisp magical burst with a glassy crackle and a short low thump, no voice, no music",
+  "duration": 0.9,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:55.640Z",
+  "bytes": 15090,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_impact_3.mp3": {
+  "id": "mage_impact",
+  "prompt": "Arcane projectile exploding on stone: a crisp magical burst with a glassy crackle and a short low thump, no voice, no music",
+  "duration": 0.9,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:57.017Z",
+  "bytes": 15090,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_nova_0.mp3": {
+  "id": "mage_nova",
+  "prompt": "Huge radial magic shockwave bursting outward from a sorceress: deep booming whoomp, rushing wind and shimmering crackle, no voice, no music",
+  "duration": 1.8,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:43:58.614Z",
+  "bytes": 29301,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_nova_1.mp3": {
+  "id": "mage_nova",
+  "prompt": "Huge radial magic shockwave bursting outward from a sorceress: deep booming whoomp, rushing wind and shimmering crackle, no voice, no music",
+  "duration": 1.8,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:00.075Z",
+  "bytes": 29301,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_teleport_0.mp3": {
+  "id": "mage_teleport",
+  "prompt": "Sorceress vanishing in a burst of dark smoke and reappearing: inverted suck-in whoosh then a soft magical pop, no voice, no music",
+  "duration": 0.9,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:01.662Z",
+  "bytes": 15090,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_teleport_1.mp3": {
+  "id": "mage_teleport",
+  "prompt": "Sorceress vanishing in a burst of dark smoke and reappearing: inverted suck-in whoosh then a soft magical pop, no voice, no music",
+  "duration": 0.9,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:03.016Z",
+  "bytes": 15090,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_teleport_2.mp3": {
+  "id": "mage_teleport",
+  "prompt": "Sorceress vanishing in a burst of dark smoke and reappearing: inverted suck-in whoosh then a soft magical pop, no voice, no music",
+  "duration": 0.9,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:04.399Z",
+  "bytes": 15090,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_beam_0.mp3": {
+  "id": "mage_beam",
+  "prompt": "Sustained searing magic beam: intense electric humming roar of a continuous arcane ray, steady, no voice, no music",
+  "duration": 3,
+  "influence": 0.5,
+  "generated": "2026-09-29T04:44:05.987Z",
+  "bytes": 48945,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_beam_1.mp3": {
+  "id": "mage_beam",
+  "prompt": "Sustained searing magic beam: intense electric humming roar of a continuous arcane ray, steady, no voice, no music",
+  "duration": 3,
+  "influence": 0.5,
+  "generated": "2026-09-29T04:44:07.521Z",
+  "bytes": 48945,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_ward_0.mp3": {
+  "id": "mage_ward",
+  "prompt": "Magical ward shield forming then shattering like crystal glass with a resonant chime, no voice, no music",
+  "duration": 1.2,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:09.113Z",
+  "bytes": 20106,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_ward_1.mp3": {
+  "id": "mage_ward",
+  "prompt": "Magical ward shield forming then shattering like crystal glass with a resonant chime, no voice, no music",
+  "duration": 1.2,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:10.697Z",
+  "bytes": 20106,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_rune_0.mp3": {
+  "id": "mage_rune",
+  "prompt": "Glowing rune circle igniting on a stone floor then erupting in a pillar of magical fire, delayed blast, no voice, no music",
+  "duration": 1.4,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:12.154Z",
+  "bytes": 23031,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_rune_1.mp3": {
+  "id": "mage_rune",
+  "prompt": "Glowing rune circle igniting on a stone floor then erupting in a pillar of magical fire, delayed blast, no voice, no music",
+  "duration": 1.4,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:13.770Z",
+  "bytes": 23031,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "mage_rune_2.mp3": {
+  "id": "mage_rune",
+  "prompt": "Glowing rune circle igniting on a stone floor then erupting in a pillar of magical fire, delayed blast, no voice, no music",
+  "duration": 1.4,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:15.308Z",
+  "bytes": 23031,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "crown_resonance_0.mp3": {
+  "id": "crown_resonance",
+  "prompt": "Ancient temporal mechanism awakening: a vast low resonant drone with ringing bell harmonics and deep stone rumble, ominous, no voice, no music",
+  "duration": 4,
+  "influence": 0.5,
+  "generated": "2026-09-29T04:44:17.425Z",
+  "bytes": 65245,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "crown_resonance_1.mp3": {
+  "id": "crown_resonance",
+  "prompt": "Ancient temporal mechanism awakening: a vast low resonant drone with ringing bell harmonics and deep stone rumble, ominous, no voice, no music",
+  "duration": 4,
+  "influence": 0.5,
+  "generated": "2026-09-29T04:44:19.402Z",
+  "bytes": 65245,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "boss_scream_0.mp3": {
+  "id": "boss_scream",
+  "prompt": "Otherworldly queenly sorceress cry of pain and fury, echoing and distorted with a supernatural layered voice, no words",
+  "duration": 1.5,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:20.937Z",
+  "bytes": 24703,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "boss_scream_1.mp3": {
+  "id": "boss_scream",
+  "prompt": "Otherworldly queenly sorceress cry of pain and fury, echoing and distorted with a supernatural layered voice, no words",
+  "duration": 1.5,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:22.419Z",
+  "bytes": 24703,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "boss_scream_2.mp3": {
+  "id": "boss_scream",
+  "prompt": "Otherworldly queenly sorceress cry of pain and fury, echoing and distorted with a supernatural layered voice, no words",
+  "duration": 1.5,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:24.009Z",
+  "bytes": 24703,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "boss_death_0.mp3": {
+  "id": "boss_death",
+  "prompt": "A supernatural sorceress dying: long fading distorted wail dissolving into shattering crystal and a collapsing temporal hum, no words, no music",
+  "duration": 4.5,
+  "influence": 0.6,
+  "generated": "2026-09-29T04:44:26.158Z",
+  "bytes": 72768,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "final_collapse_0.mp3": {
+  "id": "final_collapse",
+  "prompt": "The heart of an ancient castle falls silent: massive deep rumble of stone settling, crystal shards tinkling, then a long quiet exhale of wind, no music",
+  "duration": 5,
+  "influence": 0.5,
+  "generated": "2026-09-29T04:44:28.210Z",
+  "bytes": 81128,
+  "source": "ElevenLabs sound-generation API"
  }
 }

@@ -1,9 +1,9 @@
 import { HERO_CLIPS } from '../data/animationManifest';
 
-export type AssetId = 'knight' | 'hollow' | 'archer' | 'ghost';
+export type AssetId = 'knight' | 'hollow' | 'archer' | 'ghost' | 'lastcrown';
 /** echo: pale drifting motes · muster: faint gold dust · elite: rising embers · corrupt: ash · dread: boss embers */
 export type AuraKind = 'echo' | 'muster' | 'elite' | 'corrupt' | 'dread';
-export type ArchetypeId = 'kingsguard' | 'guard' | 'muster' | 'royal_warden' | 'hollow' | 'hollow_warden' | 'wraith' | 'archer' | 'echo_archer' | 'gate_warden' | 'remnant';
+export type ArchetypeId = 'kingsguard' | 'guard' | 'muster' | 'royal_warden' | 'hollow' | 'hollow_warden' | 'wraith' | 'archer' | 'echo_archer' | 'gate_warden' | 'remnant' | 'last_crown';
 
 export interface EnemyAttack {
   clip: string; speed: number; start: number;
@@ -138,6 +138,14 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     id: 'echo_archer', asset: 'archer', scale: 1.0, aura: 'echo', spectralArrows: true,
     hp: 36, poise: 20, runSpeed: 2.6, walkSpeed: 1.5, radius: 0.36, height: 1.8, reward: 30, blockChance: 0, aggroRange: 34, turnRate: 6, attacks: [],
     ranged: { range: [7, 32], sight: 34, projectileSpeed: 27, damage: 13, interval: [1.7, 2.6] }, clips: ARCHER_CLIPS, slotCost: 0,
+  },
+  /** Floor 3 final boss (docs/LEVEL_03_BLUEPRINT.md §I): the mage fight lives in src/enemies/LastCrown.ts */
+  last_crown: {
+    id: 'last_crown', asset: 'lastcrown', scale: 1.15, aura: 'dread',
+    hp: 1600, poise: 260, runSpeed: 3.6, walkSpeed: 1.9, radius: 0.5, height: 2.6, reward: 200, blockChance: 0, aggroRange: 40, turnRate: 5,
+    attacks: [],
+    clips: { idle: 'idle', walk: 'walk_fwd', run: 'run_fwd', strafeL: 'walk_left', strafeR: 'walk_right', back: 'walk_back', hitL: 'hit_small', hitH: 'hit_large', death: ['death'] },
+    slotCost: 0, boss: true,
   },
   wraith: {
     id: 'wraith', asset: 'ghost', scale: 1.0, aura: 'echo',
