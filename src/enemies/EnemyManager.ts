@@ -120,7 +120,6 @@ export class EnemyManager {
   /** pooled web globs / warning rings / threads of the session-9 monsters (null on floors without them) */
   monsterFx: MonsterFX | null = null;
   /** gloom bats diving right now (at most two swoop at once) */
-  batDivers = 0;
   bossName = 'THE GATE WARDEN';
   boss: Enemy | null = null;
   onBossDeath?: () => void;
@@ -134,6 +133,8 @@ export class EnemyManager {
   build(templates: Map<AssetId, EnemyTemplate>) {
     this.assets = templates;
     this.spawnFromMarkers();
+    this.checkPerches();
+    this.checkFlyers();
     this.spawnStaticFigures();
     if (this.enemies.some((e) => e.arch.brain)) this.monsterFx = new MonsterFX(this.g);
     if (this.g.level.markersOf('fissure').length || this.enemies.some((e) => e instanceof LastCrown)) {
@@ -375,6 +376,129 @@ export class EnemyManager {
       e.state !== 'hidden' && e.state !== 'dormant' && e.pos.distanceTo(p) < r &&
       ((e.isRanged || e.isFlying) ? sees(e) : Math.abs(e.pos.y - p.y) < 2.5 && e.navMode !== 'hold');
     return this.enemies.some(hit) || this.remnants.some(hit);
+  }
+
+  /**
+   * Perched archers must be able to see their own fight (session 10 audit: three Floor 2 archers — two in the middle
+   * of a 4 m walled gallery above the Chancery, one in a niche of the Crown Loft — and the undercroft scaffold archer
+   * of Floor 1 never loosed an arrow). A perch that sees less than 40 % of its arena (walkable points round its
+   * encounter's walkers, at chest height, with the archer's own parapet lean) moves along its level — within 4 m (7 m
+   * when it sees nothing),
+   * standable, never through a wall — to the spot that sees the most. Logged in spawnFixes.
+   */
+  private checkPerches() {
+    const nav = this.nav, col = this.g.level.collision;
+    if (!nav) return;
+    for (const e of this.enemies) {
+      if (!e.opts.perch || !e.isRanged) continue;
+      const enc = this.encounters.get(e.encounter);
+      if (!enc) continue;
+      const st: TimeState = e.owner === 'BOTH' ? 'PRESENT' : e.owner;
+      nav.use(st, this.g.level.flags);
+      const walkers = enc.enemies.filter((x) => !x.opts.perch && !x.isFlying && (x.owner === st || x.owner === 'BOTH'));
+      const seeds = walkers.length ? walkers.map((x) => x.home) : [enc.box.getCenter(new THREE.Vector3()).setY(enc.box.min.y + 0.5)];
+      const pts: THREE.Vector3[] = [];
+      for (const s of seeds) for (const [dx, dz] of [[0, 0], [2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5]]) {
+        const q = nav.nearestWalkable(new THREE.Vector3(s.x + dx, s.y, s.z + dz), 2);
+        if (q && Math.abs(q.y - s.y) < 1.5 && !pts.some((o) => o.distanceTo(q) < 1.2)) pts.push(q.clone().setY(q.y + 1.2));
+      }
+      if (pts.length < 3) continue;
+      const home = e.pos.clone();
+      const sees = (at: THREE.Vector3) => {
+        e.pos.copy(at);
+        let n = 0;
+        for (const t of pts) {
+          const o = e.firingPoint(col, st, t);
+          const dir = t.clone().sub(o), len = dir.length();
+          const hit = col.raycast(o, dir.normalize(), len, st);
+          if (!hit || hit.distance > len - 0.4) n++;
+        }
+        e.pos.copy(home);
+        return n / pts.length;
+      };
+      const s0 = sees(home);
+      if (s0 >= 0.4) continue;
+      let best: THREE.Vector3 | null = null, bs = s0 + 0.15;
+      // waist height: a low step between two parts of a gallery is not a wall (the Crown Loft archer's bay is 0.5 m
+      // below its gallery)
+      const waist = home.clone().setY(home.y + 1.0);
+      // a blind perch (sees nothing at all) may be in a closed bay of its gallery: look further along it
+      const reach = s0 === 0 ? 7 : 4;
+      for (let r = 0.5; r <= reach; r += 0.5) for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        const dir = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+        const wall = col.raycast(waist.clone(), dir.clone(), r + e.radius, st);
+        if (wall) continue;
+        const top = home.clone().addScaledVector(dir, r).setY(home.y + 1.2);
+        const floor = col.raycast(top, new THREE.Vector3(0, -1, 0), 2, st);
+        if (!floor || Math.abs(floor.point.y - home.y) > 0.7) continue;
+        const q = floor.point.clone().setY(floor.point.y + 0.02);
+        if (col.overlap(q, e.radius, 1.8, st) > 0.05) continue;
+        const sc = sees(q);
+        if (sc > bs) { bs = sc; best = q; }
+      }
+      // still nothing (a closed bay walled off from the fight: F2's Crown Loft archer; a scaffold landing boxed in by
+      // its rails: F1's undercroft archer) → the standable spot inside its own encounter's arena, no lower than 1.8 m
+      // below the perch (it keeps some height), that sees the fight best; nearest on ties
+      if (!best && s0 < 0.2) {
+        const b = enc.box;
+        let bd = Infinity;
+        for (let x = b.min.x + 0.25; x <= b.max.x; x += 0.5) for (let z = b.min.z + 0.25; z <= b.max.z; z += 0.5) {
+          const top = new THREE.Vector3(x, home.y + 1.2, z);
+          const floor = col.raycast(top, new THREE.Vector3(0, -1, 0), 3.0, st);
+          if (!floor || floor.point.y < home.y - 1.8 || (floor.face && floor.face.normal.y < 0.7)) continue;
+          const at = floor.point.clone().setY(floor.point.y + 0.02);
+          if (!b.containsPoint(at.clone().setY(at.y + 0.5)) || col.inVoid(at, st) || col.overlap(at, e.radius, 1.8, st) > 0.05) continue;
+          const sc = sees(at), d = at.distanceTo(home);
+          if (sc > bs || (sc === bs && best && d < bd)) { bs = sc; bd = d; best = at; }
+        }
+      }
+      if (best) {
+        e.place(best);
+        this.spawnFixes.push(`${e.encounter} archer #${e.id} perch blind (${Math.round(s0 * 100)}%) → moved ${best.distanceTo(home).toFixed(2)} m (${Math.round(bs * 100)}%)`);
+      } else this.spawnFixes.push(`${e.encounter} archer #${e.id} perch sees ${Math.round(s0 * 100)}% — no better spot`);
+    }
+    nav.use(this.g.time.state, this.g.level.flags);
+  }
+
+  /**
+   * Flyers (bats, wraiths) must be able to reach their fight: a bat of Floor 2's E1 was placed in a pocket above the
+   * antechamber with no line of sight to it and no ground route under it, and hovered there, blind, for the whole
+   * fight. A flyer that sees none of its arena from its spawn is moved above the nearest walker of its encounter
+   * (at its flying altitude, where it sees the arena). Flyers that appear elsewhere on waking (out of the Maw or the
+   * Crownheart) and all-flyer fights are left alone.
+   */
+  private checkFlyers() {
+    const col = this.g.level.collision;
+    for (const e of this.enemies) {
+      if (!e.isFlying || e.opts.fromHeart || e.arch.boss) continue;
+      const enc = this.encounters.get(e.encounter);
+      if (!enc || enc.enemies.some((x) => x.arch.id === 'lamia_maw')) continue;
+      const st: TimeState = e.owner === 'BOTH' ? 'PRESENT' : e.owner;
+      const walkers = enc.enemies.filter((x) => !x.isFlying && !x.opts.perch && (x.owner === st || x.owner === 'BOTH'));
+      if (!walkers.length) continue;
+      const pts = walkers.map((w) => w.home.clone().setY(w.home.y + 1.2));
+      const visible = (from: THREE.Vector3) => pts.filter((t) => {
+        const dir = t.clone().sub(from), len = dir.length();
+        const hit = col.raycast(from.clone(), dir.normalize(), len, st);
+        return !hit || hit.distance > len - 0.4;
+      }).length;
+      const from = e.pos.clone().setY(e.pos.y + e.height * 0.5);
+      if (visible(from) > 0) continue;
+      const alt = e.arch.flying?.altitude ?? 2;
+      let best: THREE.Vector3 | null = null, bv = 0, bd = Infinity;
+      for (const w of walkers) for (const [dx, dz] of [[0, 0], [1.5, 0], [-1.5, 0], [0, 1.5], [0, -1.5]]) {
+        const q = w.home.clone().add(new THREE.Vector3(dx, alt, dz));
+        if (col.overlap(q, e.radius, e.height, st) > 0.05) continue;
+        const v = visible(q.clone().setY(q.y + e.height * 0.5));
+        const d = q.distanceTo(e.pos);
+        if (v > bv || (v === bv && v > 0 && d < bd)) { bv = v; bd = d; best = q; }
+      }
+      if (best) {
+        this.spawnFixes.push(`${e.encounter} ${e.arch.id} #${e.id} spawned blind → moved ${best.distanceTo(e.pos).toFixed(1)} m above its fight`);
+        e.place(best);
+      }
+    }
   }
 
   /** spawn points that were left in a slot too narrow to stand in (spawns checked against the nav grid) */

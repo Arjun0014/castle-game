@@ -514,9 +514,13 @@ export class Enemy {
     // the Kingsguard died in the Present apartments' voids 1 s into its fight); knockback still can
     if (!this.isFlying && this.alive && move.lengthSq() > 0.04) move = this.keepFooting(move, ctx);
     const hv = move.add(new THREE.Vector3(this.vel.x, 0, this.vel.z));
-    const px = this.pos.x, pz = this.pos.z;
+    const px = this.pos.x, py = this.pos.y, pz = this.pos.z;
     if (this.isFlying) this.integrateFlying(dt, hv, ctx);
     else this.integrate(dt, hv, ctx.world, ctx.state);
+    // a perched archer holds its perch: standing on a stair ramp it used to creep down the slope under gravity
+    // (the undercroft scaffold archer, F1 E12c, slid 6 m to the foot of the stair behind the scaffold, lost every
+    // line of sight and never loosed another arrow); only a real knock moves it
+    if (this.opts.perch && this.alive && this.grounded && Math.hypot(this.vel.x, this.vel.z) < 0.6) this.pos.set(px, Math.max(py, this.pos.y), pz);
     if (move.lengthSq() > 0.25) { this.navMoved += Math.hypot(this.pos.x - px, this.pos.z - pz); this.navExpected += move.length() * dt; }
     this.mixer.update(dt);
     this.syncRoot();

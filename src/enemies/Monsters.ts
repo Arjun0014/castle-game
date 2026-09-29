@@ -404,11 +404,10 @@ export class Bat extends Monster {
     this.sound('bat_screech', 0.9, 1);
   }
 
-  private setDiving(on: boolean) {
-    if (on === this.diving) return;
-    this.diving = on;
-    this.g.enemies.batDivers += on ? 1 : -1;
-  }
+  private setDiving(on: boolean) { this.diving = on; }
+  /** swooping right now (alive, mid-dive) — counted live: a counter leaked whenever a bat died or was stunned
+   *  mid-swoop, and after two such kills no bat on the floor ever swooped again (session 10 audit, F2 E1) */
+  get swooping() { return this.diving && this.alive && this.state === 'special'; }
 
   protected brainThink(dt: number, dist: number, dirP: THREE.Vector3, dy: number, ctx: EnemyCtx): THREE.Vector3 | null {
     const a = this.arch;
@@ -443,7 +442,10 @@ export class Bat extends Monster {
     this.flyWant = Math.max(this.flyFloor, ctx.playerPos.y) + a.flying!.altitude + Math.sin(this.bob * 2.1 + this.id) * 0.35;
     if (Math.random() < dt * 0.12) this.orbitDir *= -1;
     // swoop: at most two at a time, only with a line of sight
-    if (this.cooldown <= 0 && dist < 9 && Math.abs(dy) < 4 && this.los && this.g.enemies.batDivers < 2) {
+    this.diving = false; // back in the circle (a swoop cut short by a blow or a parry ends here too)
+    let divers = 0;
+    for (const e of this.g.enemies.enemies) if (e !== this && (e as Bat).swooping) divers++;
+    if (this.cooldown <= 0 && dist < 9 && Math.abs(dy) < 4 && this.los && divers < 2) {
       this.setDiving(true);
       this.mode = 'tell'; this.mt = 0; this.bit = false;
       this.setState('special');

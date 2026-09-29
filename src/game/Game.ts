@@ -1049,6 +1049,9 @@ export class Game {
     if (!on) this.pendingArenaLock = false;
     const col = this.level.collision;
     let d = col.dynamic.find((x) => x.name === 'hatch');
+    // unlocking a lock that never closed: nothing to do (and nothing to build — respawns call this on every floor,
+    // and the hatch's wood texture only exists on Floor 1: a death on Floor 3 threw here before the respawn)
+    if (!d && !on) return;
     if (!d) {
       // hatch x 14.5..17, y 32.6..38 (Blender) at the hall floor
       const box = new THREE.Box3(new THREE.Vector3(14.4, -0.35, -38.1), new THREE.Vector3(17.1, 0.02, -32.5));
