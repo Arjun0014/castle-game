@@ -30,14 +30,14 @@ travels, she can fight — the Great Sword is not new to her — and she is used
 Her attitude to House Vaelor turns from *inheritance* (F1: "the crest we kept") to *complicity* (F2: "my own
 blood did this") to *refusal* (F3: "You won't have it." — "The castle can forget now").
 
-## 3. Categories (99 lines, `dialogue.json`)
+## 3. Categories (101 lines, `dialogue.json`)
 
 | Category | Lines | Trigger | Priority |
 |---|---|---|---|
 | onboarding | 7 | objective start, first Echo fight, first kill, first sigil (near / rite), first shift, first Past fight | 5 / 4 |
 | hint (stuck / denied) | 23 | objective stuck timer (never in combat), shift denied (no resonance / stone / no footing) | 4 |
 | discovery | 19 | Interact on a Memory Trace (every trace on all three floors has a line) | 5 (story) / 2 |
-| story | 3 | Floor 2 arrival, Floor 3 arrival, the Crown doors | 5 |
+| story | 5 | Floor 2 arrival, Floor 3 arrival, the Crown doors; the floor rewards (session 8): `ab_crownbreaker` on Floor 2, `ab_whirlwind` on Floor 3, said with the unlock reveal (`Game.announceAbilities`) | 5 |
 | boss | 8 | Gate Warden, Kingsguard Captain, Last Crown: intro / phases / death | 5 |
 | combat | 13 | fight start (pool), big fight, archers, a heavy foe, execution (pool), low health (pool), fight cleared (pool) | 3 / 2 |
 | checkpoint | 6 | first activation of each sigil (pool, floor-flavoured) | 2 |
@@ -124,6 +124,13 @@ they were re-directed ([uneasy], [quietly]) and regenerated alone — now 180 / 
 
 **Output:** 99 lines, 388 s of speech, 2.2 MB of OGG (`public/assets/voice/`, manifest `src/data/voiceManifest.json`).
 **Credits:** auditions ≈ 640, lines ≈ 4,850, retakes ≈ 120 → about 1,150 left of 10,000 this month.
+
+**Session 8 additions:** `ab_crownbreaker` ("My blade's heavier. As if the keep is lending me its weight.") and
+`ab_whirlwind` ("The castle turns when I turn now. I'll use that.") — same voice and settings (Lily, eleven_v3,
+stability 0.5, similarity 0.75, seed 7), one 139-character request → batch `ability_0` (4.6 s / 4.4 s). Account after:
+8,983 / 10,000 used. Not yet run through Scribe QA or heard by a human. Note: `gen_voice.mjs` now never reuses an
+existing batch name (the first run of this session wrote over `story_0`; restored from git), and `build_voice.py`
+re-encodes every OGG with byte-level differences — commit only the new files.
 
 **Regenerating:** edit `dialogue.json`, then `node tools/voice/gen_voice.mjs` (only lines whose TTS text changed),
 or `--redo id1,id2` for single takes; `python tools/voice/build_voice.py`; `node tools/voice/qa_voice.mjs`.
