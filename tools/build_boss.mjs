@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Final boss runtime GLB — `npm run assets:boss` (then `npm run assets:ktx2 -- --only glb` for the KTX2 copy).
+// Old final-boss GLB (seraph, one idle clip) — UNUSED since session 5 (Floor 3 uses lastcrown.glb, tools/blender/build_lastcrown.py); kept to regenerate it: npm run assets:boss
 //
 // Source (immutable): assets/characters/enemy/final_boss_light_monster.glb (Sketchfab, 30.5 MB, Reallusion rig,
 // 399 joints, 9 skinned+morph meshes, one 8.83 s "Motion" clip). Inspected session 4:
