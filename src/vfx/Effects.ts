@@ -83,11 +83,12 @@ export class Effects {
   hitstopTime = 0;
   // blade trail
   private trailGeo = new THREE.BufferGeometry();
-  private trailN = 14;
+  private trailN = 28;
   private trailPos = new Float32Array(this.trailN * 2 * 3);
   private trailAlpha = new Float32Array(this.trailN * 2);
   private trailMesh: THREE.Mesh;
-  private trailHist: { h: THREE.Vector3; t: THREE.Vector3 }[] = [];
+  private trailHist: { h: THREE.Vector3; t: THREE.Vector3; age: number }[] = [];
+  private trailWeight = 0;
   trailOn = false;
   private glintTex = starTexture();
   private glints: { sprite: THREE.Sprite; bone: THREE.Object3D; life: number; max: number; size: number }[] = [];
@@ -333,12 +334,26 @@ export class Effects {
   channelStart(at: THREE.Vector3, to: TimeState) { this.channel = { center: at.clone(), color: new THREE.Color(to === 'PAST' ? 0xffb060 : 0x80c8ff), t: 0 }; }
   channelStop() { this.channel = null; }
 
-  setTrail(on: boolean, hilt?: THREE.Vector3, tip?: THREE.Vector3) {
+  /**
+   * Blade trail. Samples are aged in (scaled) game time — the ribbon freezes during hit-stop and lingers on
+   * heavy swings — and fast swings are sub-sampled so the arc stays smooth at 50–60 m/s tip speeds.
+   * weight 0 (light, pale steel) .. 1 (heavy/finisher, warm and longer).
+   */
+  setTrail(on: boolean, hilt?: THREE.Vector3, tip?: THREE.Vector3, weight = 0) {
     this.trailOn = on;
-    if (on && hilt && tip) {
-      this.trailHist.unshift({ h: hilt.clone(), t: tip.clone() });
-      if (this.trailHist.length > this.trailN) this.trailHist.pop();
+    if (!on || !hilt || !tip) return;
+    this.trailWeight = weight;
+    const prev = this.trailHist[0];
+    if (prev) {
+      const gap = prev.t.distanceTo(tip);
+      const n = Math.min(3, Math.floor(gap / 0.28));
+      for (let i = 1; i <= n; i++) {
+        const k = i / (n + 1);
+        this.trailHist.unshift({ h: prev.h.clone().lerp(hilt, k), t: prev.t.clone().lerp(tip, k), age: 0 });
+      }
     }
+    this.trailHist.unshift({ h: hilt.clone(), t: tip.clone(), age: 0 });
+    while (this.trailHist.length > this.trailN) this.trailHist.pop();
   }
 
   update(dt: number, t: number) {
@@ -412,12 +427,16 @@ export class Effects {
       if (r.life <= 0) { this.scene.remove(r.mesh); this.ringPool.push(r.mesh); }
     }
     this.rings = this.rings.filter((r) => r.life > 0);
-    // blade trail
-    if (!this.trailOn && this.trailHist.length) this.trailHist.pop();
+    // blade trail (time-based fade; see setTrail)
+    const life = 0.1 + this.trailWeight * 0.09;
+    for (const e of this.trailHist) e.age += dt;
+    while (this.trailHist.length && this.trailHist[this.trailHist.length - 1].age > life) this.trailHist.pop();
     const hist = this.trailHist;
+    const base = 0.5 + this.trailWeight * 0.3;
+    (this.trailMesh.material as THREE.ShaderMaterial).uniforms.uColor.value.setRGB(0.88 + this.trailWeight * 0.12, 0.9 - this.trailWeight * 0.14, 1.0 - this.trailWeight * 0.45);
     for (let i = 0; i < this.trailN; i++) {
       const e = hist[Math.min(i, hist.length - 1)];
-      const a = hist.length > 1 ? Math.max(0, 1 - i / Math.max(1, hist.length - 1)) * 0.55 : 0;
+      const a = hist.length > 1 && e ? Math.max(0, 1 - e.age / life) * base * (i < hist.length ? 1 : 0) : 0;
       if (e) {
         this.trailPos.set([e.h.x, e.h.y, e.h.z], i * 6);
         this.trailPos.set([e.t.x, e.t.y, e.t.z], i * 6 + 3);

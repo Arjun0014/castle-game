@@ -4,7 +4,7 @@ import type { CameraRig } from './CameraRig';
 import type { Input } from '../game/Input';
 import type { CollisionWorld, CapsuleResult } from '../game/Physics';
 import type { TimeState } from '../levels/Materials';
-import { ATTACKS, type AttackDef, type HitWindow, DODGE, PARRY_WINDOW, BLOCK_ARC_DEG, BLOCK_DAMAGE_SCALE, PLAYER_HP } from '../combat/CombatData';
+import { ATTACKS, type AttackDef, type HitWindow, DODGE, PARRY_WINDOW, BLOCK_ARC_DEG, BLOCK_DAMAGE_SCALE, PLAYER_HP, speedAt } from '../combat/CombatData';
 import { HERO_CLIPS, JUMP_PHASES, LOOPING, rootAt } from '../data/animationManifest';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
 
@@ -59,6 +59,8 @@ export class Player {
   fallStartY = 0;
   // combat
   attack: AttackDef | null = null;
+  /** increments on every swing (hit bookkeeping must tell two consecutive L1s apart) */
+  attackSerial = 0;
   attackClipTime = 0;
   hitsDone = new Set<number>();
   buffered: { kind: 'light' | 'heavy' | 'kick' | 'bash'; t: number } | null = null;
@@ -568,11 +570,12 @@ export class Player {
   // ------------------------------------------------------------------ attacks
   beginAttack(def: AttackDef, target: THREE.Vector3 | null) {
     this.attack = def;
+    this.attackSerial++;
     this.attackClipTime = def.start;
     this.hitsDone.clear();
     this.lastRoot = rootAt(def.clip, def.start);
     this.setState('attack');
-    this.anim.play(def.clip, { start: def.start, speed: def.speed, fade: 0.09 });
+    this.anim.play(def.clip, { start: def.start, speed: speedAt(def, def.start), fade: 0.09 });
     if (target) this.turnToward(_v.subVectors(target, this.pos).setY(0), 100, 1);
     this.events.onAttackStart?.(def);
   }
@@ -582,6 +585,8 @@ export class Player {
     const prevT = this.attackClipTime;
     this.attackClipTime = this.anim.overlayTime;
     const t = this.attackClipTime;
+    // pacing: quick anticipation, accelerated strike, a beat of hang on the follow-through, fast recovery
+    this.anim.setOverlaySpeed(speedAt(def, t));
     if (target && t < def.start + def.track) this.turnToward(_v.subVectors(target, this.pos).setY(0), 7, dt);
     // root motion: clip-space delta → world velocity
     const r = rootAt(def.clip, t);
@@ -591,6 +596,17 @@ export class Player {
     const f = this.facing.clone();
     const rt = new THREE.Vector3().crossVectors(f, UP);
     const hv = f.multiplyScalar(df).addScaledVector(rt, dr).divideScalar(Math.max(1e-4, dt));
+    // magnetism: during the wind-up, close the gap to a target just out of reach so the blade connects
+    const first = def.hits[0];
+    if (def.lunge && target && first && t < first.t0) {
+      const to = _v.subVectors(target, this.pos).setY(0);
+      const d = to.length();
+      const ideal = Math.max(1.1, (first.reach ?? 1.9) * 0.62);
+      if (d > ideal && d < 5.5) {
+        const left = Math.max(0.08, (first.t0 - t) / speedAt(def, t));
+        hv.addScaledVector(to.divideScalar(d), Math.min(def.lunge, (d - ideal) / left));
+      }
+    }
     // clamp root motion speed (safety against clip discontinuities)
     if (hv.length() > 14) hv.setLength(14);
     // stop at ledges during lunges: don't carry the player off into voids

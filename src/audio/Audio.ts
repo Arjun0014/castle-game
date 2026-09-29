@@ -184,13 +184,33 @@ export class AudioFX {
     this.play('swing', { pos, rate: 1.18 - weight * 0.42, vol, jitter: 0.07 });
     if (weight > 0.45) this.play('blade_ring', { pos, rate: 1.05 - weight * 0.2, vol: vol * (0.6 + weight * 0.4) });
   }
-  hitEnemy(kind: 'flesh' | 'armor' | 'spirit' | 'blocked', dmg: number, pos: THREE.Vector3) {
-    const heavy = Math.min(1, dmg / 40);
-    if (kind === 'blocked') { this.play('clash', { pos }); this.play('hit_armor', { pos, vol: 0.5, rate: 0.9 }); return; }
-    if (kind === 'armor') { this.play('hit_armor', { pos, rate: 1.05 - heavy * 0.2 }); this.play('hit_flesh', { pos, vol: 0.45 + heavy * 0.3 }); return; }
-    if (kind === 'spirit') { this.play('hit_slice', { pos, rate: 0.8 }); this.play('hit_flesh', { pos, vol: 0.35, rate: 1.3 }); return; }
-    this.play('hit_flesh', { pos, rate: 1.05 - heavy * 0.2 });
-    this.play('hit_slice', { pos, vol: 0.7 + heavy * 0.3 });
+  /**
+   * Sword connects. Layers: the cut (slice), the body (flesh / plate), and for heavy blows a low body-blow
+   * thump; `weight` 0 (light) .. 1 (heavy/finisher) lowers the pitch and raises the low end. Every layer is
+   * pitch-jittered so a combo of identical swings never sounds like one sample repeated.
+   */
+  hitEnemy(kind: 'flesh' | 'armor' | 'spirit' | 'blocked', dmg: number, pos: THREE.Vector3, weight = Math.min(1, dmg / 40)) {
+    const w = weight;
+    if (kind === 'blocked') {
+      this.play('clash', { pos, rate: 1.02 - w * 0.12, jitter: 0.06 });
+      this.play('hit_armor', { pos, vol: 0.55, rate: 0.9, jitter: 0.06 });
+      this.play('shield_block', { pos, vol: 0.5, rate: 0.95, jitter: 0.05 });
+      return;
+    }
+    if (kind === 'spirit') {
+      this.play('hit_slice', { pos, rate: 0.82 - w * 0.1, jitter: 0.08 });
+      this.play('hit_flesh', { pos, vol: 0.35, rate: 1.3, jitter: 0.08 });
+      return;
+    }
+    if (kind === 'armor') {
+      this.play('hit_armor', { pos, rate: 1.08 - w * 0.25, jitter: 0.07 });
+      this.play('hit_flesh', { pos, vol: 0.45 + w * 0.3, rate: 1.05 - w * 0.15, jitter: 0.08 });
+      if (w < 0.5) this.play('blade_ring', { pos, vol: 0.22, rate: 1.25, jitter: 0.1 });
+    } else {
+      this.play('hit_flesh', { pos, rate: 1.08 - w * 0.25, jitter: 0.08 });
+      this.play('hit_slice', { pos, vol: 0.7 + w * 0.3, rate: 1.06 - w * 0.14, jitter: 0.08 });
+    }
+    if (w > 0.5) this.play('kill_impact', { pos, vol: 0.25 + (w - 0.5) * 0.7, rate: 1.12 - w * 0.2, jitter: 0.05 });
   }
   kickHit(pos: THREE.Vector3) { this.play('kick_hit', { pos }); }
   block(parry: boolean) { this.play(parry ? 'parry' : 'shield_block'); }

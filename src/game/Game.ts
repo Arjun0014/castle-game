@@ -9,7 +9,7 @@ import { TimeSystem, PER_SHIFT } from '../time/TimeSystem';
 import { EnemyManager } from '../enemies/EnemyManager';
 import { Effects } from '../vfx/Effects';
 import { AudioFX, type AmbientContext } from '../audio/Audio';
-import type { AttackKind } from '../combat/CombatData';
+import { realTimeTo, type AttackKind } from '../combat/CombatData';
 
 /** How heavy each attack kind sounds (0 light … 1 heavy). */
 const SWING_WEIGHT: Record<AttackKind, number> = { light: 0.15, heavy: 0.75, finisher: 0.85, kick: 0.2, bash: 0.2, air: 0.55, crouch: 0.3, sprint: 0.6 };
@@ -413,11 +413,13 @@ export class Game {
     p.events.onAttackStart = (a) => {
       // one swing per hit window, timed to the blade's motion rather than the button press
       const weight = SWING_WEIGHT[a.kind];
+      const serial = p.attackSerial;
       a.hits.forEach((w, i) => {
-        const delay = Math.max(0, (w.t0 - a.start) / a.speed - 0.07);
+        // the whoosh leads the contact slightly (paced timeline, not a constant playback speed)
+        const delay = Math.max(0, realTimeTo(a, w.t0) - 0.05);
         const kickish = w.shape === 'front';
         this.schedule(delay, () => {
-          if (p.attack !== a || p.state !== 'attack') return;
+          if (p.attackSerial !== serial || p.state !== 'attack') return;
           this.audio.swing(kickish ? 0.2 : Math.min(1, weight + i * 0.08), undefined, kickish ? 0.55 : 1);
         });
       });
@@ -548,7 +550,10 @@ export class Game {
     this.hud.setThreats(out);
   }
 
+  /** unscaled frame time (hit-stop / slow-mo shakes and springs run on real time) */
+  realDt = 1 / 60;
   step(dt: number) {
+    this.realDt = dt;
     if (this.fx.hitstopTime > 0) { this.fx.hitstopTime -= dt; dt *= 0.06; }
     else if (this.fx.slowTime > 0) { this.fx.slowTime -= dt; dt *= this.fx.slowScale; }
     this.t += dt;
@@ -591,8 +596,8 @@ export class Game {
     this.playerLight.intensity = this.heroLight;
     this.atmo.update(dt, this.t, this.camera, p.pos, p.grounded ? p.pos.y : null, (this.scene.fog as THREE.Fog).color);
     this.level.update(dt, this.t, p.pos);
-    const swinging = p.state === 'attack' && !!p.attack && p.attack.hits.some((h) => p.attackClipTime >= h.t0 - 0.06 && p.attackClipTime <= h.t1 + 0.04);
-    this.fx.setTrail(swinging, p.blade.hilt, p.blade.tip);
+    const swinging = p.state === 'attack' && !!p.attack && p.attack.hits.some((h) => p.attackClipTime >= h.t0 - 0.05 && p.attackClipTime <= h.t1 + 0.03);
+    this.fx.setTrail(swinging, p.blade.hilt, p.blade.tip, p.attack ? SWING_WEIGHT[p.attack.kind] : 0);
     this.fx.update(dt, this.t);
     if (this.gore.state !== this.time.state) this.gore.setState(this.time.state);
     this.gore.update(dt);

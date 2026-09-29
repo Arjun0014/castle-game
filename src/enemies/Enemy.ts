@@ -86,6 +86,11 @@ export class Enemy {
   tumbleRate = 0;
   settled = false;
   shatterAt = -1;
+  /** hit reaction physics: lean spring (x = pitch, y = roll, radians) and a brief shake along the blow */
+  private lean = new THREE.Vector2();
+  private leanVel = new THREE.Vector2();
+  private shakeT = 0;
+  private shakeDir = new THREE.Vector3();
   /** stall-detection steering (no navmesh): see steer() */
   private navMoved = 0;
   private navExpected = 0;
@@ -358,10 +363,41 @@ export class Enemy {
     this.syncRoot();
   }
 
+  /**
+   * The body takes the blow: an impulse on a lean spring (pitched back from a frontal hit, rolled from a side
+   * hit) and a short high-frequency shake along the blade's direction that plays through the hit-stop.
+   * `dir` = the direction the hit travels (world), `amount` = peak lean in radians.
+   */
+  recoil(dir: THREE.Vector3, amount: number) {
+    const f = this.facing;
+    const r = _fw.crossVectors(f, UP);
+    const fwd = dir.x * f.x + dir.z * f.z;
+    const side = dir.x * r.x + dir.z * r.z;
+    this.leanVel.x += fwd * amount * 26;
+    this.leanVel.y += side * amount * 26;
+    this.shakeT = 0.16;
+    this.shakeDir.copy(dir).setY(0).normalize();
+  }
+
+  /** Spring + shake integration on REAL time (they must animate during hit-stop, when dt is scaled down). */
+  updateReaction(realDt: number) {
+    const dt = Math.min(realDt, 1 / 30);
+    this.leanVel.x += (-this.lean.x * 190 - this.leanVel.x * 17) * dt;
+    this.leanVel.y += (-this.lean.y * 190 - this.leanVel.y * 17) * dt;
+    this.lean.x += this.leanVel.x * dt;
+    this.lean.y += this.leanVel.y * dt;
+    if (this.shakeT > 0) this.shakeT = Math.max(0, this.shakeT - dt);
+  }
+
   private syncRoot() {
     this.root.position.copy(this.pos);
     this.root.rotation.y = this.yaw;
-    this.root.rotation.x = -this.tumble;
+    this.root.rotation.x = -this.tumble + this.lean.x;
+    this.root.rotation.z = this.lean.y;
+    if (this.shakeT > 0) {
+      const k = this.shakeT / 0.16;
+      this.root.position.addScaledVector(this.shakeDir, Math.sin(this.shakeT * 170) * 0.045 * k);
+    }
     if (this.isFlying && this.alive) this.root.position.y += Math.sin(performance.now() * 0.002 + this.id) * 0.12;
   }
 

@@ -8,6 +8,8 @@ import type { Marker } from '../levels/Level';
 import type { EnemyTemplate } from '../assets/GameAssets';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
 import { Hints } from '../ui/Hints';
+import { FEEL } from '../combat/CombatData';
+import { Platform } from '../platform/Platform';
 
 interface Encounter {
   id: string; state: TimeState | 'BOTH'; box: THREE.Box3; enemies: Enemy[];
@@ -73,8 +75,6 @@ export class EnemyManager {
   slotsUsed = new Map<number, number>();
   slotCapacity = 2;
   private hitRegistry = new Set<string>();
-  private attackSerial = 0;
-  private lastAttack: unknown = null;
   inCombat = false;
   activeCount = 0;
   fissureCooldown = new Map<string, number>();
@@ -427,6 +427,7 @@ export class EnemyManager {
         g.hud.prompt('The Captain reels at the edge!', 1.5);
         g.fx.dust(e.pos.clone(), 8);
       }
+      e.updateReaction(g.realDt);
       e.update(dt, ctx);
       this.presentEnemy(e, dt);
       active++;
@@ -615,7 +616,13 @@ export class EnemyManager {
     if (res === 'parry') {
       e.parried();
       g.fx.sparks(p.blade.tip, 26, 0xfff2c0);
-      g.fx.hitstop(0.09);
+      // the parry is the loudest beat in the game: long stop, a slow-motion breath, zoom, strong buzz
+      g.fx.hitstop(0.13);
+      g.fx.slowmo(0.3, 0.45);
+      g.kickFov(3);
+      g.rig.punch(e.pos.clone().sub(p.pos).setY(0), 2.4);
+      e.recoil(e.pos.clone().sub(p.pos).setY(0).normalize(), 0.35);
+      Platform.haptic(34);
     } else if (res === 'block') {
       g.rig.addShake(0.12);
     } else if (res === 'hit') {
@@ -625,7 +632,9 @@ export class EnemyManager {
       g.fx.bloodSpray(at, hurtDir, atk.heavy ? 0.8 : 0.45);
       g.gore.aftermath(at, hurtDir, atk.heavy ? 0.6 : 0.3);
       g.rig.addShake(atk.heavy ? 0.45 : 0.22);
+      g.rig.punch(hurtDir, atk.heavy ? 3 : 1.6);
       g.hud.flash('#6a0000', 0.22);
+      Platform.haptic(atk.heavy ? 40 : 22);
     }
   }
 
@@ -633,15 +642,13 @@ export class EnemyManager {
     const g = this.g, p = g.player;
     const hits = p.activeHits();
     if (!hits.length) return;
-    if (p.attack !== this.lastAttack || p.stateTime < 0.02) {
-      if (p.attack !== this.lastAttack) { this.attackSerial++; this.lastAttack = p.attack; }
-    }
     const st = g.time.state;
     const targets = [...this.enemies, ...this.remnants].filter((e) => this.liveIn(st)(e) && e.state !== 'hidden');
     const f = p.facing.clone();
     for (const { win, index } of hits) {
       for (const e of targets) {
-        const key = `${this.attackSerial}:${index}:${e.id}`;
+        // keyed per swing, not per attack definition: the same attack twice in a row must hit twice
+        const key = `${p.attackSerial}:${index}:${e.id}`;
         if (this.hitRegistry.has(key)) continue;
         let hit = false;
         let contact = e.center.clone();
@@ -676,15 +683,34 @@ export class EnemyManager {
         this.hitRegistry.add(key);
         p.hitsDone.add(index * 1000 + e.id);
         const res = e.takeHit(win.damage, win.poise, win.knock, p.pos, { knockdown: win.knockdown, guardBreak: win.guardBreak });
-        if (win.shape === 'front') { g.audio.kickHit(contact); if (res === 'blocked') g.audio.hitEnemy('blocked', win.damage, contact); }
-        else g.audio.hitEnemy(res === 'blocked' ? 'blocked' : e.isFlying ? 'spirit' : e.arch.asset === 'knight' ? 'armor' : 'flesh', win.damage, contact);
+        const kind = p.attack?.kind ?? 'light';
+        const feel = FEEL[kind];
+        // how heavy this connection sounds/feels: attack kind, damage, and the last beat of a chain
+        const last = !!p.attack && index === p.attack.hits.length - 1;
+        const weight = Math.min(1, (kind === 'light' || kind === 'crouch' ? 0.15 : 0.7) + win.damage / 90 + (p.attack?.id === 'L4' ? 0.15 : 0));
+        if (win.shape === 'front') { g.audio.kickHit(contact); if (res === 'blocked') g.audio.hitEnemy('blocked', win.damage, contact, weight); }
+        else g.audio.hitEnemy(res === 'blocked' ? 'blocked' : e.isFlying ? 'spirit' : e.arch.asset === 'knight' ? 'armor' : 'flesh', win.damage, contact, weight);
         if (e.arch.asset === 'hollow' && (res === 'flinch' || res === 'stagger') && Math.random() < 0.6) g.audio.play('hollow_hurt', { pos: contact });
-        this.impact(e, res, win.damage, contact);
+        const swing = this.swingDir(e);
+        this.impact(e, res, win.damage, contact, swing);
         g.time.gain(2, 'hit');
         if (p.attack?.resonance && res !== 'blocked') g.time.gain(p.attack.resonance, 'finisher');
-        const heavy = win.damage >= 28 || res === 'stagger';
-        g.fx.hitstop(res === 'dead' ? 0.1 : heavy ? 0.07 : 0.04);
-        g.rig.addShake(res === 'dead' ? 0.34 : heavy ? 0.28 : 0.12);
+        if (res === 'blocked') {
+          // the blade bounces off the guard: short stop, the hero is pushed back, a hard clang in the camera
+          g.fx.hitstop(0.05);
+          g.rig.addShake(0.14);
+          g.rig.punch(swing.clone().negate(), 1.6);
+          p.vel.addScaledVector(e.pos.clone().sub(p.pos).setY(0).normalize(), -2.2);
+          Platform.haptic(12);
+        } else {
+          const stagger = res === 'stagger' || res === 'dead';
+          g.fx.hitstop(feel.stop * (last && p.attack?.id === 'L4' ? 1.25 : 1) + (res === 'dead' ? 0.03 : stagger ? 0.015 : 0));
+          g.rig.addShake(feel.shake + (res === 'dead' ? 0.08 : 0));
+          g.rig.punch(swing, feel.punch);
+          if (feel.fov > 0.7 || stagger) g.kickFov(feel.fov + (stagger ? 0.6 : 0));
+          e.recoil(swing, feel.lean * (res === 'armor' ? 0.5 : 1));
+          Platform.haptic(feel.buzz + (res === 'dead' ? 8 : 0));
+        }
         if (res === 'dead') this.onKill(e);
       }
     }
@@ -695,12 +721,18 @@ export class EnemyManager {
    * Hit presentation: blood follows the blade's real sweep; killing blows fling the body (harder for heavy
    * attacks and finishers), throw gore, and give the kill a short slow-motion beat.
    */
-  private impact(e: Enemy, res: string, damage: number, contact: THREE.Vector3) {
-    const g = this.g, p = g.player;
+  /** Direction the hit travels: the blade's real sweep blended with player-to-enemy (horizontal-ish). */
+  private swingDir(e: Enemy) {
+    const p = this.g.player;
     const sweep = p.blade.tip.clone().sub(p.blade.prevTip);
     sweep.y *= 0.35;
     const away = e.pos.clone().sub(p.pos).setY(0).normalize();
-    const dir = (sweep.lengthSq() > 1e-4 ? sweep.normalize() : away.clone()).lerp(away, 0.45).normalize();
+    return (sweep.lengthSq() > 1e-4 ? sweep.normalize() : away.clone()).lerp(away, 0.45).normalize();
+  }
+
+  private impact(e: Enemy, res: string, damage: number, contact: THREE.Vector3, dir: THREE.Vector3) {
+    const g = this.g, p = g.player;
+    const away = e.pos.clone().sub(p.pos).setY(0).normalize();
     if (res === 'blocked') { g.fx.sparks(contact, 18, 0xffd090); return; }
     const kind = p.attack?.kind;
     const power = res === 'dead' ? (kind && HEAVY_KINDS.has(kind) ? 1 : damage >= 28 ? 0.75 : 0.35) : 0;
