@@ -24,7 +24,8 @@
     "package:itch": "npm run build && powershell -NoProfile -Command \"Compress-Archive -Force -Path dist/* -DestinationPath build/caer-veyr-itch.zip\"",
     "predev:lan": "node tools/build_floor_manifest.mjs",
     "dev:lan": "vite --host 0.0.0.0 --port 5173 --strictPort",
-    "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort"
+    "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort",
+    "assets:boss": "node tools/build_boss.mjs"
   },
   "dependencies": {
     "three": "^0.186.1",

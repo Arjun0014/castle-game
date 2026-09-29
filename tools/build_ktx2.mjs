@@ -39,7 +39,7 @@ const SETS = {
   iron: ['metal', 'metal_plate_02_1k', 'metal_plate_02'], rust: ['metal', 'rust_coarse_01_1k', 'rust_coarse_01'], rust_plate: ['metal', 'rusty_metal_04_1k', 'rusty_metal_04'],
   fabric_royal: ['fabric', 'quatrefoil_jacquard_fabric_1k', 'quatrefoil_jacquard_fabric'], fabric_gold: ['fabric', 'crepe_satin_1k', 'crepe_satin'], fabric_linen: ['fabric', 'rough_linen_1k', 'rough_linen'],
 };
-const GLBS = ['characters/hero.glb', 'characters/knight.glb', 'characters/hollow.glb', 'characters/archer.glb', 'characters/ghost.glb',
+const GLBS = ['characters/hero.glb', 'characters/knight.glb', 'characters/hollow.glb', 'characters/archer.glb', 'characters/ghost.glb', 'characters/boss.glb',
   'vegetation/low_poly_grass.glb', 'vegetation/low_poly_grass_pack.glb', 'vegetation/low_poly_glowing_flower.glb'];
 
 const COLOR = { isUASTC: true, needSupercompression: true, enableRDO: true, rdoQualityLevel: 2, isPerceptual: true, isSetKTX2SRGBTransferFunc: true, generateMipmap: true };
