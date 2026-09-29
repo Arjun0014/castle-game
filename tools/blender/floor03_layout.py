@@ -465,8 +465,10 @@ def build_descent(B):
         d0 = pol(cx, cy, SP_RIN, SP_DOOR, 0); d1 = pol(cx, cy, SP_ROUT, SP_DOOR, 0)
         mid = ((d0[0] + d1[0]) / 2, (d0[1] + d1[1]) / 2)
         zd = ramp_z(SP_DOOR)
-        B.obox((mid[0], mid[1], zd + 2.4), (SP_ROUT - SP_RIN, 0.5, 4.8), (0, 0, math.radians(SP_DOOR + 90)), "iron", col=True)
-        B.obox((mid[0], mid[1], zd + 4.9), (SP_ROUT - SP_RIN + 0.6, 0.8, 0.4), (0, 0, math.radians(SP_DOOR + 90)), "stone_block")
+        # the door spans the ramp radially (box X = inner rim -> outer wall): rotated by the door's own angle. Session 10:
+        # it was rotated by +90 deg, lying ALONG the ramp — the Past could walk straight past the King's last gate
+        B.obox((mid[0], mid[1], zd + 2.4), (SP_ROUT - SP_RIN + 0.4, 0.5, 4.8), (0, 0, math.radians(SP_DOOR)), "iron", col=True)
+        B.obox((mid[0], mid[1], zd + 4.9), (SP_ROUT - SP_RIN + 0.6, 0.8, 0.4), (0, 0, math.radians(SP_DOOR)), "stone_block")
         prompt(B, "C_RDOOR", (mid[0] - 4, mid[0] + 4, mid[1] - 4, mid[1] + 4, zd - 1, zd + 4), "The King's last gate is shut in this memory. In the ruin it was torn open.", state="PAST")
         for deg in range(-60, 360, 60):
             p = pol(cx, cy, SP_ROUT - 0.6, deg, ramp_z(deg))

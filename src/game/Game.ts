@@ -376,6 +376,7 @@ export class Game {
     const hm = this.level.markersOf('heart')[0];
     this.heart = hm ? new Crownheart(this, hm.pos.clone()) : null;
     this.embers = new AbyssEmbers(this);
+    this.collectRoots();
     this.wireEvents();
     const spawn = this.level.marker('spawn', 'SPAWN');
     this.player.revive(spawn.pos, Math.PI); // three.js: Blender north (+Y) = -Z; yaw π faces -Z
@@ -720,6 +721,48 @@ export class Game {
     this.touch?.holdHint(pending === 'crownbreaker' ? 'heavy' : 'light');
   }
 
+  // ------------------------------------------------------------------ the Crownheart's crystal roots
+  /**
+   * The crystal roots (Floor 3: arching over the Hall of Roots, leaning off the arena's pillar stumps) are scenery
+   * without collision, so the camera — portrait sits high and far behind her — used to end up inside them and the
+   * frame filled with glowing orange. Whenever a root stands between her and the camera they all fade out. Their
+   * materials are transparent from the start (the program is compiled at load; toggling would recompile).
+   */
+  private roots: THREE.Mesh[] = [];
+  private rootMats: THREE.Material[] = [];
+  private rootFade = 1;
+  private rootRay = new THREE.Raycaster();
+  private collectRoots() {
+    this.roots = [];
+    this.rootMats = [];
+    this.level.root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.userData.matKey === 'fx_root') this.roots.push(m); });
+    if (!this.roots.length) return;
+    for (const st of ['PAST', 'PRESENT'] as TimeState[]) { this.mats.get('fx_root', st, 'SHARED'); this.mats.get('fx_root', st, st); }
+    this.rootMats = this.mats.variants('fx_root');
+    for (const m of this.rootMats) m.transparent = true;
+    this.rootFade = 1;
+  }
+  private _rh = new THREE.Vector3();
+  private _rd = new THREE.Vector3();
+  private updateRoots(dt: number) {
+    if (!this.roots.length) return;
+    const head = this._rh.copy(this.player.pos).setY(this.player.pos.y + 1.4);
+    const dir = this._rd.subVectors(this.camera.position, head);
+    const len = dir.length();
+    let hit = false;
+    if (len > 0.05) {
+      this.rootRay.set(head, dir.divideScalar(len));
+      this.rootRay.far = len + 0.4;
+      for (const m of this.roots) {
+        if (!m.visible || !m.parent?.visible) continue;
+        if (this.rootRay.intersectObject(m, false).length) { hit = true; break; }
+      }
+    }
+    const want = hit ? 0.02 : 1;
+    this.rootFade += (want - this.rootFade) * Math.min(1, dt * (hit ? 14 : 4));
+    for (const m of this.rootMats) m.opacity = this.rootFade;
+  }
+
   /** Stop the frame loop (floor transitions). */
   stop() { this.renderer.setAnimationLoop(null); }
 
@@ -778,6 +821,7 @@ export class Game {
   }
 
   private frame() {
+    if (this.takePendingNext()) return;
     let dt = this.clock.getDelta();
     this.updateDynRes(dt);
     dt = Math.min(dt, 1 / 20);
@@ -911,6 +955,7 @@ export class Game {
     });
     this.learned.looked += Math.abs(look.dx) + Math.abs(look.dy);
     this.rig.update(dt, p.pos, look, this.level.collision, this.time.state, p.crouching);
+    this.updateRoots(this.realDt);
     this.updateThreats();
     // hero light: above and slightly toward the camera, so what the player faces is lit
     const toCam = this.camera.position.clone().sub(p.pos).setY(0).normalize();
@@ -1014,7 +1059,10 @@ export class Game {
   private updateVoidAndPrompts() {
     const p = this.player;
     const col = this.level.collision;
-    if (p.alive && !this.respawning && (col.inVoid(p.pos, this.time.state) || p.pos.y < -40)) this.fallRespawn();
+    // a scripted hero (the King's lift riding down its shaft, a finisher) is placed by its sequence: the lift's
+    // descent crosses the shaft's kill volume, and each "fall" cost her a quarter of her health — four of them on
+    // the way down, so a real player died on the lift
+    if (p.alive && !this.respawning && !p.scripted && (col.inVoid(p.pos, this.time.state) || p.pos.y < -40)) this.fallRespawn();
     // prompt volumes
     const head = p.pos.clone().add(new THREE.Vector3(0, 0.9, 0));
     for (const m of this.level.markersOf('prompt')) {
@@ -1132,12 +1180,25 @@ export class Game {
   /** Leave this floor now (the King's lift reaching the bottom of the shaft): the in-place floor transition. */
   leaveFloor() { if (!this.finished) this.finish(); }
 
+  /** the floor was left: the transition starts at the top of the next frame (see finish) */
+  private pendingNext: number | null = null;
+  private takePendingNext() {
+    const n = this.pendingNext;
+    if (n === null) return false;
+    this.pendingNext = null;
+    this.onNextFloor?.(n);
+    return true;
+  }
+
   private finish() {
     this.finished = true;
     if (this.floor.next) {
-      // hand HP and resonance to the next floor; main.ts shows the chapter card and loads it
+      // hand HP and resonance to the next floor; main.ts shows the chapter card and loads it — at the top of the
+      // NEXT frame: the transition tears this floor down synchronously, and doing that from inside step() (the exit
+      // volume, the King's lift) left the rest of the frame running on a disposed level (it threw, and the throw
+      // ended that animation loop)
       saveCarry({ hp: this.player.hp, charge: this.time.charge, unlocked: this.time.unlocked });
-      this.onNextFloor?.(this.floor.next);
+      this.pendingNext = this.floor.next;
       return;
     }
     const secs = (performance.now() - this.startTime) / 1000 + (this.playTimeBefore?.() ?? 0);
@@ -1177,7 +1238,7 @@ export class Game {
     const tick = () => new Promise<void>((r) => { ch.port1.onmessage = () => r(); ch.port2.postMessage(0); });
     const n = Math.max(1, Math.round(seconds / dt));
     for (let i = 0; i < n; i++) {
-      if (onFrame?.(i) === false) break;
+      if (onFrame?.(i) === false || this.takePendingNext()) break;
       this.perf.beginStep();
       if (!this.paused) this.step(dt);
       this.input.endFrame(dt);
@@ -1193,7 +1254,7 @@ export class Game {
   advance(seconds: number, step = 1 / 60, render = true) {
     const n = Math.max(1, Math.round(seconds / step));
     for (let i = 0; i < n; i++) {
-      if (this.loading) break; // a floor transition is tearing the floor down / building the next one
+      if (this.takePendingNext() || this.loading) break; // a floor transition is tearing the floor down / building the next one
       if (!this.paused) this.step(step);
       this.input.endFrame(step);
     }

@@ -74,6 +74,8 @@ export class LastCrown extends Enemy {
   private heartPos: THREE.Vector3 | null = null;
   private cam = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
   private introT = 0;
+  /** the reveal has been seen once: after a death it plays at double speed (a retry is not a first meeting) */
+  private introSeen = false;
   private wedges: { angle: number; half: number; r0: number; r1: number }[];
   handR: THREE.Object3D | null = null;
   handL: THREE.Object3D | null = null;
@@ -598,8 +600,9 @@ export class LastCrown extends Enemy {
     return true;
   }
 
-  private updateIntro(dt: number) {
+  private updateIntro(frameDt: number) {
     const g = this.g, p = g.player;
+    const dt = frameDt * (this.introSeen ? 2 : 1);
     this.introT += dt;
     const t = this.introT;
     const heart = this.heartPos!;
@@ -632,6 +635,7 @@ export class LastCrown extends Enemy {
       g.signals.emit('boss:start', { id: 'last_crown' });
     }
     if (t >= 4.6) {
+      this.introSeen = true;
       this.mode = 'idle'; this.t = 0; this.gap = 1.2; this.invuln = false; this.untargetable = false;
       this.pos.copy(this.lens);
       p.endScripted();

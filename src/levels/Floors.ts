@@ -55,7 +55,7 @@ export const FLOORS: Record<number, FloorDef> = {
     // session 9: the deep beneath the castle — no sky; the heart's red light, darker than the floors above
     moonHoles: [],
     env: {
-      PRESENT: { bg: 0x0a0406, fog: 0x1c080a, near: 6, far: 62, hemiSky: 0x7a3848, hemiGround: 0x120408, hemi: 0.66, sun: 0xc06050, sunI: 1.3, fill: 0x9a4a5a, fillI: 0.62, exposure: 1.3, heroLight: 7.5 },
+      PRESENT: { bg: 0x0a0406, fog: 0x1c080a, near: 8, far: 66, hemiSky: 0x8a4858, hemiGround: 0x1a0a0e, hemi: 0.9, sun: 0xc06050, sunI: 1.4, fill: 0xa85a68, fillI: 0.8, exposure: 1.42, heroLight: 9 },
       PAST: { bg: 0x120806, fog: 0x1a0c08, near: 10, far: 66, hemiSky: 0xffc890, hemiGround: 0x2a160c, hemi: 0.8, sun: 0xff9a5a, sunI: 1.4, fill: 0xff9050, fillI: 0.3, exposure: 1.18, heroLight: 1.5 },
     },
     epigraph: 'Beneath the keep the royal line kept its heart. It is still beating.',

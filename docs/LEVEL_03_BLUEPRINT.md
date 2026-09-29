@@ -1,175 +1,206 @@
-# LEVEL_03_BLUEPRINT.md — Floor 3: "The Crown" (the summit of Caer Veyr)
+# LEVEL_03_BLUEPRINT.md — Floor 3: "The Crownheart" (the descent beneath Caer Veyr)
 
-Status: **v2.0 (session 5, self-reviewed §L)** — supersedes v1.0. v1.0 assumed the old final-boss asset
-(`final_boss_light_monster.glb`, one 8.8 s idle clip) and designed a **stationary** boss. That assumption is
-**obsolete**: the user supplied `Pro Magic Pack with final boss.zip` (Mixamo "Nightshade", a 2.35 m horned sorceress with
-a full mage animation set, inspected in §O). The Last Crown is now a **mobile mage boss** fought at three ranges.
+Status: **v3.1 (session 10)** — describes the floor as built and played. v3.0 was built in session 9 (the rebuild
+from the old summit design) and only its layout script described it; session 10 play-tested it end to end, fixed what
+the play-test found (§L) and rewrote this document. **v1.0/v2.0 (the summit "Crown" above the bell chamber, the Wind
+Gallery, the warded stair, the Hall of Crowns) are obsolete** — none of that geometry exists any more.
 
-Coordinates: Blender X east, Y north, Z up (three.js x = X, y = Z, z = −Y), identical to Floors 1–2. Floor base
-**z 24** (the Bell Chamber at the top of Floor 2's Conduit Stair), the Crown's floor **z 32**.
-Mirrored in code by `tools/blender/floor03_layout.py` (§M).
+Authority: `tools/blender/floor03_layout.py` (geometry, markers, encounters — its header lists every space) →
+`tools/blender/build_floor03.py` → `public/assets/levels/floor03.glb` + `floor03_collision.glb`, nav
+`floor03_nav.bin` (`node tools/build_navgrid.mjs 3`). Runtime: `src/levels/Floors.ts` (entry 3: lighting, epigraph, no
+sky), `src/data/objectives.ts` (floor 3), `src/enemies/LastCrown.ts`, `src/vfx/Crownheart.ts`, `src/levels/Lift.ts`.
+Coordinates: Blender X east, Y north, Z up (three.js x = X, y = Z, z = −Y), the same frame as Floors 1–2. Floor 3
+starts at **z 0** (the lift foot) and ends at **z −16** (the Threshold and the arena).
 
 ---
 
 ## A. Floor thesis
 
-Floors 1–2 taught reading two memories of one room. On Floor 3 the Crownheart's hold is so strong the memories stop
-staying apart: near the Crown the castle **slips** on its own, and the final fight is decided by *when* the player
-chooses a memory, not only where. Short and rising: arrival → one weave + one fight → the warded stair → the Hall of
-Crowns (hardest non-boss fight) → the Last Crown.
+Floors 1–2 taught reading two memories of one room. Floor 3 goes *down*, out of the castle and into what the castle
+was built on: the King's lift drops the Uncrowned down the conduit shaft, and every space after that is closer to the
+Crownheart — the Hall of Roots its kings walked, the ossuary where they are buried, the font where each heir was bled,
+the spiral round the heart's own shaft, and the heart itself.
 
 | | |
 |---|---|
-| Gameplay purpose | Final exam: sword combat under ranged pressure + shifting as a combat tool (break wards, beat bindings, pick cover). |
-| Narrative purpose | *Should this inheritance survive at all?* The Crownheart made the Last Crown from Aldren's imprint — and dressed it in the shape of **the Queen** who saved the Uncrowned's line (Floor 2, T3). It wants the unbound blood to finish the ritual. |
-| Duration | 10–15 min first play (≈4–6 approach, ≈6–9 boss). ~130 m critical path — clearly shorter than Floors 1–2. |
-| Visual identity | **Past**: coronation night — candles, gold, white marble, intact Sealbearer pillars. **Present**: summit open to a storm sky, the Crownheart's red-gold glow welling through floor wounds, pillars broken to stumps. |
+| Gameplay purpose | Final exam: every memory-weave idea of the game at full pace (a gap, a gate, a missing bridge, a fallen bridge, a sealed door, a fused door, a collapsed ramp, a shut gate, warded doors), fights mixing the living guard (Past) with the new monsters (Present), a mini-boss, then the Last Crown. |
+| Narrative purpose | *Should this inheritance survive at all?* The heart made the Last Crown from Aldren's imprint and dressed it in the Queen's face. The deeper she goes, the more the castle's own dead line the way. |
+| Duration | 15–20 min first play (≈10–13 descent, ≈5–8 boss). Critical path ≈ 250 m of walking, 6 required shifts. |
+| Visual identity | **Past**: torchlit royal undercroft — carpet, braziers, candles on the ossuary platforms, the coronation chamber whole with its Sealbearer pillars to the dome. **Present**: red-black ruin — the heart's crystal roots breaking through, every drop a real abyss (black shaft walls, broken rims, glow far below, embers rising — never a flat red floor), no sky. |
 
-**New rule — slips.** In the Crown the castle may shift by itself: a 3 s telegraph (hum, the future holes glow on the
-floor), costs the player nothing. The player's own shift (hold, 100 resonance) is still the only way to *choose*.
-
-## B. Spatial graph (critical path bold)
+## B. Spatial graph (critical path bold; memory needed in brackets)
 
 ```
-                      ┌──────── THE CROWN (CR) z32, circle r13 at (0,138) ────────┐
-                      │ lens r3 · 4 Sealbearer pillars r8.5 · Present: 4 wedge holes│
-                      └───────────────┬─ Crown doors y124 [PAST open · PRESENT fused]┘
-            ┌──────── HALL OF CROWNS (HOC) z32  x −12..12, y 108..124 ────────┐  CP2 + fissure F3a (S end)
-            └───────────────┬────────────────────────────────────────────────┘
-                            │ top landing y106..108 z32 — PAST: Royal Ward (gold light, solid)
-   CORONATION STAIR (CS)    │ upper flight z28→32 PAST only · PRESENT: fallen bell-spire ramp (x 3..5)
-   x −3..3, y 100..106      │ lower flight z24→28 BOTH (mid landing y 102..104 z28)
-  ┌──────────── WIND GALLERY (WG) z24, x −6..18, y 96..100 ────────────────────┐
-  │ W end: stair door x −3..3 · portcullis x 2 [PAST] · floor gap x 4..10 [PRESENT void] │
-  └────────────────────────────────────────────────────────────────┬──────────┘
-                                                       BELL CHAMBER (BC) z24, x 18..26, y 90..98 — SPAWN, CP1
+ C1 LIFT FOOT (0,0) z0  spawn on the cage, CP1, F1, T1 ──► passage north
+   │
+ C2 HALL OF ROOTS  x −9..9, y 10..60, z0 (50 m processional hall, barrel vault)
+   │ E1 [PRESENT] y 11..29 ── chasm y 29..40: PRESENT abyss │ PAST floor ──► shift to PAST
+   │ E2 [PAST] y 40..60 ── Royal Grille y 51: PAST portcullis │ PRESENT fallen ──► shift to PRESENT
+   │ F2 (5.6, 45.5)
+ C3 OSSUARY  cavern x −24..24, y 62..98 over a void; platforms P1 (0,74) · P2 (−11,86) · P3 (10,86)
+   │ B1 bridge ──► P1: E3 [PRESENT] ── P1→P2 bridge: PAST only ──► shift to PAST on P1
+   │ P2: E4 [PAST], F3 ── P2→P3 fallen column: PRESENT only ──► shift to PRESENT on P2
+   │ P3: CP2 ── B4 ──►
+ C4 CISTERN (10,113) r 12, the blood font (pit r 4.6, waist-high rim), T3
+   │ south door: PAST warded │ PRESENT open ──► enter in the PRESENT: E5 THE MAW [PRESENT]
+   │ north door: PRESENT crystal-fused │ PAST open ──► shift to PAST to leave
+ C5 GREAT DESCENT  spiral ramp round the heart's shaft, centre (10,146), r 6.5..13, 450°: z 0 → −16
+   │ −60..30°: E6 [PRESENT] (walked past in the Past)
+   │ 40..62°: PRESENT collapse (abyss) │ PAST ramp ──► walk it in the PAST
+   │ 110..200°: E7 [PAST], F4 (150°)
+   │ 222°: PAST iron gate (the King's last gate) │ PRESENT torn open ──► shift to PRESENT
+   │ 250..345°: E8 [PRESENT], F5 (318°)
+   │ foot at 360° (z −16), landing turning east
+ C6 THE THRESHOLD  x 22..27.5, z −16: CP3, the empty throne, T2
+   │ Crown doors: PAST shut + warded │ PRESENT broken ──► enter in the PRESENT
+   │ bridge over the abyss (parapets) ──►
+   THE CROWNHEART  ring r 17 at (54,148), z −16; lens r 4.2; pillars r 11 (0/90/180/270°);
+   PRESENT wedge holes r 6..13.5 at 45/135/225/315° ±20°; the heart hangs above at z −3  ── BOSS: the Last Crown
 ```
 
-1. **BC** (Present spawn, CP1) → WG east.
-2. **G1 weave:** gap x 4..10 is a void in the Present → **shift to PAST** (floor intact) → cross → the Past portcullis
-   (x 2) blocks → from the strip x 2..4 **shift to PRESENT** (the grille lies flat) → WG west. Charge between the two
-   shifts: **E0** (2 remnants, Past, in the gap strip, +100) and **fissure F3c** (x 14).
-3. **E1** (Present, WG west + stair foot): 2 hollows + 1 echo archer on the mid landing.
-4. **G2 the warded stair:** Past = the stair's upper flight exists but the Royal Ward (solid gold light) seals the top
-   landing ("The Crown admits the crowned"); Present = upper flight collapsed, the **fallen bell-spire** leans from the
-   mid landing (x 3..5, y 101..106, z 28→32) to the top landing → climb it **in the Present**.
-5. **HOC:** **E2** (Present): 2 hollow wardens + 2 hollows + 1 echo archer (east gallery ledge). CP2 + F3a at the south
-   end. **G3:** Crown doors fused in the Present → **shift to PAST** (F3a guarantees charge) → the doors stand open.
-6. **CR:** the Last Crown. Ending.
+Checkpoints (Blood Sigils): **CP1** lift foot · **CP2** ossuary P3 · **CP3** the Threshold (the boss respawn).
+Fissures (softlock refill): F1 lift foot · F2 Hall of Roots · F3 ossuary P2 · F4 ramp 150° · F5 ramp 318°.
 
-## C/D. Past / Present per space
+## C/D. Past / Present, space by space
 
-| Space | Past | Present |
+| Space | Past (the undercroft in use) | Present (the ruin) |
 |---|---|---|
-| BC | trap floor, bell in its frame | bell fell through: crater void x 20..24 y 92..96; spawn on the E strip |
-| WG | roofed walkway, candles, **portcullis x 2** | roof gone, **floor gap x 4..10** (void), portcullis lies flat |
-| CS | full marble stair, **Royal Ward** at the top | lower flight only; **bell-spire ramp** to the top landing |
-| HOC | 12 crown plinths, banners, **Crown doors open** | plinths toppled (cover), **doors fused** by red crystal |
-| CR | white marble star floor, **4 intact Sealbearer pillars** (full cover) | 4 **wedge holes** (voids, r 5..11 between the pillars), pillars = 1.3 m stumps (low cover) |
+| C1 lift foot | winch on timber trestles, 4 braziers, banners | rubble mounds, two crystal shards, red glow |
+| C2 Hall of Roots | carpet, braziers every 7 m, banners, pillars in the chasm span, **the Royal Grille** across y 51 | **chasm y 29–40** (abyss 26 m deep, lit rims), grille lies flat in the dust, crystal roots through the floor and across the vault |
+| C3 ossuary | candles on each platform, **bridge P1→P2** with low walls | **P1→P2 bridge gone** (two stubs), **a colossal column fallen P2→P3** |
+| C4 cistern | the font brimming, candles on the rim, **south door warded** (the Crown admits the crowned), north door open | south door hangs open, **north door fused by red crystal** |
+| C5 descent | the ramp whole, inner parapet, torches, **the King's iron gate at 222°** | **the ramp fallen in at 40–62°**, gate torn open, low broken parapet stubs |
+| C6 threshold | **Crown doors shut and warded** | doors lie broken |
+| C6 arena | the coronation chamber: floor whole, 4 Sealbearer pillars to the dome, braziers, candles | 4 **wedge-shaped abysses** between the pillar stumps (1.3 m), crystal shards leaning off the stumps |
 
-## E. State-difference matrix (why each difference exists)
+## E. Every memory weave (session 10: all walked with real movement, both memories — `dev/f3Probe.js gates()`)
 
-| Place | Past | Present | Purpose |
+| Gate | Passes in | The other memory | Teaching |
 |---|---|---|---|
-| WG x 4..10 | floor | void | G1 part 1 needs PAST |
-| WG x 2 | portcullis | flat grille | G1 part 2 needs PRESENT |
-| CS top | stair + ward (solid) | spire ramp | G2: the ruin is the way |
-| Crown doors | open | fused | G3 needs PAST |
-| CR pillars | full cover (blocks bolts + beam) | stumps (bolts pass; low waves blocked) | cover choice in the fight |
-| CR floor | intact | 4 wedge voids | slips change the footing |
+| Hall chasm y 29–40 | PAST (floor) | PRESENT: falls (void) | the Floor 1 lesson in one hall |
+| Royal Grille y 51 | PRESENT (fallen) | PAST: blocked at the grille | …and its reverse ten metres later |
+| Ossuary P1→P2 | PAST (bridge) | PRESENT: falls | a way that only existed |
+| Fallen column P2→P3 | PRESENT (column) | PAST: falls | a way that only the ruin made |
+| Cistern south door | PRESENT (open) | PAST: blocked (warded) | come in through the ruin… |
+| Cistern north door | PAST (open) | PRESENT: blocked (fused) | …leave through the memory |
+| Ramp collapse 40–62° | PAST (ramp) | PRESENT: falls | the gap is on a slope, mid-descent |
+| Iron gate 222° | PRESENT (torn open) | PAST: blocked (the gate) | shift back mid-ramp, right after a Past fight |
+| Crown doors | PRESENT (broken) | PAST: blocked (warded) | the heart is reached through its ruin |
 
-## G. Combat plan (approach)
+The whole route (spawn → the arena, six shifts, each accepted by the destination check) passes: `F.route()`.
 
-| Id | Where | State | Composition | Reward |
+## F. Objectives and guidance (`src/data/objectives.ts`, floor 3)
+
+`f3_hall` (ring at the chasm, from the PRESENT) → `f3_grille` (ring before the grille, from the PAST) → `f3_oss`
+(ring on P1, from the PRESENT) → `f3_col` (ring on P2, from the PAST) → `f3_maw` → `f3_maw2` (defeat the Maw) →
+`f3_font` (ring at the north door, from the PRESENT) → `f3_desc` (ring before the collapse, only if she walks the head
+of the ramp in the PRESENT) → `f3_gate` (ring before the iron gate, from the PAST) → `f3_foot` → `f3_heart` (ring at
+the Crown doors, from the PAST) → `f3_boss`. A shift ring shows only in the memory she must leave (session 10:
+`shiftFrom`); stuck hints are voiced (`hint_f3_gap`, `hint_f3_gate`, `hint_f3_doors`), the gold guide marker points the
+way after ~30 s without progress. Level prompts name each difference (`C_GAP`, `C_GRILLE`, `C_B2`, `C_B3`, `C_DOORS`,
+`C_RGAP`, `C_RDOOR`, `C_WARD`).
+
+## G. Combat plan
+
+Rewards (resonance): goblin 30 · bat 12 · Widow 60 · widowling 12 · lamia 80 · the Maw 200 · Remnant 50 · guard 40 ·
+muster 40 · archer 30 · royal warden 100 · the Last Crown 200.
+
+| Id | Where | Memory | Composition (wave 2+ in brackets) | Notes |
 |---|---|---|---|---|
-| E0 | WG gap strip | PAST | 2 remnants (rise) | 100 |
-| E1 | WG west + stair foot | PRESENT | 2 hollows + 1 echo archer (mid landing, perched) | 110 |
-| E2 | HOC | PRESENT | 2 hollow wardens, 2 hollows, 1 echo archer (east ledge, perched) | 250 |
-| BOSS | CR | BOTH | the Last Crown + pooled remnant adds | surge on each phase break |
+| E1 | Hall of Roots south | PRESENT | 3 goblins, 2 bats [Widow from the vault, a goblin] | the floor's welcome: every new monster at once, before the chasm |
+| E2 | Hall of Roots north (at the grille) | PAST | 2 royal wardens, a guard, an archer [2 guards] | the King's last guard; fought on the far side of the chasm |
+| E3 | ossuary P1 | PRESENT | Widow (drops from the dark), 2 bats [2 widowlings] | a fight on a disc over a void |
+| E4 | ossuary P2 | PAST | royal warden, 2 guards | on the other side of the Past-only bridge |
+| E5 | the cistern | PRESENT | **THE MAW OF THE CROWNHEART** (lamia ×1.4, 900 HP) [3 bats from its belly at 65 %] [2 goblins from the dome at 35 %] | mini-boss; the rim keeps the fight round the font |
+| E6 | ramp head −60..30° | PRESENT | 4 goblins, 2 bats [2 goblins] | met only by a player who walks the ramp head in the Present |
+| E7 | ramp 110..200° | PAST | 2 royal wardens, 2 guards, an archer [2 muster] | the Kingsguard's last post on the stair |
+| E8 | ramp 250..345° | PRESENT | lamia, Widow, goblin [Widow, 2 Remnants] | the deepest fight, just before the foot |
+| BOSS | the Crownheart | BOTH | the Last Crown [3 bats out of the heart at 65 %] [2 goblins + 2 widowlings at 35 %] | §I |
 
-## H. Temporal economy (worst case)
+Monster behaviour: `src/enemies/Monsters.ts` (goblin skirmisher, bat swarm, Widow, lamia). Session 10 audit
+(`dev/auditProbe.js`): every enemy of every Floor 3 encounter acts; in the big fights every waiting enemy gets a turn.
 
-Arrive ≥ 100 → G1a (−100) → E0 (+100) / F3c → G1b (−100) → E1 (+110) → G2 (−100, F3c/E1 cover it) → E2 (+250) →
-G3 (−100, F3a) → boss: phase breaks surge +100, adds +50 each. Every forced shift has a fissure within 14 m or a
-guaranteed encounter before it: **no route softlocks**. Checkpoints: CP1 (BC), CP2 (HOC south; the boss respawn).
+## H. Temporal economy (worst case, critical path)
 
-## I. The Last Crown — mage boss (the fight)
+Arrive with ≥ 100 (the transition guarantees it) → E1 (+204) → shift (−100) → E2 (+350) → shift (−100) → E3 (+108) →
+shift (−100) → E4 (+180) → shift (−100) → CP2 → E5 (+296) → shift (−100) → E7 (+390) → shift (−100) → E8 (+330) → CP3
+→ the boss (adds + her 200). The capacity is 200, so every required shift is preceded by a fight that refills at least
+one segment; a respawn at any sigil restores ≥ 100; F1–F5 refill a player who spent everything with no Echo left near.
+**No route softlocks.**
 
-**Who:** Aldren's imprint fused with the Crownheart, wearing the Queen's shape ("Come home, child. Finish what I
-began."). Model: `lastcrown.glb` (Nightshade, 13k tris, 32 clips), scale 1.15 → 2.7 m. HP 1600. Arena r 13.
+## I. The Last Crown in the heart's chamber (the fight)
 
-**Ranges and vocabulary** (every spell is telegraphed: a hand glow + cast sound, then a ground/ray marker for AoE):
+**Who:** Aldren's imprint fused with the Crownheart, wearing the Queen's face. `lastcrown.glb` (Mixamo Nightshade,
+32 clips), 3.4 m, 1600 HP. **The reveal:** stepping onto the ring starts a 4.6 s shot — the camera tilts up to the
+heart, she sinks out of its light onto the lens, the title "THE LAST CROWN", the sting, a shockwave; control returns
+with both in frame. After a death the reveal plays at double speed (session 10).
 
-| Range | Spell (clip) | Behaviour | Counter |
-|---|---|---|---|
-| Long (> 9 m) | **Bolt** (`throw`) | 1 fast bolt, aimed with lead | sidestep / dodge / guard (blockable) |
-| Long | **Twin bolts** (`double_cast`) | 2 bolts, 0.35 s apart | dodge the second |
-| Long | **Bombardment** (`slam_call`) | 3–5 rune circles under/around the player, erupt after 1.2 s | move out |
-| Long (P2+) | **Beam** (`beam`) | channelled ray that sweeps 70° | Past: hide behind a pillar · Present: jump it (knee height) / dodge i-frames |
-| Mid (4–9 m) | **Fan** (`sweep`) | 5 bolts in a 60° fan | dodge through a gap / guard |
-| Mid | **Ground wave** (`ground_slam`) | expanding ring at ankle height | jump or dodge through |
-| Mid (P2+) | **Nova** (`nova`) | 1.1 s tell, radial burst r 6 | get out or dodge at the right time |
-| Short (< 4 m) | **Repel** (`push`) | point-blank blast, knockback | guard (chip) / dodge |
-| Short (P3) | **Dark burst** (`crouch_blast`) | deep crouch tell 0.9 s, burst r 4.5 | back off / dodge |
-| Short | **Blink** (`leap`) | after ~3 s pressed in melee: leap tell → vanishes → reappears at the arena edge, bolt on arrival | chase; she stays hittable during the tell |
-| P3 | **Orb** (`charge_orb`) | slow homing orb (turn-rate limited), explodes r 3 after 5 s or on contact | outrun / strike it? (no) — dodge at contact |
+**Arena:** ring r 17 (a player-height parapet round the edge), the lens r 4.2 at the centre, 4 pillars at r 11; she
+keeps to r ≈ 14.5 and blinks between 8 points at r 12.5. In the PRESENT four wedge abysses (r 6–13.5, ±20° at 45/135/
+225/315°) open between the stumps — the footing changes with the memory. The heart hangs above and beats with the fight
+(colour per phase; `vfx/Crownheart.ts` drives the level's crown light).
 
-**Phase 1 — "The Crown remembers" (100→65 %).** The fight opens with a forced slip to the **Past**. Readable pace
-(1.6–2.2 s between casts): bolt, twin bolts, fan, ground wave, repel, blink. At 80 % she summons 2 remnants.
-**Phase break (65 %):** kneel → invulnerable 3 s, crown resonance, shockwave pushes the player back, surge +100.
+**Spells and phases** (unchanged from v2; `LastCrown.ts` CASTS): bolt, twin bolts, fan, ground wave, repel (phase 1);
++ bombardment, nova, beam (phase 2, from 65 %); + orb, dark burst, binding (phase 3, from 30 %). Wards (phase 2+) and
+bindings (phase 3) exist in one memory only — **her own shift breaks them** (stagger, damage window). Forced slips
+move the fight between memories with a 3 s telegraph. Phase breaks: kneel, invulnerable, surge. At 65 % bats pour
+out of the heart; at 35 % goblins and the brood climb over the rim.
 
-**Phase 2 — "The castle slips" (65→30 %).** Faster casts (1.2–1.7 s). Adds bombardment, nova, **beam**. **Ward:** every
-~16 s she crosses her arms and raises a ward **bound to the current memory** (damage ×0.1). **Shifting breaks it**
-("THE WARD WAS WOVEN IN ANOTHER MEMORY") → 3.5 s stagger, damage ×1.5. **Forced slips** every ~24 s (3 s telegraph:
-the Present wedges glow red on the Past floor; stand clear or fall = the usual fall penalty).
-**Phase break (30 %):** kneel, invulnerable, surge +100, the storm turns red.
+**Death and ending:** she staggers and sinks; the camera tilts up as the heart convulses and shatters; the chamber goes
+dark; "THE CROWNHEART IS SILENT" with time / Echoes / shifts / deaths, the epilogue line, and a way back to the title.
 
-**Phase 3 — "Temporal collapse" (30→0 %).** She combines spells (bolt → nova, fan → bombardment), adds dark burst and
-the orb, slips every ~15 s, and every ~20 s casts **Binding**: a golden tether pulls the player toward the lens for
-4 s — **shifting breaks it** ("THE BLOOD REFUSES") → 4 s stagger. If it completes: 45 damage + knockdown (never a kill).
-**Death:** she staggers, sinks, the lens cracks, slow-mo, a final slip to the **Present** (permanent), ending card.
-
-**Why time-shifting matters in the fight (and never replaces the sword):** wards and bindings are broken *only* by
-shifting (each costs 100, refilled by adds and phase surges) — the shift opens the biggest damage windows, the sword
-does the damage. Cover differs by state (Past pillars stop bolts and the beam; Present stumps don't, but Present
-holes change the footing). Forced slips move the fight between memories on the boss's schedule.
-
-**Fairness:** ≤ 6 live bolts, ≤ 5 rune circles, 1 beam; every AoE has a ground marker ≥ 0.9 s before damage; no spell
-lands from off-screen without an edge indicator (portrait threat chevrons include incoming bolts and the boss).
+**Session 10 play-test:** a god-mode bot finishes the fight in 100–123 s (phase 2 at ~40–55 s, phase 3 at ~76–93 s, the
+death sequence, the end card; 0 errors). A real-damage bot that never dodges or guards dies every ~40–60 s and reached
+phase 3 once in 283 s — a lower bound: a player who guards, parries and dodges does much better. Each death respawns
+at CP3 (the Threshold), the fight resets cleanly, the Present Crown doors let her back in.
 
 ## J. Streaming / performance
 
-Scope `floor3`: level + collision GLBs, knight/hollow/archer/ghost rigs as needed, `lastcrown.glb` (KTX2 5.7 MB, 3
-textures 1024²), 12 boss sounds (floor-only). Spells are pooled at floor build (`src/vfx/Spells.ts`): bolt meshes,
-rune circles, rings, beam, ward, tether — shared geometry, two shared additive materials; the warm-up kit renders one
-of each behind the loading screen (no first-cast compile/upload). Adds come from the pre-built remnant pool.
+Scope `floor3`: `floor03.glb` (93 visual objects, 20.0k tris), `floor03_collision.glb` (4.7k tris), nav 491 KB; rigs
+knight / archer / hollow (Remnants) / goblin / bat / widow / lamia / lastcrown (KTX2); the 12 boss sounds and the monster
+sounds. The descent has no sky (`noSky`); the fog colour is the dark beyond the walls. Point lights come from the pooled
+light rig (crown lights prioritised). Spells and Remnants are pooled and warmed behind the loading screen.
 
-## K. Collision & shift-safety
+## K. Collision & shift safety
 
-Wedge holes and the BC crater / WG gap are Present `void` volumes. The Royal Ward is a PAST-only collider. Slips use
-`TimeSystem.setState` (no validation — the telegraph makes them fair); a player caught over a hole takes the fall
-penalty. Boss arena is sealed by nothing: the fight stays in the ring because she keeps it there (blink returns to r 10).
+Every drop is an `abyss`: a kill volume below the rim plus black shaft walls, so a hole always reads as a hole. Shift
+destinations are validated (capsule overlap + footing within 8 m in the target memory) — the six required shifts of the
+route are all accepted at their ring. Scripted sequences (the lift ride, finishers) are exempt from the fall check
+(session 10: the lift's descent crossed the conduit shaft's kill volume). The crystal roots and shards have no collision;
+when one stands between the camera and the hero, the roots fade out (`Game.updateRoots`, session 10).
 
-## L. Self-review (v2.0)
+## L. Self-review / session 10 play-test fixes
 
-- v1.0's stationary design is replaced; kept: slips, the ward-anchor idea (now a ward bound to one memory), binding.
-- Repetition: G1 (precise weave), G2 (warded stair / ruin route), G3 (Past-only doors) — three different ideas.
-- Portrait: the boss is framed ahead of the hero at 5–12 m (portrait camera + boss pull-back); ground markers read
-  from the high portrait camera; bolts from off-screen get edge chevrons.
-- Scope honesty: Floor 3 is ~40 % of Floor 2's length by design.
+- **The King's iron gate never closed the ramp** (its door box was rotated 90°, lying along the ramp): the Past walked
+  past it. Fixed in the layout (rotation = the door's own angle); gate probe now OK in both memories.
+- **The lift ride killed the hero:** the descent crossed the shaft's kill volume, and each "fall" cost a quarter of her
+  health (4 falls). Scripted sequences are exempt now; the ride arrives at full health.
+- **The floor exit tore the floor down inside the frame** (the lift → transition → unload ran synchronously inside
+  `Game.step`, the rest of the frame used the disposed level and threw). The transition now starts at the top of the
+  next frame.
+- **Dying on Floor 3 threw inside the respawn** (`setArenaLock(false)` built Floor 1's hatch with a texture Floor 3 never
+  loads). Fixed.
+- **The camera sat inside the crystal shards** at the arena's west pillar (where the bridge arrives): the roots now fade.
+- **The Present was too dark to read on the approach bridge** in portrait: Floor 3's Present lighting was raised
+  (ambient 0.66 → 0.9, exposure 1.3 → 1.42, hero light 7.5 → 9, fog pushed back).
+- Shift rings only appear in the memory that must be left; the two unmarked shifts (P2, the iron gate) got objectives.
+- Repetition check: nine weaves, no two alike (gap, gate, bridge, fallen bridge, sealed door, fused door, sloped gap,
+  shut gate, warded doors); the floor alternates Present and Past fights so the resonance never runs dry.
+- Known limits: E6 is skipped by a player who stays in the Past from the cistern (it is not needed for the economy);
+  the Past iron gate is dark iron and reads best with its prompt.
 
-## M. Implementation (session 5)
+## M. Implementation map
 
-`tools/blender/floor03_layout.py` + `build_floor03.py` → `public/assets/levels/floor03*.glb`; `src/levels/Floors.ts`
-entry 3 (Floor 2 `next: 3`); `src/enemies/LastCrown.ts` (boss AI, phases, wards, slips, binding) + `src/vfx/Spells.ts`
-(pooled spells) + archetype `last_crown`; boss SFX via ElevenLabs (`tools/elevenlabs_sfx.json`); ending in
-`Game.finish`. See CONTEXT.md §6/§10 for what is verified.
+`tools/blender/floor03_layout.py` (v3) + `build_floor03.py` (headless: `blender --background --factory-startup
+--python tools/blender/build_floor03.py -- --no-render`), then `node tools/build_navgrid.mjs 3` (NAV3 — required after
+any rebuild). `Floors.ts` entry 3 (env overrides, epigraph, `noSky`), Floor 2 `next: 3` via the King's lift
+(`levels/Lift.ts`, F2 marker `LIFT_DEPART`, F3 `LIFT_ARRIVE`). Dev: `?floor=3`, `?at=hall3 | maw | descent | lastcrown`;
+probes `dev/f3Probe.js` (gates, route), `dev/bossBot.js` (the fight), `dev/monsterProbe.js brawl()` (the Maw),
+`dev/auditProbe.js` (every encounter).
 
-## O. Asset notes (session 5)
+## O. Asset notes
 
-`Pro Magic Pack with final boss.zip`: `Nightshade J Friedrich.fbx` (68 bones = the hero's 65 mixamorig bones + Ribbon1-3,
-12,999 tris, 2.35 m, diffuse/normal/specular/glow 2048²) + 56 clips on the same skeleton (verified). Inspection:
-`tools/blender/inspect_pack.py` → `build/analysis/magic/inspect.json`, sheets `build/analysis/magic/sheet_*.png`,
-close-ups `close_boss.png`. 32 clips used (`tools/blender/build_lastcrown.py` lists each with its role and the unused
-ones with the reason) → `public/assets/characters/lastcrown.glb` (4.4 MB; KTX2 5.7 MB) + `src/data/bossAnimations.json`
-(hand-release peaks per cast). The old `boss.glb` (seraph, one clip) is **no longer used** by Floor 3.
+The boss asset (`Pro Magic Pack with final boss.zip` → `lastcrown.glb`) is described in CONTEXT.md §4 and
+`tools/blender/build_lastcrown.py`. Monsters: `gobelin_monster.glb` (retargeted), `bat_dark_bad_cartoon_monster.glb`,
+`ragno_monster.glb` (the Widow), `monster-_module_xb1011.glb` (the lamia / the Maw) — CC BY 4.0, credited in the game's
+Credits (`src/data/credits.ts`).

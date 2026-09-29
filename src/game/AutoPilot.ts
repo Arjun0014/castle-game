@@ -278,7 +278,11 @@ export class AutoPilot {
       if (e.owner !== st && e.owner !== 'BOTH') continue;
       const d = e.pos.distanceTo(g.player.pos);
       const dy = Math.abs(e.pos.y - g.player.pos.y);
-      if (dy > 2.4) continue;
+      // flyers circle 3-4 m above her head and come down to strike: they count as on her level
+      if (dy > (e.isFlying ? 4.8 : 2.4)) continue;
+      // a perched archer on another level (a gallery, the flight of a stair above) is not chased straight at: the
+      // route reaches it (session 10: the undercroft stair archer, relocated onto the upper flight, stalled the bot)
+      if (e.opts.perch && dy > 1.0) continue;
       const from = g.player.pos.clone().setY(g.player.pos.y + 1.3);
       const to = e.pos.clone().setY(e.pos.y + 1.1);
       const dir = to.clone().sub(from);
@@ -335,7 +339,8 @@ export class AutoPilot {
       const tol = step.tol ?? 0.7;
       // interrupt travel to fight anything that engages us
       const engaged = this.nearestEnemy([], 6);
-      if (engaged && engaged.triggered && !step.crouch) { this.fightTick(engaged, dt); return; }
+      // (a fight on the way is not travel time: the Gutter King's 40 s fight used to time the walk out)
+      if (engaged && engaged.triggered && !step.crouch) { this.stepT = Math.max(0, this.stepT - dt); this.fightTick(engaged, dt); return; }
       if (step.crouch && !p.crouching && p.state === 'move') inp.tapVirtual('crouch');
       if (!step.crouch && p.crouching && (p.state === 'crouch')) inp.tapVirtual('crouch');
       if (!this.detour.length && dist < tol && Math.abs(target.y - p.pos.y) < 1.2) {
@@ -354,6 +359,19 @@ export class AutoPilot {
       this.lastPos.copy(p.pos);
       if (this.stuckT > 1.2 && p.grounded && !step.crouch) {
         this.stuckCount++;
+        // a fight pushed us off the line (the Gutter King's pack threw the bot 12 m into the range's trusses): take a
+        // real route over the nav grid to where we are going before trying jumps and backtracks
+        const nav = g.enemies.nav;
+        if (nav && !this.detour.length && this.stuckCount % 3 !== 0) {
+          nav.use(g.time.state, g.level.flags);
+          const path = nav.path(p.pos, target, [], 0.35);
+          if (path && path.length > 1 && nav.reached) {
+            for (const w of path.slice(0, 14)) this.detour.push(w.clone());
+            this.note('stuck — following the grid route');
+            this.stuckT = 0.4;
+            return;
+          }
+        }
         if (this.stuckCount % 3 === 0 && this.lastReached && !this.detour.length) {
           // displaced by a fight: walk back to the last waypoint we reached, then retry
           this.detour.push(this.lastReached.clone());
@@ -410,7 +428,7 @@ export class AutoPilot {
         return;
       }
       if (threat && threat.triggered) { inp.setVirtual('shift', false); this.fightTick(threat, dt); return; }
-      if (g.time.charge < 100 && g.time.cooldown <= 0 && this.stepT > 1) {
+      if (g.time.charge < 100 && this.stepT > 1) {
         // rely on fissures / remaining Echoes: fight whatever is around, otherwise go and wait by the nearest
         // fissure on this level (the blueprint's softlock guarantee), then come back to shift here
         const any = this.nearestEnemy([], 20);
@@ -435,6 +453,8 @@ export class AutoPilot {
         return;
       }
       if (this.shiftReturn) { this.shiftReturn = null; this.release(); }
+      // the castle settles for a moment after a shift: pressing now only burns attempts
+      if (g.time.cooldown > 0) { inp.setVirtual('shift', false); return; }
       if (p.state !== 'channel') {
         inp.setVirtual('shift', false);
         if (p.state === 'move' || p.state === 'land') {

@@ -1,13 +1,13 @@
-// Last Crown fight bot (dev server). Console on http://localhost:5173/?mute&autostart&floor=3 :
-//   const bb = await import('/dev/bossBot.js'); bb.setup(); bb.fight(180, false)
+// Last Crown fight bot (dev server). Floor 3 v3 (session 10): console on http://localhost:5173/?mute&autostart&at=lastcrown :
+//   const bb = await import('/dev/bossBot.js'); bb.setup(); bb.fight(240, false)
 // The bot locks on, walks in (never into a Present hole), chains light attacks and holds Shift whenever a ward or a
-// binding is up and it has the charge. It never dodges or guards: a lower bound on a human player.
+// binding is up and it has the charge. It never dodges or guards: a lower bound on a human player. After a death it
+// walks back from the Threshold (CP3) through the Crown doors, which stand open only in the Present.
 export function setup() {
   const g = window.__game;
-  g.checkpoints.activate(g.level.marker('sigil', 'CP2'));
-  g.forceState('PAST');
-  g.time.unlocked = true; g.time.charge = Math.max(g.time.charge, 100);
-  g.tp(0, 127.5, 32, 0); g.advance(0.3, 1 / 60, false);
+  g.time.unlocked = true; g.time.charge = Math.max(g.time.charge, 200);
+  if (g.time.state !== 'PRESENT') g.forceState('PRESENT');
+  g.tp(26, 148, -16, -90); g.advance(0.3, 1 / 60, false);
 }
 
 export function fight(seconds, god = true) {
@@ -21,8 +21,8 @@ export function fight(seconds, god = true) {
   hook();
   let lastPhase = b.phase, lastState = g.time.state, lastMode = b.mode;
   for (let i = 0; i < seconds * 60 && !g.finished; i++) {
-    // after a death the hero respawns at CP2: walk back into the Crown (Past doors)
-    if (p.alive && p.pos.z > -124.5 && g.time.state === 'PRESENT' && !g.respawning && !p.isChanneling && shiftHold <= 0 && g.time.charge >= 100) { shiftHold = 2.6; inp.setVirtual('shift', true); }
+    // after a death the hero respawns at the Threshold (CP3): the Crown doors stand open only in the Present
+    if (p.alive && p.pos.x < 30 && g.time.state === 'PAST' && !g.respawning && !p.isChanneling && shiftHold <= 0 && g.time.charge >= 100) { shiftHold = 2.6; inp.setVirtual('shift', true); }
     const d = b.pos.distanceTo(p.pos);
     if (b.alive && !b.untargetable) p.lockTarget = { get pos() { return b.pos; }, get alive() { return b.alive; } };
     const needShift = (b.wardUp || b.bindT >= 0) && g.time.charge >= 100 && !p.isChanneling;

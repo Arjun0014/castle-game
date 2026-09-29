@@ -177,6 +177,9 @@ export class MaterialLibrary {
   }
 
   /** group: which geometry group the mesh belongs to. SHARED meshes get per-state materials swapped. */
+  /** every material already created for `key` (all memory / group variants) */
+  variants(key: string) { return [...this.mats.entries()].filter(([id]) => id.startsWith(key + '|')).map(([, m]) => m); }
+
   get(key: string, state: TimeState, group: 'SHARED' | TimeState): THREE.Material {
     const id = `${key}|${state}|${group === 'SHARED' ? 'S' : 'X'}`;
     const hit = this.mats.get(id);
