@@ -260,9 +260,9 @@ export class Dialogue {
   private prefetch() {
     const m = this.g.assets.manager, p = this.g.player.pos;
     const want: string[] = [];
-    for (const a of this.anchors) if (!m.has('vo:' + a.id) && a.pos.distanceTo(p) < PREFETCH) want.push('vo:' + a.id);
+    for (const a of this.anchors) if (!this.played.has(a.id) && !m.has('vo:' + a.id) && a.pos.distanceTo(p) < PREFETCH) want.push('vo:' + a.id);
     // lines with no place (idle remarks) load quietly once the floor has settled
-    if (this.floorT > 50) for (const id of this.idleLines) if (!m.has('vo:' + id)) want.push('vo:' + id);
+    if (this.floorT > 50) for (const id of this.idleLines) if (!this.played.has(id) && !m.has('vo:' + id)) want.push('vo:' + id);
     if (want.length) m.acquire('vo' + this.floorId, want).catch((e) => console.warn('[dialogue] prefetch failed', e));
   }
 
@@ -280,6 +280,9 @@ export class Dialogue {
       else if (this.clock > this.pending.until) { const l = this.pending.line; this.pending = null; this.begin(l, null); }
     }
     if (this.cur && this.clock >= this.cur.until) {
+      // a once-only line will never play again: free its decoded audio now (memory stays at the prefetch window)
+      const done = this.cur.line;
+      if (ONCE.has(done.cat) || done.cat === 'idle') g.assets.manager.evict('vo:' + done.id);
       this.cur = null;
       this.lastEnd = this.clock;
       g.audio.duck(false);
