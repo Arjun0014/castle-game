@@ -29,7 +29,9 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 **World scope:** one ancestral castle  
 **Total floors:** 3  
 **Current implementation priority:** session 4 = jam-facing portrait build (portrait default, touch controls, portrait
-camera/HUD), combat feel + new L1, archers, mobile performance, git — all done and verified (§2.1, §6, §10). Next: Floor 3.
+camera/HUD), combat feel + new L1, archers, mobile performance, git — all done and verified (§2.1, §6, §10). Floor 3:
+blueprint written (`docs/LEVEL_03_BLUEPRINT.md` v1.0) and the final boss asset processed (`boss.glb`); geometry,
+boss controller and ending NOT built yet (§8).
 
 The player is a forgotten descendant of the royal bloodline that once ruled the castle. The bloodline is bound to an ancient temporal mechanism called the Crownheart. The player can force the castle between two spatial memories:
 
@@ -303,7 +305,9 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | Floor 2 geometry | BUILT (v1) | `tools/blender/floor02_layout.py` → `build_floor02.py` → `public/assets/levels/floor02.glb` (14.8k tris) + collision (3.4k tris); 0 validation issues |
 | Floor 2 runtime | WORKING | `?floor=2` loads (44 enemies, 12 encounters, 5 sigils, 6 fissures); Floor 1 exit → chapter reload into Floor 2 with HP/charge carry; FR1 fracture breaks + Present chandelier bridge verified; every route segment walked with 0 falls (see §10) |
 | Floor 2 full playthrough | **VERIFIED (session 3)** | god: spawn → G7 in one run + CP5 → exit segment; **real damage (`?autopilot=full&floor=2`): exit reached at 495 s, 6 deaths → checkpoint respawns (4 in the Kingsguard fight: kicked into floor holes), 35 kills, 7 shifts, 0 compiles / 0 uploads** |
-| Floor 3 | NOT STARTED BY DESIGN | |
+| Floor 3 blueprint | DONE (v1.0, self-reviewed) | `docs/LEVEL_03_BLUEPRINT.md` — "The Crown": Bell Chamber → Wind Gallery weave → East Terrace / spire ramp → Hall of Crowns → the Crown; new rule "slips"; the Last Crown (stationary; ward anchors = F2 fractures, state-dependent attacks, forced slips, binding broken by shifting) |
+| Final boss asset | PROCESSED, VERIFIED IN ENGINE | `tools/build_boss.mjs` (`npm run assets:boss`) → `public/assets/characters/boss.glb` (14.8 MB) → `ktx2/characters/boss.glb` (13.2 MB); loads in 0.7 s, renders correctly at 2× (4.2 m); **not used by any floor yet** |
+| Floor 3 geometry / runtime / boss AI / ending | NOT STARTED | implementation plan: blueprint §N |
 | **Asset lifecycle (session 3)** | DONE, VERIFIED | `src/assets/AssetManager.ts` (ref-counted scopes, shared in-flight loads, byte-weighted progress, disposal), `src/assets/GameAssets.ts` (every key + per-floor dependency lists from `src/data/floorManifests.json`). Scopes: `core` (hero, shared sounds), `ambience` (5 beds, skipped when muted), `floorN`. F1→F2→F1→F2 returns identical GL counts |
 | **Loading screen** | DONE | `src/ui/LoadingScreen.ts`: initial + floor transitions; "LOADING CAER VEYR / ████░░ 82% / Preparing the Royal Floor — …"; real progress (bytes, then build, then GPU warm-up) |
 | **In-place floor transitions** | DONE, VERIFIED | `Game.transitionTo(next)`: stop loop → retain shared keys → `unloadFloor()` → release old scope (disposes textures/geometries/materials/skeletons/bone textures/audio buffers only it used) → load+build+warm next → carry HP/charge. Duplicate calls share one promise. F1→F2 ≈ 2 s (was page reload 3.4 s + 6.4 s first-frame freeze) |
@@ -312,7 +316,7 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **KTX2 textures** | ADOPTED (default) | `tools/build_ktx2.mjs` → `public/assets/ktx2/**`; runtime prefers them, `?tex=jpg` forces the originals. See §10 benchmarks |
 | **Profiler** | DONE | `src/game/Perf.ts` (per-frame step/render/GPU timer query, compile/upload attribution, spikes, long tasks); `Game.bench()` drives real frames in hidden tabs |
 | **Portrait jam presentation (session 4)** | DONE, VERIFIED | `Platform.ts` stage 9:21..9:16; desktop 1024×768 → centred 432×768 stage, kbm, no touch HUD; phone emulation 375×812 → full stage, touch HUD, DPR 2 (1.2 MP), 1024 shadows; rotate overlay on a landscape handheld (pauses); `?view=wide` unchanged |
-| **Touch controls** | DONE, VERIFIED (emulated multitouch) | `src/ui/TouchControls.ts`; scripted PointerEvent tests: stick walk 3.1 m/s / rim sprint 6.3 m/s, look while moving, attack with a 3rd finger, lifting one finger keeps the others, Guard→slide = BASH, Guard + Heavy = KICK, directional dodge, Shift hold, no stuck holds; auto-crouch through both F1 crawl spots. **Not yet tried on a real phone.** |
+| **Touch controls** | DONE, VERIFIED (emulated multitouch) | `src/ui/TouchControls.ts`; scripted PointerEvent tests: stick walk 3.1 m/s / rim sprint 6.3 m/s, look while moving, attack with a 3rd finger, lifting one finger keeps the others, Guard→slide = BASH, Guard + Heavy = KICK, directional dodge, hold SHIFT → Present→Past (ring fills, charge spent), pause button → card → tap resumes, interact pill at CP1 activates the sigil, no stuck holds; auto-crouch through both F1 crawl spots. **Not yet tried on a real phone.** |
 | **Portrait camera** | DONE, VERIFIED | `CameraRig` profiles; screenshots: spawn, E1 fight, crawl tunnel, Great Hall; ceiling/roof clearance fixes |
 | **Combat feel + new L1** | DONE, VERIFIED (numeric) | L1 contact 0.13 s after press; chain hit every 0.38–0.47 s; L1→Heavy continues into F1c; per-swing hit registry (fixed repeat-swing whiffs) |
 | **Archers** | DONE, VERIFIED | first arrow 1.0 s after sight at 27 m; straight runs hit 4/8, juking 0/8, guard blocks all, cover (gallery slab) 0 shots |
@@ -432,15 +436,21 @@ A parry staggers the attacker and grants +12 resonance.
 
 # 8. Next Concrete Tasks
 
-1. **Floor 3** (next major content stage): blueprint first (`docs/LEVEL_03_BLUEPRINT.md`: short climb into the Crownheart
-   / Last Crown sequence), then `final_boss_light_monster.glb` processing (KTX2 + opaque materials; it has ONE 8.8 s
-   clip — see §9), then geometry (`floor03_layout.py` / `build_floor03.py`), runtime, and the existing floor-scoped
-   loading (`floorManifests.json` + `GameAssets.floorKeys`).
-2. **Real-phone test by a human** (touch feel, thumb reach, haptics, performance on a mid-range phone): `npm run dev:lan`.
-   Adjust `TouchControls` sizes (CSS `--tu`), look sensitivity (`2.6 / stage width` rad/px), rim-sprint threshold.
-3. Listen to the mix (human): combat impact layers were re-balanced by weight in session 4 (`Audio.hitEnemy`).
-4. Floor 2 visual pass with the new textures (plaster, mossy rock, aerial rocks, facade glass) — unchanged from session 3.
-5. New enemy GLBs (bat, spider, goblin, blob) still not integrated.
+1. **Build Floor 3** from `docs/LEVEL_03_BLUEPRINT.md` §N, in order:
+   a. `tools/blender/floor03_layout.py` + `build_floor03.py` (copy the floor02 driver; run Blender directly — the npm
+      script hit cmd.exe quoting before) → `public/assets/levels/floor03.glb` + `floor03_collision.glb`; QA renders.
+   b. `Floors.ts` entry 3 + Floor 2 `next: 3`; `GameAssets.floorKeys(3)` incl. `glb:enemy:boss` (normalise like the
+      ghost: 2× scale, feet at origin); `npm run assets:manifest`; KTX2 for any new textures.
+   c. `src/enemies/LastCrown.ts` boss controller (phases, ward + 4 Sealbearer fractures, Decree ring, Crown beam, void
+      lances via the arrow pool, pooled summons, forced slips with safe-footing wait, binding tether broken by a
+      state change) + boss bar "THE LAST CROWN"; warm-up kit for its VFX materials.
+   d. Ending sequence + card for the last floor (`Game.finish`).
+   e. `AutoPilot` `ROUTES[3]` + boss tick; verify god + real damage; floor 2 → 3 transition + residency.
+2. **Real-phone test by a human** (`npm run dev:lan` → http://192.168.1.39:5173/): touch sizes (`--tu`), look
+   sensitivity (`2.6 / stage width` rad/px), rim-sprint threshold, haptics, frame rate on a mid-range phone.
+3. Listen to the mix (human): impact layers were re-balanced by weight (`Audio.hitEnemy`).
+4. Floor 2 visual pass with the new textures (plaster, mossy rock, aerial rocks, facade glass).
+5. New enemy GLBs (bat, spider, goblin, blob) not integrated; the bat is the cheapest (flying AI + flap loop).
 6. Floor 1 leftovers: wall detailing, baked AO.
 
 ---
@@ -450,9 +460,10 @@ A parry staggers the attacker and grants +12 resonance.
 These would materially improve the game and are best sourced manually (licensing/quality judgement by ear/eye):
 
 - **Final boss animation (highest value for Floor 3):** `final_boss_light_monster.glb` has a single 8.8 s `Motion`
-  clip on a 399-joint Reallusion rig. A boss fight needs at least idle, walk/float, 3–4 attacks (sweep, slam, lunge,
-  ranged), hit reaction, phase transition and death — ideally exported from the same source (Reallusion / Mixamo-style
-  retarget) as separate clips or one timeline with markers.
+  clip (a subtle breathing idle — the model is a rooted, throne-like winged seraph on a dark pool). Floor 3 is designed
+  so the boss never needs to walk (blueprint §I), but these clips on the same 399-joint rig would lift the fight a lot:
+  **wings-spread roar / cast** (phase changes, Decree), **a forward strike or crest flare** (beam/lance tell), **a hit
+  flinch**, **a collapse/death**. Blend-shape (morph) animations also work — every mesh already has morph targets.
 - **Enemy animation for the new monsters:** the spider/goblin/blob each ship one clip (walk / idle / idle). Attack,
   hit, death clips (or the source rigs so Mixamo clips can be retargeted) are needed before they can fight.
 - **Audio:** human combat vocal efforts/grunts/death cries (royal guards + hero); a real bow draw/release/arrow set;
@@ -586,9 +597,18 @@ is set locally. Pushes are non-interactive (`GCM_INTERACTIVE=never`). The repo i
 packs (`assets/characters`, `assets/materials`, `assets/vegetation`, `assets/blender`) are git-ignored and stay local;
 runtime assets (`public/assets`) are committed. `.env` is ignored.
 
+**Floor 3 (started, not built):** `docs/LEVEL_03_BLUEPRINT.md` v1.0 (self-reviewed; design only) and the processed
+boss asset (`tools/build_boss.mjs`: 30.5 → 13.2 MB KTX2, textures deduplicated, opaque materials, constant tracks
+removed; verified rendering in engine). Everything else for Floor 3 is in §8.1.
+
+**Commits this session (all pushed to Arjun0014/castle-game main):** baseline · portrait + touch + input split ·
+camera framing/clearance + T-pose fix · combat feel + L1 + repeat-swing fix · archers · ledge-safe dodge/knockback ·
+itch build · mobile quality tier + LAN scripts · CONTEXT · boss asset · Floor 3 blueprint · final CONTEXT.
+
 **Known issues:** browser-pane screenshots crop at DPR 1.25 in desktop mode (use phone-size emulation for captures);
 touch controls never tried on a real device; CPU-side render timings on this machine are polluted by other sessions'
-GPU work (compare GPU timer numbers).
+GPU work (compare GPU timer numbers); the itch zip still carries the JPEG/PNG fallback textures and non-KTX2 GLBs
+(`?tex=jpg`) — harmless (never downloaded unless requested) but ~25 MB of the 83 MB.
 
 ### Session 3 (2026-09-29) — performance, asset lifecycle, KTX2, audio correction, Floor 2 verification
 
