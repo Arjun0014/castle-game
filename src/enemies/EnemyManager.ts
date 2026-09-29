@@ -10,6 +10,7 @@ import type { EnemyTemplate } from '../assets/GameAssets';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
 import { FEEL } from '../combat/CombatData';
 import { Platform } from '../platform/Platform';
+import type { NavGrid } from './NavGrid';
 
 interface Encounter {
   id: string; state: TimeState | 'BOTH'; box: THREE.Box3; enemies: Enemy[];
@@ -94,6 +95,9 @@ export class EnemyManager {
   private tracerGeo = new THREE.CylinderGeometry(0.012, 0.012, 1, 4, 1, true).translate(0, 0.5, 0).rotateX(Math.PI / 2);
   private tracerMat = new THREE.MeshBasicMaterial({ color: 0xffb070, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending });
   private tracers: THREE.Mesh[] = [];
+  /** the floor's baked navigation grid (Game sets it at load) */
+  nav: NavGrid | null = null;
+  private navPlans = 0;
   bossName = 'THE GATE WARDEN';
   boss: Enemy | null = null;
   onBossDeath?: () => void;
@@ -252,7 +256,7 @@ export class EnemyManager {
     const e = arch.id === 'last_crown'
       ? new LastCrown(arch, model, clips, p.encounter, p.state, p.wave ?? 1, { yaw }, this.g)
       : new Enemy(arch, model, clips, p.encounter, p.state, p.wave ?? 1, { rise: !!p.rise, kneel: !!p.kneel, perch: !!p.perch, yaw, tint: p.tint });
-    e.place(m.pos);
+    e.place(this.walkableSpawn(m.pos, p.state, !!p.perch || arch.id === 'last_crown' || !!arch.flying, m.name));
     this.g.scene.add(e.root);
     this.enemies.push(e);
     const enc = this.encounters.get(p.encounter);
@@ -317,6 +321,44 @@ export class EnemyManager {
     const st = this.g.time.state;
     return this.enemies.some((e) => e.alive && !e.removed && (e.owner === st || e.owner === 'BOTH') && e.state !== 'hidden' && e.state !== 'dormant' && e.pos.distanceTo(p) < r)
       || this.remnants.some((e) => e.alive && e.pos.distanceTo(p) < r);
+  }
+
+  /** An engaged (triggered, living, visible) enemy of the current memory within r m — Blood Sigils refuse then. */
+  engagedNear(p: THREE.Vector3, r: number) {
+    const st = this.g.time.state;
+    // melee Echoes on another level (below a gallery, behind a locked stair) are no threat; archers and wraiths
+    // are when they can see you
+    const chest = p.clone().setY(p.y + 1.3);
+    const w = this.g.level.collision;
+    const sees = (e: Enemy) => {
+      const from = e.center.clone(), dir = chest.clone().sub(from), len = dir.length();
+      const hitW = w.raycast(from, dir.normalize(), len, st);
+      return !hitW || hitW.distance > len - 0.4;
+    };
+    const hit = (e: Enemy) => e.alive && !e.removed && e.triggered && (e.owner === st || e.owner === 'BOTH') &&
+      e.state !== 'hidden' && e.state !== 'dormant' && e.pos.distanceTo(p) < r &&
+      ((e.isRanged || e.isFlying) ? sees(e) : Math.abs(e.pos.y - p.y) < 2.5 && e.navMode !== 'hold');
+    return this.enemies.some(hit) || this.remnants.some(hit);
+  }
+
+  /** spawn points that were left in a slot too narrow to stand in (spawns checked against the nav grid) */
+  spawnFixes: string[] = [];
+  /**
+   * A walker must start on walkable ground of its own memory: a spawn wedged between a tomb and a wall (a body
+   * cannot fit) is moved to the nearest walkable spot within 1.5 m. Logged so the layout can be corrected.
+   */
+  private walkableSpawn(pos: THREE.Vector3, state: TimeState | 'BOTH', exempt: boolean, name: string) {
+    const nav = this.nav;
+    if (!nav || exempt) return pos;
+    const st = state === 'BOTH' ? this.g.time.state : state;
+    nav.use(st, this.g.level.flags);
+    let out = pos;
+    if (!nav.walkable(pos, 0.5)) {
+      const q = nav.nearestWalkable(pos, 3);
+      if (q && q.distanceTo(pos) < 1.6) { out = q.clone(); this.spawnFixes.push(`${name} ${st} moved ${q.distanceTo(pos).toFixed(2)} m`); }
+    }
+    nav.use(this.g.time.state, this.g.level.flags);
+    return out;
   }
 
   private liveIn(st: TimeState) { return (e: Enemy) => e.alive && !e.removed && (e.owner === st || e.owner === 'BOTH'); }
@@ -386,6 +428,8 @@ export class EnemyManager {
 
   // ------------------------------------------------------------------ state
   onStateChange(st: TimeState) {
+    this.nav?.use(st, this.g.level.flags);
+    for (const e of [...this.enemies, ...this.remnants]) e.navReset();
     for (const e of this.enemies) {
       const vis = (e.owner === st || e.owner === 'BOTH') && !e.removed && e.state !== 'hidden';
       e.root.visible = vis;
@@ -427,11 +471,15 @@ export class EnemyManager {
     const g = this.g;
     const st = g.time.state;
     const p = g.player;
+    this.navPlans = 0;
+    this.nav?.use(st, g.level.flags);
     const ctx: EnemyCtx = {
       playerPos: p.pos, playerAlive: p.alive, world: g.level.collision, state: st, now: g.t,
       requestSlot: this.requestSlot, releaseSlot: this.releaseSlot,
       onAttackHit: (e, atk) => this.enemyHitsPlayer(e, atk),
       shoot: (e) => this.shoot(e),
+      nav: this.nav,
+      navBudget: () => this.navPlans++ < 3,
       lineOfSight: (a, b) => {
         const dir = b.clone().sub(a);
         const len = dir.length();

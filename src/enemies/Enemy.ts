@@ -4,6 +4,7 @@ import type { TimeState } from '../levels/Materials';
 import type { CollisionWorld } from '../game/Physics';
 import { rootAt } from '../data/animationManifest';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
+import type { NavGrid } from './NavGrid';
 
 export type EnemyEvent = 'telegraph' | 'windup' | 'swing' | 'aim' | 'death' | 'alert' | 'shatter' | 'land';
 
@@ -30,6 +31,10 @@ export interface EnemyCtx {
   onAttackHit(e: Enemy, atk: EnemyAttack): void;
   shoot(e: Enemy): void;
   lineOfSight(from: THREE.Vector3, to: THREE.Vector3): boolean;
+  /** the baked walkability grid of the present memory (null = none on this floor) */
+  nav: NavGrid | null;
+  /** may this enemy run an A* plan this frame? (a few per frame across all enemies) */
+  navBudget(): boolean;
 }
 
 export class Enemy {
@@ -126,6 +131,16 @@ export class Enemy {
   private navExpected = 0;
   private navDetourT = 0;
   private navDir = new THREE.Vector3();
+  /** grid navigation (session 7): 'direct' chase while the ground to the hero is continuous, else a path */
+  navMode: 'direct' | 'path' | 'hold' = 'direct';
+  private leashT = 0;
+  private navPath: THREE.Vector3[] = [];
+  private navIdx = 0;
+  private navGoal = new THREE.Vector3(1e9, 0, 0);
+  private navCheckT = Math.random() * 0.3;
+  private navPlanAt = -99;
+  /** forget the current route (the memory changed, the enemy was moved) */
+  navReset() { this.navMode = 'direct'; this.navPath.length = 0; this.navIdx = 0; this.navCheckT = 0; this.navGoal.set(1e9, 0, 0); }
 
   constructor(
     public arch: Archetype,
@@ -278,6 +293,11 @@ export class Enemy {
       case 'chase':
       case 'circle': {
         if (!ctx.playerAlive) { this.loop(a.clips.idle, 1); break; }
+        // wraiths and archers left far behind give up too (walkers: see navigate())
+        if ((this.isFlying || this.isRanged) && !a.boss) {
+          if (dist > (this.isRanged ? 38 : 30)) this.leashT += dt; else this.leashT = 0;
+          if (this.leashT > 6) { this.leashT = 0; this.triggered = false; this.setState('idle'); if (this.hasSlot) { ctx.releaseSlot(this); this.hasSlot = false; } break; }
+        }
         if (this.isRanged) { move = this.rangedThink(dt, dist, dirP, ctx); break; }
         if (this.isFlying) { move = this.flyThink(dt, dist, dirP, ctx); break; }
         this.turnToward(dirP, a.turnRate, dt);
@@ -290,7 +310,9 @@ export class Enemy {
           break;
         }
         const atk = this.pickAttack(dist);
-        if (atk && this.cooldown <= 0 && (this.hasSlot || ctx.requestSlot(this, a.slotCost))) {
+        // an enemy that cannot reach the hero (holding) never takes one of the few attack slots from those who can
+        if (this.navMode === 'hold' && this.hasSlot) { ctx.releaseSlot(this); this.hasSlot = false; }
+        if (atk && this.cooldown <= 0 && this.navMode !== 'hold' && (this.hasSlot || ctx.requestSlot(this, a.slotCost))) {
           this.hasSlot = true;
           if (dist <= atk.range + 0.2 && Math.abs(dy) < 1.8) { this.beginAttack(atk); break; }
           // close in
@@ -380,7 +402,8 @@ export class Enemy {
     const drag = this.state === 'dead' && !this.grounded ? 0.5 : 7;
     this.vel.x *= Math.max(0, 1 - dt * drag);
     this.vel.z *= Math.max(0, 1 - dt * drag);
-    if (!this.isFlying && (this.state === 'chase' || this.state === 'circle')) move = this.steer(move, dt, ctx);
+    if (!this.isFlying && ctx.nav && this.alive && (this.state === 'chase' || this.state === 'circle')) move = this.navigate(move, dirP, dy, dt, ctx);
+    if (!this.isFlying && (this.state === 'chase' || this.state === 'circle') && this.navMode !== 'hold') move = this.steer(move, dt, ctx);
     // walkers never step off a ledge on their own (chasing straight across a floor hole was a free kill —
     // the Kingsguard died in the Present apartments' voids 1 s into its fight); knockback still can
     if (!this.isFlying && this.alive && move.lengthSq() > 0.04) move = this.keepFooting(move, ctx);
@@ -489,6 +512,73 @@ export class Enemy {
     if (best) { this.navDir.copy(best); this.navDetourT = 0.5 + bestFree * 0.25; }
     else this.circleDir *= -1;
     return move;
+  }
+
+  /**
+   * Grid navigation. While the ground between the enemy and the hero is continuous in the present memory (the
+   * baked grid's line walk: no wall, prop, gap or step on the way) the enemy chases straight as before. Otherwise
+   * it follows an A* path (round tables and pews, through the door, up the stair); a hero it cannot reach at all
+   * (a gallery above, a locked stair) makes it go to the closest reachable spot and hold there instead of
+   * running into the wall. Replans when the hero moves away from the old goal; a few plans per frame at most.
+   */
+  private navigate(move: THREE.Vector3, dirP: THREE.Vector3, dy: number, dt: number, ctx: EnemyCtx): THREE.Vector3 {
+    const nav = ctx.nav!;
+    // leash: a melee Echo left far behind (another wing, another level) stops chasing and stands where it is;
+    // it wakes again when it sees the hero (EnemyManager aggro-on-sight)
+    if (!this.arch.boss && this.pos.distanceTo(ctx.playerPos) > 26) this.leashT += dt; else this.leashT = 0;
+    if (this.leashT > 6) {
+      this.leashT = 0;
+      this.triggered = false;
+      this.setState('idle');
+      this.navReset();
+      if (this.hasSlot) { ctx.releaseSlot(this); this.hasSlot = false; }
+      return new THREE.Vector3();
+    }
+    const speed = move.length();
+    // last-resort recovery: pushed into a slot no body fits (between a tomb and a wall) and not moving → step to
+    // the nearest walkable spot (at most 1.5 m, never through a wall: the spot is on the same level)
+    if (speed > 0.3 && this.navMoved < 0.05 && this.navExpected > 0.8 && !nav.walkable(this.pos, 0.5)) {
+      const q = nav.nearestWalkable(this.pos, 3);
+      if (q && q.distanceTo(this.pos) < 1.6) { this.pos.set(q.x, q.y + 0.02, q.z); this.navReset(); this.navMoved = this.navExpected = 0; }
+    }
+    if (speed < 0.3 || move.x * dirP.x + move.z * dirP.z < 0.2 * speed) {
+      // strafing / backing off round the hero: local steering handles it
+      if (this.navMode === 'hold') return new THREE.Vector3();
+      return move;
+    }
+    this.navCheckT -= dt;
+    if (this.navCheckT <= 0) {
+      this.navCheckT = 0.3 + Math.random() * 0.1;
+      const direct = Math.abs(dy) < 1.2 && nav.clearLine(this.pos, ctx.playerPos, this.radius);
+      if (direct) this.navMode = 'direct';
+      else if ((this.navMode === 'direct' || this.navGoal.distanceTo(ctx.playerPos) > 1.5 || ctx.now - this.navPlanAt > 3) && ctx.navBudget()) {
+        this.navPlanAt = ctx.now;
+        this.navGoal.copy(ctx.playerPos);
+        const p = nav.path(this.pos, ctx.playerPos, this.navPath, this.radius);
+        this.navIdx = 0;
+        if (!p) this.navMode = 'direct';
+        else if (nav.reached) this.navMode = 'path';
+        else {
+          // unreachable: walk to the closest reachable point, then hold there facing the hero
+          const end = p[p.length - 1];
+          this.navMode = end && Math.hypot(end.x - this.pos.x, end.z - this.pos.z) > 1.2 ? 'path' : 'hold';
+          this.navCheckT = 1.2;
+        }
+      }
+    }
+    if (this.navMode === 'direct') return move;
+    if (this.navMode === 'hold') return new THREE.Vector3();
+    const path = this.navPath;
+    while (this.navIdx < path.length) {
+      const wp = path[this.navIdx];
+      if (Math.hypot(wp.x - this.pos.x, wp.z - this.pos.z) < 0.6 && Math.abs(wp.y - this.pos.y) < 1.3) this.navIdx++;
+      else break;
+    }
+    if (this.navIdx >= path.length) { this.navMode = this.navGoal.distanceTo(ctx.playerPos) < 1.5 && Math.abs(dy) > 1.2 ? 'hold' : 'direct'; return this.navMode === 'hold' ? new THREE.Vector3() : move; }
+    const wp = path[this.navIdx];
+    const dir = new THREE.Vector3(wp.x - this.pos.x, 0, wp.z - this.pos.z).normalize();
+    this.turnToward(dir, this.arch.turnRate, dt);
+    return dir.multiplyScalar(speed);
   }
 
   private footT = 0;

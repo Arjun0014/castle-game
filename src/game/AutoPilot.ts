@@ -267,6 +267,7 @@ export class AutoPilot {
   }
 
   /** Nearest live hostile relevant to the listed encounters (or any within radius). */
+  private lastTap = -10;
   private nearestEnemy(ids: string[], radius: number) {
     const g = this.game;
     const st = g.time.state;
@@ -390,12 +391,15 @@ export class AutoPilot {
       return;
     }
     if ('interact' in step) {
+      // a Blood Sigil refuses while engaged Echoes are near: finish them first, then kneel
+      const foe = this.nearestEnemy([], 12);
+      if (foe && foe.triggered && g.enemies.engagedNear(p.pos, 12)) { this.fightTick(foe, dt); this.stepT = 0; return; }
       this.release();
-      if (this.stepT > 0.2 && this.stepT < 0.3) inp.tapVirtual('interact');
-      if (this.stepT > 2.4) {
-        if (step.again ? g.checkpoints.save?.cid === step.interact : g.checkpoints.activated.has(step.interact)) { this.note('sigil ' + step.interact + ' activated'); this.next(); }
-        else this.fail('could not activate sigil ' + step.interact);
-      }
+      const done = step.again ? g.checkpoints.save?.cid === step.interact : g.checkpoints.activated.has(step.interact);
+      if (done && p.state !== 'interact') { this.note('sigil ' + step.interact + ' activated'); this.next(); return; }
+      // Echoes still settling (or the sigil recovering): wait, tapping again every second like a player would
+      if (!done && p.state !== 'interact' && this.stepT - this.lastTap > 1) { this.lastTap = this.stepT; inp.tapVirtual('interact'); }
+      if (this.stepT > 12) this.fail('could not activate sigil ' + step.interact);
       return;
     }
     if ('shift' in step) {
@@ -635,6 +639,7 @@ export class AutoPilot {
   }
 
   private next() {
+    this.lastTap = -10;
     const cur = this.route[this.i];
     if (cur && 'go' in cur) this.lastReached = B(...cur.go);
     this.detour = [];

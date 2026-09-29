@@ -128,6 +128,15 @@ export class GameAssets {
         memory: (g) => objectMemory(g.scene),
       });
     }
+    for (const fid of Object.keys(floorManifests)) {
+      const url = `assets/levels/floor${fid.padStart(2, '0')}_nav.bin`;
+      m.register<ArrayBuffer>({
+        key: 'nav:' + fid, bytes: size(url), label: 'Paths through the keep',
+        load: (p) => fetchBytes(url, size(url), p),
+        dispose: () => { /* garbage-collected */ },
+        memory: (b) => ({ gpu: 0, cpu: b.byteLength }),
+      });
+    }
     for (const [key, e] of Object.entries(textureLibrary as Record<string, { diff: string; nor: string; arm: string; ktx2?: { diff: string; nor: string; arm: string } }>)) {
       const urls = USE_KTX2 && e.ktx2 && SIZES[e.ktx2.diff] ? e.ktx2 : { diff: e.diff, nor: e.nor, arm: e.arm };
       m.register<TexSet>({
@@ -219,7 +228,7 @@ export class GameAssets {
   floorKeys(id: number): string[] {
     const man = (floorManifests as Record<string, FloorManifest>)[id];
     if (!man) throw new Error('No manifest for floor ' + id + ' (run npm run assets:manifest)');
-    const keys = ['glb:level:' + id, 'glb:col:' + id];
+    const keys = ['glb:level:' + id, 'glb:col:' + id, 'nav:' + id];
     const sets = new Set<string>();
     for (const mat of man.materials) for (const s of materialTextureSets(mat)) sets.add(s);
     keys.push(...[...sets].sort().map((s) => 'tex:' + s));

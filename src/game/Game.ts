@@ -32,6 +32,7 @@ import { TargetAssist } from '../combat/TargetAssist';
 import { Signals } from './Signals';
 import { Objectives, type Learned } from './Objectives';
 import { Dialogue } from '../audio/Dialogue';
+import { NavGrid } from '../enemies/NavGrid';
 
 /** Loading-screen sink: fraction 0..1 of the whole operation + what is happening. */
 export type LoadSink = (f: number, label: string) => void;
@@ -329,6 +330,7 @@ export class Game {
     const rigs = new Map<any, EnemyTemplate>();
     for (const k of keys) if (k.startsWith('glb:enemy:')) rigs.set(k.slice('glb:enemy:'.length), m.get(k));
     this.enemies = new EnemyManager(this);
+    this.enemies.nav = new NavGrid(m.get<ArrayBuffer>('nav:' + id));
     this.enemies.build(rigs);
     this.checkpoints = new Checkpoints(this);
     this.objectives = new Objectives(this, this.learned);
@@ -930,6 +932,7 @@ export class Game {
   advance(seconds: number, step = 1 / 60, render = true) {
     const n = Math.max(1, Math.round(seconds / step));
     for (let i = 0; i < n; i++) {
+      if (this.loading) break; // a floor transition is tearing the floor down / building the next one
       if (!this.paused) this.step(step);
       this.input.endFrame(step);
     }

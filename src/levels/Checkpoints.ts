@@ -13,6 +13,8 @@ export const SIGIL_COOLDOWN = 30;
 /** interaction reach (m, horizontal) and the distance at which a sigil first announces itself */
 const REACH = 2.3;
 const NOTICE = 7;
+/** a sigil refuses while an engaged enemy is this close (m) */
+const SIGIL_SAFE = 12;
 
 /**
  * Blood Sigils (checkpoints), Memory Traces and the respawn policy.
@@ -79,14 +81,15 @@ export class Checkpoints {
       const cid = this.near.m.name;
       const left = this.cooldownLeft(cid);
       if (left > 0) g.hud.interact(`Recovering · ${Math.ceil(left)} s`, 'BLOOD SIGIL', true);
-      else if (g.enemies.inCombat) g.hud.interact('Enemies are near', 'BLOOD SIGIL', true);
+      else if (g.enemies.engagedNear(p, SIGIL_SAFE)) g.hud.interact('Enemies are near', 'BLOOD SIGIL', true);
       else g.hud.interact(this.save?.cid === cid ? 'Renew Checkpoint' : 'Activate Checkpoint', 'BLOOD SIGIL');
     } else if (this.near?.kind === 'trace') {
       g.hud.interact(this.readTraces.has(this.near.m.name) ? 'Remember' : 'Examine', 'MEMORY');
     } else g.hud.interact(null);
     // beacon states
     for (const m of this.sigils) {
-      const b = this.beacons.get(m.name)!;
+      const b = this.beacons.get(m.name);
+      if (!b) continue;
       const current = this.save?.cid === m.name;
       const left = this.cooldownLeft(m.name);
       b.update(dt, {
@@ -118,7 +121,7 @@ export class Checkpoints {
       g.signals.emit('sigil:blocked', { cid: m.name, why: 'cooldown' });
       return true;
     }
-    if (g.enemies.inCombat) {
+    if (g.enemies.engagedNear(g.player.pos, SIGIL_SAFE)) {
       g.hud.deny('The sigil will not answer while Echoes are near.');
       g.audio.deny();
       g.signals.emit('sigil:blocked', { cid: m.name, why: 'combat' });
