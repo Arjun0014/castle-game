@@ -40,7 +40,11 @@ export const WARPS: Record<string, Warp> = {
   range: { floor: 2, at: [35, 42, 10], yaw: -90, state: 'PRESENT', sigil: 'CP2', before: ['E1', 'E1b', 'E3', 'E3p'], note: "Wardens' range, Present — E4 Hollow Wardens + Remnants" },
   kingsguard: { floor: 2, at: [0, 76.5, 8], yaw: 0, state: 'PRESENT', sigil: 'CP1', flags: ['FR1'], before: ['E1', 'E1b', 'E3', 'E3p', 'E4', 'E6', 'E7', 'E8', 'E9'], note: "King's apartments — E10 the Kingsguard Captain" },
   // ---- Floor 3
-  lastcrown: { floor: 3, at: [0, 123.5, 30], yaw: 0, state: 'PAST', sigil: 'CP2', before: ['E0', 'E1', 'E2'], note: 'The doors of the Crown — the Last Crown' },
+  // Floor 3 (session 9 rebuild): the descent beneath the castle
+  hall3: { floor: 3, at: [0, 12, 0], yaw: 0, state: 'PRESENT', sigil: 'CP1', before: [], note: 'Hall of Roots, Present — E1 goblins, bats, a Widow' },
+  maw: { floor: 3, at: [10, 99.5, 0], yaw: 0, state: 'PRESENT', sigil: 'CP2', before: ['E1', 'E2', 'E3', 'E4'], note: 'The cistern, Present — E5 THE MAW OF THE CROWNHEART' },
+  descent: { floor: 3, at: [10, 128.5, 0], yaw: 0, state: 'PRESENT', sigil: 'CP2', before: ['E1', 'E2', 'E3', 'E4', 'E5'], note: 'Head of the Great Descent, Present — E6 / E7 / E8' },
+  lastcrown: { floor: 3, at: [24, 148, -16], yaw: 90, state: 'PRESENT', sigil: 'CP3', before: ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8'], note: 'The Threshold — the Last Crown' },
 };
 
 /** The floor a dev URL asks for (null = none / production). */

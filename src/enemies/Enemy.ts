@@ -164,7 +164,7 @@ export class Enemy {
     public encounter: string,
     public owner: TimeState | 'BOTH',
     public wave: number,
-    public opts: { rise?: boolean; kneel?: boolean; perch?: boolean; yaw?: number; tint?: string; ceiling?: boolean; brood?: boolean },
+    public opts: { rise?: boolean; kneel?: boolean; perch?: boolean; yaw?: number; tint?: string; ceiling?: boolean; brood?: boolean; fromHeart?: boolean },
   ) {
     this.id = Enemy.nextId++;
     this.root.rotation.order = 'YXZ'; // yaw, then the death tumble about the body's own right axis

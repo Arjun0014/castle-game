@@ -17,6 +17,12 @@ export interface FloorDef {
   moonHoles: [number, number, number, number, number][];
   /** the scripted autopilot route exists for this floor */
   autopilot: boolean;
+  /** per-memory lighting overrides of Game's ENV presets (Floor 3: the deep, red-black Crownheart) */
+  env?: Partial<Record<'PAST' | 'PRESENT', Record<string, number | number[]>>>;
+  /** loading-screen line under the floor's name while it loads (the chapter's epigraph) */
+  epigraph?: string;
+  /** underground: no sky dome (the fog colour is the dark beyond the walls) */
+  noSky?: boolean;
 }
 
 export const FLOORS: Record<number, FloorDef> = {
@@ -42,10 +48,16 @@ export const FLOORS: Record<number, FloorDef> = {
     moonHoles: [],
   },
   3: {
-    id: 3, title: 'THE CROWN', subtitle: 'Floor III — The Crownheart',
-    loadingText: 'Preparing the Crown', readyText: 'The bell chamber. Above it, the Crown is waiting.', next: null, autopilot: false,
-    // the Present summit is open to the storm sky (no shafts needed)
+    id: 3, title: 'THE CROWNHEART', subtitle: 'Floor III — The Crownheart',
+    loadingText: 'Descending beneath Caer Veyr', readyText: 'The lift has reached the bottom of the shaft.', next: null, autopilot: false,
+    // session 9: the deep beneath the castle — no sky; the heart's red light, darker than the floors above
     moonHoles: [],
+    env: {
+      PRESENT: { bg: 0x0a0406, fog: 0x1c080a, near: 6, far: 62, hemiSky: 0x7a3848, hemiGround: 0x120408, hemi: 0.66, sun: 0xc06050, sunI: 1.3, fill: 0x9a4a5a, fillI: 0.62, exposure: 1.3, heroLight: 7.5 },
+      PAST: { bg: 0x120806, fog: 0x1a0c08, near: 10, far: 66, hemiSky: 0xffc890, hemiGround: 0x2a160c, hemi: 0.8, sun: 0xff9a5a, sunI: 1.4, fill: 0xff9050, fillI: 0.3, exposure: 1.18, heroLight: 1.5 },
+    },
+    epigraph: 'Beneath the keep the royal line kept its heart. It is still beating.',
+    noSky: true,
   },
 };
 

@@ -35,6 +35,8 @@ import { Dialogue } from '../audio/Dialogue';
 import { NavGrid } from '../enemies/NavGrid';
 import { ABILITY_FLOOR, ABILITY_INFO, HOLD_THRESHOLD, WHIRL_MAX, abilitiesForFloor, type AbilityId } from '../combat/Abilities';
 import { Finishers } from '../combat/Finishers';
+import { Lift } from '../levels/Lift';
+import { Crownheart, AbyssEmbers } from '../vfx/Crownheart';
 
 /** Loading-screen sink: fraction 0..1 of the whole operation + what is happening. */
 export type LoadSink = (f: number, label: string) => void;
@@ -125,6 +127,12 @@ export class Game {
   assist: TargetAssist;
   /** cinematic last-enemy finishers (combat/Finishers.ts) */
   finisher: Finishers;
+  /** the King's lift (Floor 2 departure / Floor 3 arrival), the Crownheart, embers rising out of every abyss */
+  lifts: Lift[] = [];
+  heart: Crownheart | null = null;
+  private embers: AbyssEmbers | null = null;
+  /** this floor was reached by the lift (Floor 3 opens with the arrival shot) */
+  arrivedByLift = false;
   /** `?camassist=0|1` pins the soft camera; otherwise it follows the input mode (touch only) */
   camAssistPin: boolean | null = null;
   /** Adaptive resolution: multiplier on the device pixel-ratio cap (see updateDynRes). */
@@ -291,6 +299,8 @@ export class Game {
       for (const k of released) if (k.startsWith('snd:')) this.audio.unbind(k.slice(4));
       this.perf.mark(`transition ${prev}→${next}: released ${released.length}`);
       await this.loadFloor(next, sink, [], released);
+      // Floor 2's lift lands at Floor 3's lift foot: the arrival shot plays when the floor starts
+      this.arrivedByLift = this.level.markersOf('lift').some((m) => m.props.role === 'arrive');
       this.time.unlocked = true;
       this.time.charge = Math.max(100, carry.charge);
       this.time.shiftCount = carry.shifts;
@@ -336,6 +346,7 @@ export class Game {
     this.level.buildVegetation(Object.fromEntries(man.veg.map((v) => [v, m.get('veg:' + v)])));
     this.scene.add(this.level.root);
     this.atmo.buildShafts(this.level.collision, ENV.PRESENT.sunDir, def.moonHoles);
+    this.atmo.sky.visible = !def.noSky;
     this.time = new TimeSystem(this.level);
     const rigs = new Map<any, EnemyTemplate>();
     for (const k of keys) if (k.startsWith('glb:enemy:')) rigs.set(k.slice('glb:enemy:'.length), m.get(k));
@@ -346,6 +357,10 @@ export class Game {
     this.objectives = new Objectives(this, this.learned);
     this.dialogue.attach(id);
     this.fractures = new Fractures(this);
+    this.lifts = this.level.markersOf('lift').map((m) => new Lift(this, m));
+    const hm = this.level.markersOf('heart')[0];
+    this.heart = hm ? new Crownheart(this, hm.pos.clone()) : null;
+    this.embers = new AbyssEmbers(this);
     this.wireEvents();
     const spawn = this.level.marker('spawn', 'SPAWN');
     this.player.revive(spawn.pos, Math.PI); // three.js: Blender north (+Y) = -Z; yaw π faces -Z
@@ -364,6 +379,7 @@ export class Game {
   private async warmGpu(onProgress: (f: number, label: string) => void) {
     const at = this.player.pos.clone();
     const kits = [this.enemies.warmKit(at), this.fx.warmKit(at), this.gore.warmKit(at), this.atmo.warmKit(at), this.finisher.warmKit(at)];
+    if (this.heart) kits.push(this.heart.warmKit(at));
     for (const k of kits) for (const o of k.objects) this.scene.add(o);
     stabilizeShadowDepth(this.scene); // catch-all for any caster added without it
     const restoreEnemies = this.enemies.forceVisible();
@@ -389,6 +405,9 @@ export class Game {
   private unloadFloor() {
     this.autopilot = null;
     this.finisher.end();
+    for (const l of this.lifts) l.dispose();
+    this.lifts = [];
+    this.heart?.dispose(); this.heart = null; this.embers = null;
     this.enemies.dispose();
     this.checkpoints.dispose();
     this.objectives.dispose();
@@ -406,6 +425,12 @@ export class Game {
     this.hud.boss(null);
     this.hud.setChannel(false);
     this.player.lockTarget = null;
+    // a scripted exit (the lift's descent) hands everything back before the next floor
+    this.player.endScripted();
+    this.rig.cine = null;
+    this.hud.cinematic(false);
+    this.touch?.cinematic(false);
+    this.hud.fade(false);
     this.assist.reset();
   }
 
@@ -444,7 +469,7 @@ export class Game {
       // the Last Crown's wards and bindings exist in one memory only: the hero's own shift breaks them
       for (const e of this.enemies.enemies) (e as { onPlayerShift?: () => void }).onPlayerShift?.();
     };
-    p.events.onInteract = () => this.checkpoints.interact();
+    p.events.onInteract = () => this.lifts.some((l) => l.interact()) || this.checkpoints.interact();
     p.events.onDeath = () => this.onPlayerDeath();
     p.events.onFootstep = (_pos, speed) => this.audio.footstep(this.time.state, speed, p.crouching);
     p.events.onDodge = () => this.audio.dodge();
@@ -525,6 +550,7 @@ export class Game {
       this.hud.setState(to);
       this.setEnvironment(to, false);
       this.enemies.onStateChange(to);
+      this.heart?.setState(to);
       this.audio.shiftBoom(to);
       this.hud.flash(to === 'PAST' ? '#ffd9a0' : '#bfe0ff', 0.55);
       this.rig.addShake(0.35);
@@ -576,10 +602,23 @@ export class Game {
 
   setEnvironment(state: TimeState, instant: boolean) {
     this.envFrom = this.currentEnv();
-    this.envTarget = ENV[state];
+    this.envTarget = this.envFor(state);
     this.envBlend = instant ? 1 : 0;
     this.atmo.setState(state, instant);
-    if (instant) this.applyEnv(ENV[state], ENV[state], 1);
+    if (instant) this.applyEnv(this.envTarget, this.envTarget, 1);
+  }
+  /** the floor's lighting for a memory: Game's presets with the floor's overrides (FloorDef.env) */
+  envFor(state: TimeState): EnvPreset {
+    const o = this.floor?.env?.[state];
+    if (!o) return ENV[state];
+    const e: EnvPreset = { ...ENV[state] };
+    for (const [k, v] of Object.entries(o)) {
+      const cur = (e as unknown as Record<string, unknown>)[k];
+      if (cur instanceof THREE.Color) (e as unknown as Record<string, unknown>)[k] = new THREE.Color(v as number);
+      else if (cur instanceof THREE.Vector3) (e as unknown as Record<string, unknown>)[k] = new THREE.Vector3(...(v as number[])).normalize();
+      else (e as unknown as Record<string, unknown>)[k] = v;
+    }
+    return e;
   }
   private envTarget: EnvPreset = ENV.PRESENT;
   private currentEnv(): EnvPreset {
@@ -617,6 +656,9 @@ export class Game {
     this.started = true;
     if (this.announcedFloor !== this.floorId) {
       this.announcedFloor = this.floorId;
+      // reached by the King's lift: the arrival shot (the hero stands on the cage at the spawn)
+      if (this.arrivedByLift) { this.arrivedByLift = false; this.heart?.setState(this.time.state); for (const l of this.lifts) l.arrive(); }
+      else this.heart?.setState(this.time.state);
       // after the floor's title card: the reward this floor's arrival brings (none on Floor 1)
       this.schedule(4.2, () => this.announceAbilities());
     }
@@ -761,6 +803,9 @@ export class Game {
     this.enemies.update(dt);
     this.time.update(dt);
     this.checkpoints.update(dt);
+    for (const l of this.lifts) l.update(dt);
+    this.heart?.update(dt);
+    this.embers?.update(dt);
     this.objectives.update(dt);
     this.dialogue.update(this.realDt);
     this.fractures.update(dt);
@@ -1005,6 +1050,8 @@ export class Game {
 
   /** The last floor's ending (the Last Crown's death sequence calls it). */
   endGame() { if (!this.finished) this.finish(); }
+  /** Leave this floor now (the King's lift reaching the bottom of the shaft): the in-place floor transition. */
+  leaveFloor() { if (!this.finished) this.finish(); }
 
   private finish() {
     this.finished = true;

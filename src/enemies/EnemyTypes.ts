@@ -187,8 +187,9 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
   },
   /** Floor 3 final boss (docs/LEVEL_03_BLUEPRINT.md §I): the mage fight lives in src/enemies/LastCrown.ts */
   last_crown: {
-    id: 'last_crown', asset: 'lastcrown', scale: 1.15, aura: 'dread',
-    hp: 1600, poise: 260, runSpeed: 3.6, walkSpeed: 1.9, radius: 0.5, height: 2.6, reward: 200, blockChance: 0, aggroRange: 40, turnRate: 5,
+    // session 9: larger (3.4 m) — the final boss must dominate the frame; collision grows with her
+    id: 'last_crown', asset: 'lastcrown', scale: 1.45, aura: 'dread',
+    hp: 1600, poise: 260, runSpeed: 3.6, walkSpeed: 1.9, radius: 0.46, height: 3.35, reward: 200, blockChance: 0, aggroRange: 40, turnRate: 5,
     attacks: [],
     clips: { idle: 'idle', walk: 'walk_fwd', run: 'run_fwd', strafeL: 'walk_left', strafeR: 'walk_right', back: 'walk_back', hitL: 'hit_small', hitH: 'hit_large', death: ['death'] },
     slotCost: 0, boss: true,

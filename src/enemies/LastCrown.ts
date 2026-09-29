@@ -15,7 +15,7 @@ import { Spells, GOLD, VIOLET, EMBER } from '../vfx/Spells';
  * Time-shift hooks: wards and bindings exist in one memory only — the player's own shift (onPlayerShift) breaks them.
  * Forced slips (phase 2+) move the fight between memories with a 3 s telegraph.
  */
-type Mode = 'idle' | 'cast' | 'blink' | 'break' | 'stagger' | 'dying';
+type Mode = 'idle' | 'cast' | 'blink' | 'break' | 'stagger' | 'dying' | 'intro';
 interface CastDef { clip: string; release: number[]; range: [number, number]; phase: number; weight: number; tail: number; tell?: number }
 
 const CASTS: Record<string, CastDef> = {
@@ -33,6 +33,7 @@ const CASTS: Record<string, CastDef> = {
 const PHASE_SPEED = [0, 1.05, 1.25, 1.4];
 const PHASE_GAP: [number, number][] = [[0, 0], [1.3, 1.9], [0.85, 1.35], [0.55, 1.0]];
 const PHASE_RANGE = [0, 8.5, 7.5, 6.5];
+/** default ring radius she keeps to; the arena's lens marker overrides it (prop r; session 9: the Crownheart ring) */
 const ARENA_R = 10.5;
 
 const _v = new THREE.Vector3();
@@ -67,6 +68,12 @@ export class LastCrown extends Enemy {
   private breakTo = 0;
   private lens: THREE.Vector3;
   private points: THREE.Vector3[];
+  /** the ring she never leaves (m from the lens) */
+  private arenaR = ARENA_R;
+  /** where she descends from (the Crownheart), and the reveal / death camera */
+  private heartPos: THREE.Vector3 | null = null;
+  private cam = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
+  private introT = 0;
   private wedges: { angle: number; half: number; r0: number; r1: number }[];
   handR: THREE.Object3D | null = null;
   handL: THREE.Object3D | null = null;
@@ -80,6 +87,9 @@ export class LastCrown extends Enemy {
     });
     const lens = g.level.markersOf('boss_lens')[0];
     this.lens = lens ? lens.pos.clone() : new THREE.Vector3();
+    if (lens?.props.r) this.arenaR = lens.props.r;
+    const heart = g.level.markersOf('heart')[0];
+    if (heart) this.heartPos = heart.pos.clone();
     this.points = g.level.markersOf('boss_point').map((m) => m.pos.clone());
     this.wedges = g.level.markersOf('wedge').map((m) => ({ angle: m.props.angle, half: m.props.half, r0: m.props.r0, r1: m.props.r1 }));
     this.spells = new Spells(g.scene, {
@@ -138,6 +148,7 @@ export class LastCrown extends Enemy {
     const dist = toP.length();
     const dirP = dist > 1e-3 ? toP.clone().divideScalar(dist) : this.facing;
     if (this.mode === 'dying') { this.updateDeath(dt); this.finishFrame(dt); return; }
+    if (this.mode === 'intro') { this.updateIntro(dt); this.mixer.update(dt); this.syncRoot(); return; }
     if (!this.triggered || !ctx.playerAlive) {
       this.loop(this.arch.clips.idle, 1);
       this.spells.update(dt);
@@ -186,13 +197,13 @@ export class LastCrown extends Enemy {
     const move = tangent.clone().multiplyScalar(this.arch.walkSpeed * 0.8).addScaledVector(dirP, THREE.MathUtils.clamp((dist - want) * 0.6, -1.6, 1.4));
     const next = this.pos.clone().addScaledVector(move, dt * 4);
     const fromC = next.clone().sub(this.lens).setY(0);
-    if (fromC.length() > ARENA_R) move.addScaledVector(fromC.normalize(), -2.5);
+    if (fromC.length() > this.arenaR) move.addScaledVector(fromC.normalize(), -2.5);
     if (ctx.state === 'PRESENT' && this.inWedge(next)) { this.strafe *= -1; move.multiplyScalar(0.2); }
     if (Math.random() < dt * 0.15) this.strafe *= -1;
     this.pos.addScaledVector(move, dt);
     // she never leaves the ring (hard clamp: the lens is her anchor)
     const off = _w.subVectors(this.pos, this.lens).setY(0);
-    if (off.length() > ARENA_R) this.pos.copy(this.lens).addScaledVector(off.setLength(ARENA_R), 1).setY(this.lens.y);
+    if (off.length() > this.arenaR) this.pos.copy(this.lens).addScaledVector(off.setLength(this.arenaR), 1).setY(this.lens.y);
     const f = this.facing, r = _v.crossVectors(f, UP);
     const lf = move.dot(f), lr = move.dot(r);
     const c = this.arch.clips;
@@ -484,6 +495,7 @@ export class LastCrown extends Enemy {
     if (this.t > 2.8 && this.curName === 'kneel_idle') this.once('rise', 1.2, 0, 0.2);
     if (this.t > 3.7) {
       this.phase = this.breakTo;
+      this.g.heart?.setPhase(this.phase);
       this.g.signals.emit('boss:phase', { id: 'last_crown', phase: this.phase });
       this.invuln = false;
       this.mode = 'idle'; this.t = 0; this.gap = 0.8;
@@ -505,10 +517,31 @@ export class LastCrown extends Enemy {
     g.hud.flash('#fff0d0', 0.7);
     g.rig.addShake(0.6);
     g.hud.message('THE LAST CROWN FALLS', 'The Crownheart falters', 4);
+    // the finale shot: on her as she falls, then up at the heart as it convulses and breaks
+    const p = g.player;
+    if (p.alive) { p.beginScripted(); p.anim.play('idle_alert', { fade: 0.3, loop: true }); }
+    g.rig.cine = this.cam;
+    g.hud.cinematic(true);
+    g.touch?.cinematic(true);
+    this.shotDeath(0);
+  }
+
+  /** the death camera: her collapse (low, close), then a slow tilt up to the heart breaking above */
+  private shotDeath(t: number) {
+    const p = this.g.player.pos;
+    const side = new THREE.Vector3().subVectors(this.pos, p).setY(0).normalize();
+    const right = new THREE.Vector3(-side.z, 0, side.x);
+    const k = Math.min(1, Math.max(0, (t - 1.2) / 1.6));
+    const e = k * k * (3 - 2 * k);
+    this.cam.pos.copy(this.pos).addScaledVector(side, -4.2).addScaledVector(right, 2.2).setY(this.lens.y + 1.6 - e * 0.9);
+    const heart = this.heartPos ?? this.lens.clone().setY(this.lens.y + 12);
+    this.cam.look.copy(this.pos).setY(this.lens.y + 1.4).lerp(heart, e);
   }
   private updateDeath(dt: number) {
     const g = this.g;
     this.deathT += dt;
+    this.shotDeath(this.deathT);
+    if (this.deathT > 1.1 && this.deathT - dt <= 1.1) g.heart?.shatter();
     if (this.deathT > 3.2 && this.state !== 'dead') {
       this.state = 'dead';
       g.fx.shatter(this.root, 'ember', 420);
@@ -517,6 +550,7 @@ export class LastCrown extends Enemy {
       this.sfx('final_collapse', this.lens, 1.2);
       if (g.time.state !== 'PRESENT') g.time.setState('PRESENT', g.player.pos, true);
       g.enemies.onBossDefeated(this);
+      g.schedule(2.6, () => g.hud.fade(true));
     }
   }
 
@@ -533,6 +567,7 @@ export class LastCrown extends Enemy {
     this.wardUp = false; this.bindT = -1; this.slipT = -1; this.staggerT = 0; this.summoned80 = false; this.castId = '';
     this.nextWard = 14; this.nextSlip = 20; this.nextBind = 12;
     this.spells.clearAll();
+    this.g.heart?.setPhase(1);
   }
 
   /** Floor time is relative: schedule the phase clocks from the moment the fight starts. */
@@ -540,6 +575,71 @@ export class LastCrown extends Enemy {
     const was = this.triggered;
     super.activate();
     if (!was) { const t = this.g.t; this.nextWard = t + 14; this.nextSlip = t + 20; this.nextBind = t + 12; this.gap = 2.2; this.t = 0; }
+  }
+
+  /**
+   * The reveal (session 9): as the hero steps onto the ring the camera lifts to the Crownheart; she descends out of
+   * its light onto the lens, her name is given, and the fight begins. 4.6 s; the hero waits at the ring's edge.
+   */
+  beginIntro() {
+    const g = this.g, p = g.player;
+    if (!this.heartPos || !p.alive) return false;
+    this.mode = 'intro'; this.introT = 0; this.invuln = true; this.untargetable = true;
+    this.pos.copy(this.heartPos).setY(this.heartPos.y - 3.2);
+    this.yaw = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
+    this.loop('idle', 1, 0);
+    p.beginScripted();
+    p.anim.play('idle_alert', { fade: 0.3, loop: true });
+    g.rig.cine = this.cam;
+    g.hud.cinematic(true);
+    g.touch?.cinematic(true);
+    this.sfx('crown_resonance', this.heartPos, 1.2, 0.8);
+    this.updateIntro(0);
+    return true;
+  }
+
+  private updateIntro(dt: number) {
+    const g = this.g, p = g.player;
+    this.introT += dt;
+    const t = this.introT;
+    const heart = this.heartPos!;
+    const toBoss = new THREE.Vector3().subVectors(this.lens, p.pos).setY(0).normalize();
+    const right = new THREE.Vector3(-toBoss.z, 0, toBoss.x);
+    const sm = (a: number, b: number) => { const k = Math.min(1, Math.max(0, (t - a) / (b - a))); return k * k * (3 - 2 * k); };
+    // 0-1.4 s: from behind her the camera tilts up to the heart; 1.4-3.4: she sinks out of its light onto the lens;
+    // 3.4-4.6: back behind the hero, both in frame
+    const behind = p.pos.clone().addScaledVector(toBoss, -3.2).setY(p.pos.y + 1.9);
+    const low = this.lens.clone().addScaledVector(toBoss, -7).addScaledVector(right, 3.5).setY(this.lens.y + 1.2);
+    const a = sm(0, 1.4), b = sm(1.4, 2.0), c = sm(3.4, 4.4);
+    this.cam.pos.copy(behind).lerp(low, b).lerp(behind.clone().setY(p.pos.y + 2.4), c);
+    const lookUp = heart.clone();
+    const lookHer = this.pos.clone().setY(this.pos.y + 1.6);
+    this.cam.look.copy(p.pos.clone().setY(p.pos.y + 1.6)).lerp(lookUp, a).lerp(lookHer, sm(1.6, 2.6)).lerp(this.lens.clone().setY(this.lens.y + 1.5), c);
+    // her descent out of the heart's light
+    const d = sm(1.4, 3.3);
+    this.pos.copy(heart).setY(heart.y - 3.2).lerp(this.lens, d);
+    this.yaw = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
+    if (t > 1.4 && Math.random() < dt * 30) g.fx.emit(this.pos.clone().setY(this.pos.y + 1.2), new THREE.Vector3((Math.random() - 0.5) * 2, 1.5, (Math.random() - 0.5) * 2), this.color, 0.8, 0.08, 0);
+    if (t >= 2.2 && t - dt < 2.2) {
+      g.hud.message('THE LAST CROWN', "Aldren's imprint, wearing the Queen's face", 3.8);
+      g.audio.bossSting();
+      this.play('raise', 1, 0.2);
+    }
+    if (t >= 3.3 && t - dt < 3.3) {
+      g.fx.shockwave(this.lens.clone(), 6, 0.5);
+      g.rig.addShake(0.35);
+      this.sfx('mage_nova', this.lens, 0.8, 0.7);
+      g.signals.emit('boss:start', { id: 'last_crown' });
+    }
+    if (t >= 4.6) {
+      this.mode = 'idle'; this.t = 0; this.gap = 1.2; this.invuln = false; this.untargetable = false;
+      this.pos.copy(this.lens);
+      p.endScripted();
+      g.rig.cine = null;
+      g.hud.cinematic(false);
+      g.touch?.cinematic(false);
+      this.loop(this.arch.clips.idle, 1, 0.3);
+    }
   }
 
   dispose() {

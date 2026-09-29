@@ -389,8 +389,14 @@ export class Bat extends Monster {
     const hidden = this.state === 'hidden';
     super.activate();
     if (!hidden) return;
+    const heart = this.opts.fromHeart ? this.g.level.markersOf('heart')[0] : undefined;
     const maw = this.g.enemies.enemies.find((e) => e.alive && e.arch.id === 'lamia_maw' && e.encounter === this.encounter);
-    if (maw) {
+    if (heart) {
+      // the Last Crown's call: bats pour out of the Crownheart's light
+      const a = Math.random() * Math.PI * 2;
+      this.pos.copy(heart.pos).add(new THREE.Vector3(Math.cos(a) * 2.5, -1.5, Math.sin(a) * 2.5));
+      for (let i = 0; i < 12; i++) this.g.fx.emit(this.pos.clone(), new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(4), 0xff4a18, 0.6, 0.08, 0);
+    } else if (maw) {
       this.pos.copy(maw.center).addScaledVector(maw.facing, 0.8);
       this.g.fx.bloodSpray(this.pos.clone(), maw.facing, 0.4, 0x28300c);
     }

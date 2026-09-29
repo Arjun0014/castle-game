@@ -64,7 +64,7 @@ VARIANT_PREVIEW = {"ward_ground": "stone_block", "timber": "wood_rough", "iron_r
 FLAT = {
     "bone": ((0.78, 0.74, 0.66), 0.0), "candle": ((0.92, 0.88, 0.75), 0.0),
     "fx_ember": ((1.0, 0.35, 0.08), 6.0), "fx_flame": ((1.0, 0.6, 0.2), 8.0),
-    "fx_crown": ((1.0, 0.25, 0.08), 12.0), "fx_sigil": ((0.75, 0.05, 0.05), 4.0),
+    "fx_crown": ((1.0, 0.25, 0.08), 12.0), "fx_sigil": ((0.75, 0.05, 0.05), 4.0), "fx_root": ((0.8, 0.1, 0.04), 5.0),
     "fx_fissure": ((0.2, 0.8, 1.0), 5.0), "fx_void": ((0.0, 0.0, 0.0), 0.0),
     "fx_blood": ((0.35, 0.0, 0.0), 0.5),
 }
@@ -289,12 +289,13 @@ def render_plans(vis_objs, col_objs):
             o.hide_render = o["group"] not in ("SHARED", state)
 
     # top-down plans, cut at 7.8 m to remove roofs
+    pc = floor03_layout.PLAN_CAM
     cam.data.type = "ORTHO"
-    cam.data.ortho_scale = 64
+    cam.data.ortho_scale = pc["scale"]
     cam.data.clip_end = 400
-    cam.location = (4, 121, 120)
+    cam.location = (pc["center"][0], pc["center"][1], pc["height"])
     cam.rotation_euler = (0, 0, 0)
-    cam.data.clip_start = 120 - 39.5
+    cam.data.clip_start = pc["height"] - pc["cut"]
     sc.render.resolution_x = 1400
     sc.render.resolution_y = 1700
     for state in ("PAST", "PRESENT"):
@@ -302,12 +303,7 @@ def render_plans(vis_objs, col_objs):
         sc.render.filepath = os.path.join(REPORT_DIR, "floor03_plan_%s.png" % state.lower())
         bpy.ops.render.render(write_still=True)
     # perspective QA views: (name, camera location, look-at)
-    views = [
-        ("gallery", (16, 98, 26.5), (0, 98, 24)),
-        ("stair", (-2.5, 97.5, 27.5), (-2.5, 106, 29)),
-        ("hall", (0, 109, 36), (0, 122, 32)),
-        ("crown", (0, 125, 38), (0, 140, 32)),
-    ]
+    views = floor03_layout.QA_VIEWS
     cam.data.type = "PERSP"
     cam.data.lens = 24
     cam.data.clip_start = 0.1

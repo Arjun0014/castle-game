@@ -294,7 +294,7 @@ export class EnemyManager {
     const { model, clips } = this.instantiate(arch.asset);
     // Blender yaw (about +Z) → three.js yaw (about +Y): character forward is -Y in Blender = +Z three
     const yaw = (p.yaw ?? 0) + Math.PI;
-    const opts = { rise: !!p.rise, kneel: !!p.kneel, perch: !!p.perch, yaw, tint: p.tint, ceiling: !!p.ceiling, brood: !!p.brood };
+    const opts = { rise: !!p.rise, kneel: !!p.kneel, perch: !!p.perch, yaw, tint: p.tint, ceiling: !!p.ceiling, brood: !!p.brood, fromHeart: !!p.from_heart };
     const e = arch.id === 'last_crown'
       ? new LastCrown(arch, model, clips, p.encounter, p.state, p.wave ?? 1, { yaw }, this.g)
       : makeMonster(arch, model, clips, p.encounter, p.state, p.wave ?? 1, opts, this.g) ?? new Enemy(arch, model, clips, p.encounter, p.state, p.wave ?? 1, opts);
@@ -726,9 +726,14 @@ export class EnemyManager {
       kinds: [...new Set(enc.enemies.map((e) => e.arch.id))], count: enc.enemies.length });
     if (enc.bossFight && !enc.finale) {
       const boss = enc.enemies.find((e) => e.arch.boss);
-      if (boss) { this.boss = boss; this.bossName = enc.title ?? this.bossName; this.g.signals.emit('boss:start', { id: boss.arch.id }); }
-      this.g.hud.message(enc.title ?? 'A GUARDIAN WAKES', BOSS_SUB[boss?.arch.id ?? ''] ?? 'Echo of the royal guard', 3.5);
-      this.g.audio.bossSting();
+      if (boss) { this.boss = boss; this.bossName = enc.title ?? this.bossName; }
+      // the Last Crown is revealed by her own scene (she descends out of the Crownheart: LastCrown.beginIntro), which
+      // gives her name, the sting and the boss:start line at the right beats
+      if (!(boss instanceof LastCrown && boss.beginIntro())) {
+        if (boss) this.g.signals.emit('boss:start', { id: boss.arch.id });
+        this.g.hud.message(enc.title ?? 'A GUARDIAN WAKES', BOSS_SUB[boss?.arch.id ?? ''] ?? 'Echo of the royal guard', 3.5);
+        this.g.audio.bossSting();
+      }
     }
     if (enc.finale) {
       this.g.hud.message('THE LAST MUSTER', 'The Gate Warden wakes', 3.5);

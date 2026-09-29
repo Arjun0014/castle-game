@@ -469,9 +469,15 @@ def build_apartments(B):
         B.slab(18, 30, 90.67, 100, 23.6, 24, "stone_block", holes=[(22.5, 26.5, 90.67, 94)])
         B.wall(17, 18, 88, 101, 23.4, 30, axis="y")
         B.wall(30, 31, 88, 101, 23.4, 30, axis="y")
-        B.wall(17, 31, 100, 101, 23.4, 30, openings=[(22, 26, 24, 28.4)], axis="x")
+        B.wall(17, 31, 100, 101, 23.4, 30, axis="x")
         B.parapet(22.3, 26.7, 94, 94.2, 24, h=1.1)
-        B.volume("exit", 22, 26, 100, 102, 24, 28, name="EXIT")
+        # session 9: the way on is DOWN — the King's lift hangs in the conduit shaft (a runtime cage, levels/Lift.ts);
+        # its descent ends the floor, so the exit volume is out of reach
+        B.marker("lift", (24.5, 92.33, 24), name="LIFT_DEPART", role="depart")
+        B.volume("exit", 22, 26, 88, 92, -60, -58, name="EXIT")
+        B.box(20.5, 28.5, 91.95, 92.7, 29.4, 29.85, "timber")                     # the winch beam, wall to wall
+        B.hprism(22.6, 26.4, 92.33, 28.8, 0.55, 12, "wood_rough", axis="x")        # its drum
+        prompt(B, "T_LIFT", (18, 22.5, 90.67, 100, 23.5, 27), "The King's lift hangs in the conduit shaft. Far below, the heart of the castle glows.", state="BOTH")
         prompt(B, "T_CS", (13, 19.5, 82, 88, Z, Z + 4), "The conduit stair's lower flight is gone here. It stood in the other memory.", state="PRESENT")
     with B.at(S, "PAST"):
         for x0, x1, y0, y1 in KAP_VOIDS:

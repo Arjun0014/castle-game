@@ -50,6 +50,8 @@ const DEFS: Record<string, { PAST: MatDef; PRESENT: MatDef }> = {
   fx_sigil: { PAST: { color: 0x300000, emissive: 0xc01818, emissiveIntensity: 1.6 }, PRESENT: { color: 0x300000, emissive: 0xd02020, emissiveIntensity: 1.8 } },
   fx_fissure: { PAST: { color: 0x001018, emissive: 0x30c8ff, emissiveIntensity: 1.8 }, PRESENT: { color: 0x001018, emissive: 0x40d8ff, emissiveIntensity: 2.2 } },
   fx_void: { PAST: { color: 0x000000, unlit: true }, PRESENT: { color: 0x000000, unlit: true } },
+  /** the Crownheart's crystal roots (Floor 3): a deep red glow, never the near-white of fx_crown */
+  fx_root: { PAST: { color: 0x1a0402, emissive: 0xb01a0c, emissiveIntensity: 1.3, roughness: 0.3 }, PRESENT: { color: 0x1a0402, emissive: 0xe0240e, emissiveIntensity: 1.9, roughness: 0.3 } },
   fx_blood: { PAST: { color: 0x3a0202, roughness: 0.15, metalness: 0.0 }, PRESENT: { color: 0x1a0606, roughness: 0.9 } },
 };
 
