@@ -1,36 +1,138 @@
 import * as THREE from 'three';
 import type { CollisionWorld } from '../game/Physics';
 import type { TimeState } from '../levels/Materials';
+import type { ViewProfile } from '../platform/Platform';
 
 const _v = new THREE.Vector3();
 const _dir = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const _pivot = new THREE.Vector3();
+const _off = new THREE.Vector3();
+const _q = new THREE.Vector3();
 
-/** Third-person orbit camera with collision (raycast against the active state's BVH). */
+/**
+ * Per-view camera tuning. The portrait profile is not a crop of the widescreen camera: it sits farther back
+ * and higher, centred behind the hero (no shoulder offset), with a lens shift that puts the hero in the lower
+ * part of the tall frame so the space AHEAD (screen-up) is visible, and a vertical FOV that widens with the
+ * aspect so the horizontal view never collapses on very tall phones.
+ */
+export interface CamProfile {
+  fov: number;              // vertical FOV (deg) at the reference aspect
+  minHFov: number;          // widen vertical FOV until the horizontal FOV reaches this (deg); 0 = off
+  maxFov: number;
+  distance: number;
+  combatDistance: number;
+  maxPull: number;          // extra pull-back in large fights (m)
+  shoulder: number;
+  height: number;
+  pitch: number;            // default pitch (rad, + = looking down)
+  pitchMin: number;
+  pitchMax: number;
+  lockPitch: number;        // base pitch while locked on
+  lensShift: number;        // fraction of the frame height the pivot is pushed down (0 = centred)
+  lensShiftTouch: number;   // same with the touch HUD (the hero must stay clear of the thumbs)
+  lookDrop: number;
+  lowCeilingPitch: number;  // how far the camera may drop its pitch to stay behind the hero under low ceilings
+}
+
+export const CAM_PROFILES: Record<ViewProfile, CamProfile> = {
+  wide: {
+    fov: 58, minHFov: 0, maxFov: 58, distance: 4.4, combatDistance: 3.9, maxPull: 0, shoulder: 0.45, height: 1.55,
+    pitch: 0.28, pitchMin: -0.55, pitchMax: 1.05, lockPitch: 0.22, lensShift: 0, lensShiftTouch: 0, lookDrop: 0.1, lowCeilingPitch: 0,
+  },
+  portrait: {
+    fov: 66, minHFov: 44, maxFov: 78, distance: 5.7, combatDistance: 6.1, maxPull: 2.2, shoulder: 0.0, height: 1.65,
+    pitch: 0.38, pitchMin: -0.3, pitchMax: 1.1, lockPitch: 0.34, lensShift: 0.12, lensShiftTouch: 0.035, lookDrop: 0.0, lowCeilingPitch: 0.34,
+  },
+};
+
+/** Third-person orbit camera with collision (raycasts against the active state's BVH). */
 export class CameraRig {
   yaw = 0;          // radians; camera sits behind the player at yaw
   pitch = 0.28;     // radians, positive = looking down
-  distance = 4.4;
-  combatDistance = 3.9;
-  shoulder = 0.45;
-  height = 1.55;
+  profile: CamProfile = CAM_PROFILES.wide;
   private curDist = 4.4;
   private target = new THREE.Vector3();
   private shake = 0;
+  private shakeT = 0;
+  /** spring-damped positional kick in camera space (x right, y up, z back) — hit impulses */
+  private kick = new THREE.Vector3();
+  private kickVel = new THREE.Vector3();
+  private pitchAdj = 0;
+  /** extra pull-back requested by the game (large fights), eased */
+  pullWant = 0;
+  private pull = 0;
   lockTarget: THREE.Vector3 | null = null;
   inCombat = false;
+  /** current base vertical FOV (profile + aspect); Game subtracts its FOV punch from this */
+  baseFov = 58;
 
   constructor(public camera: THREE.PerspectiveCamera) {}
 
-  snapBehind(yaw: number) { this.yaw = yaw + Math.PI; }
+  setProfile(view: ViewProfile) {
+    this.profile = CAM_PROFILES[view];
+    this.pitch = this.profile.pitch;
+    this.curDist = this.profile.distance;
+  }
+
+  /** Recompute FOV + lens shift for the stage size (call on resize). */
+  applyViewport(w: number, h: number, touch = false) {
+    const p = this.profile;
+    const aspect = w / h;
+    let fov = p.fov;
+    if (p.minHFov > 0) {
+      const needed = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(p.minHFov) / 2) / aspect));
+      fov = Math.min(p.maxFov, Math.max(fov, needed));
+    }
+    this.baseFov = fov;
+    this.camera.aspect = aspect;
+    this.camera.fov = fov;
+    const shift = touch ? p.lensShiftTouch : p.lensShift;
+    if (shift) this.camera.setViewOffset(w, h, 0, -Math.round(h * shift), w, h);
+    else this.camera.clearViewOffset();
+    this.camera.updateProjectionMatrix();
+  }
+
+  snapBehind(yaw: number) { this.yaw = yaw + Math.PI; this.pitchAdj = 0; }
 
   addShake(amount: number) { this.shake = Math.min(0.6, this.shake + amount); }
+
+  /** Directional camera impulse (world direction, metres/s of kick velocity). Springs back within ~0.2 s. */
+  punch(worldDir: THREE.Vector3, strength: number) {
+    const c = this.camera;
+    _q.copy(worldDir).normalize();
+    // into camera space
+    const inv = c.quaternion.clone().invert();
+    _q.applyQuaternion(inv);
+    this.kickVel.addScaledVector(_q, strength);
+  }
 
   /** Horizontal forward vector of the camera (where W moves). */
   forward(out = new THREE.Vector3()) { return out.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)); }
 
+  /** Longest free distance (0..want) from the pivot toward the camera spot at `pitch` (3 rays: centre + sides). */
+  private probe(pivot: THREE.Vector3, head: THREE.Vector3, pitch: number, want: number, world: CollisionWorld, state: TimeState) {
+    _off.set(Math.sin(this.yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(this.yaw) * Math.cos(pitch));
+    _right.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    let best = want;
+    for (const side of [0, 0.22, -0.22]) {
+      const desired = _v.copy(pivot).addScaledVector(_off, want).addScaledVector(_right, side);
+      _dir.subVectors(desired, head);
+      const len = _dir.length();
+      _dir.normalize();
+      const hit = world.raycast(head, _dir, len + 0.3, state);
+      if (hit) {
+        const allowed = Math.max(0.4, hit.distance - 0.35);
+        best = Math.min(best, want * Math.min(1, allowed / len));
+      }
+    }
+    return best;
+  }
+
   update(dt: number, focus: THREE.Vector3, look: { dx: number; dy: number }, world: CollisionWorld, state: TimeState, crouch: boolean) {
+    const P = this.profile;
     this.yaw -= look.dx;
-    this.pitch = THREE.MathUtils.clamp(this.pitch + look.dy, -0.55, 1.05);
+    this.pitch = THREE.MathUtils.clamp(this.pitch + look.dy, P.pitchMin, P.pitchMax);
     if (this.lockTarget) {
       _dir.subVectors(this.lockTarget, focus);
       const want = Math.atan2(-_dir.x, -_dir.z);
@@ -38,42 +140,50 @@ export class CameraRig {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.yaw += d * Math.min(1, dt * 6);
       const flat = Math.hypot(_dir.x, _dir.z);
-      const wantPitch = THREE.MathUtils.clamp(0.22 - Math.atan2(_dir.y, flat) * 0.6, 0.05, 0.6);
+      const wantPitch = THREE.MathUtils.clamp(P.lockPitch - Math.atan2(_dir.y, flat) * 0.6, 0.05, 0.75);
       this.pitch += (wantPitch - this.pitch) * Math.min(1, dt * 3);
     }
-    const h = crouch ? this.height - 0.5 : this.height;
+    const h = crouch ? P.height - 0.5 : P.height;
     this.target.lerp(_v.set(focus.x, focus.y + h, focus.z), Math.min(1, dt * 18));
-    const wantDist = this.inCombat ? this.combatDistance : this.distance;
-    // shoulder offset (to the right of the view)
-    const right = _v.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
-    const pivot = this.target.clone().addScaledVector(right, this.shoulder);
-    const off = new THREE.Vector3(
-      Math.sin(this.yaw) * Math.cos(this.pitch),
-      Math.sin(this.pitch),
-      Math.cos(this.yaw) * Math.cos(this.pitch),
-    );
-    // collision: ray from the head toward the desired camera spot
+    this.pull += (this.pullWant - this.pull) * Math.min(1, dt * (this.pullWant > this.pull ? 1.2 : 0.6));
+    const wantDist = (this.inCombat ? P.combatDistance : P.distance) + Math.min(P.maxPull, this.pull);
+    const right = _right.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    const pivot = _pivot.copy(this.target).addScaledVector(right, P.shoulder);
     const head = this.target;
-    const desired = pivot.clone().addScaledVector(off, wantDist);
-    _dir.subVectors(desired, head);
-    const len = _dir.length();
-    _dir.normalize();
-    const hit = world.raycast(head, _dir, len + 0.3, state);
-    let dist = wantDist;
-    if (hit) {
-      const allowed = Math.max(0.4, hit.distance - 0.35);
-      const ratio = allowed / len;
-      dist = Math.min(wantDist, wantDist * ratio);
+    // low ceilings (portrait's higher camera): if the wanted pitch is badly blocked but a flatter one is not,
+    // ease the pitch down so the camera stays behind the hero instead of diving into the back of the head
+    let pitch = THREE.MathUtils.clamp(this.pitch + this.pitchAdj, P.pitchMin, P.pitchMax);
+    if (P.lowCeilingPitch > 0) {
+      const dHigh = this.probe(pivot, head, this.pitch, wantDist, world, state);
+      let adj = 0;
+      if (dHigh < wantDist * 0.62) {
+        const low = Math.max(P.pitchMin, this.pitch - P.lowCeilingPitch);
+        const dLow = this.probe(pivot, head, low, wantDist, world, state);
+        if (dLow > dHigh * 1.25 + 0.3) adj = low - this.pitch;
+      }
+      this.pitchAdj += (adj - this.pitchAdj) * Math.min(1, dt * (adj < this.pitchAdj ? 5 : 1.5));
+      pitch = THREE.MathUtils.clamp(this.pitch + this.pitchAdj, P.pitchMin, P.pitchMax);
     }
+    const dist = this.probe(pivot, head, pitch, wantDist, world, state);
     // pull in fast, ease out slowly
     this.curDist += (dist - this.curDist) * Math.min(1, dt * (dist < this.curDist ? 22 : 4));
-    const pos = pivot.clone().addScaledVector(off, this.curDist);
-    if (this.shake > 0) {
-      pos.x += (Math.random() - 0.5) * this.shake * 0.25;
-      pos.y += (Math.random() - 0.5) * this.shake * 0.25;
-      this.shake = Math.max(0, this.shake - dt * 2.5);
-    }
+    const off = _off.set(Math.sin(this.yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(this.yaw) * Math.cos(pitch));
+    const pos = _v.copy(pivot).addScaledVector(off, this.curDist);
     this.camera.position.copy(pos);
-    this.camera.lookAt(pivot.x, pivot.y - 0.1, pivot.z);
+    this.camera.lookAt(pivot.x, pivot.y - P.lookDrop, pivot.z);
+    // hit kick: critically-damped spring in camera space
+    this.kickVel.addScaledVector(this.kick, -260 * dt);
+    this.kickVel.multiplyScalar(Math.max(0, 1 - 22 * dt));
+    this.kick.addScaledVector(this.kickVel, dt);
+    // smooth shake: layered sines (~9–20 Hz), amplitude falls off quadratically — no per-frame white noise
+    _q.copy(this.kick);
+    if (this.shake > 0) {
+      this.shakeT += dt;
+      const t = this.shakeT * 60, a = this.shake * 0.13;
+      _q.x += (Math.sin(t * 1.13) + Math.sin(t * 2.71 + 0.7) * 0.45) * a;
+      _q.y += (Math.sin(t * 1.61 + 1.3) + Math.sin(t * 3.07) * 0.45) * a * 0.8;
+      this.shake = Math.max(0, this.shake - dt * 2.4);
+    }
+    if (_q.lengthSq() > 1e-8) this.camera.position.add(_q.applyQuaternion(this.camera.quaternion));
   }
 }

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Game } from '../game/Game';
 import type { TimeState } from './Materials';
 import type { Marker } from './Level';
+import { Hints } from '../ui/Hints';
 
 interface Save { cid: string; pos: THREE.Vector3; yaw: number; state: TimeState; charge: number; }
 
@@ -67,7 +68,7 @@ export class Checkpoints {
     if (m.name === 'CP1' && !g.time.unlocked) {
       g.time.unlocked = true;
       g.time.charge = Math.max(g.time.charge, 100);
-      g.hud.message('YOUR BLOOD ANSWERS THE CASTLE', 'Hold R to force the castle between its memories', 5);
+      g.hud.message('YOUR BLOOD ANSWERS THE CASTLE', Hints.shiftUnlock(), 5);
     } else if (first) {
       g.hud.message('BLOOD SIGIL', 'The castle will remember you here', 2.5);
     }

@@ -14,6 +14,12 @@
       "port": 5174
     },
     {
+      "name": "time-castle-dev-5180",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "5180", "--strictPort"],
+      "port": 5180
+    },
+    {
       "name": "time-castle-preview",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "preview", "--port", "4174", "--strictPort"],

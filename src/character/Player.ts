@@ -188,7 +188,8 @@ export class Player {
 
     // buffered inputs
     if (input.wasPressed('light')) this.buffered = { kind: input.isDown('block') ? 'bash' : 'light', t: input.now };
-    if (input.wasPressed('heavy')) this.buffered = { kind: 'heavy', t: input.now };
+    // Guard + Heavy = kick (the touch HUD has no kick button; keyboard keeps F as well)
+    if (input.wasPressed('heavy')) this.buffered = { kind: input.isDown('block') ? 'kick' : 'heavy', t: input.now };
     if (input.wasPressed('kick')) this.buffered = { kind: 'kick', t: input.now };
     if (this.buffered && input.now - this.buffered.t > 0.4) this.buffered = null;
 
@@ -201,11 +202,16 @@ export class Player {
     // ---- interact
     if (input.wasPressed('interact') && canAct && this.grounded) this.events.onInteract?.();
 
-    // ---- dodge (Shift tap: released before it became a sprint hold)
+    // ---- dodge: the Dodge button, or a Shift tap (released before it became a sprint hold). Buffered briefly
+    // so a dodge pressed late in an attack or a hit reaction still comes out as soon as it is allowed.
     const tapped = input.releasedAfter('sprint');
-    if (tapped >= 0 && tapped < SPRINT_HOLD && this.dodgeCooldown <= 0 && this.grounded &&
+    if (input.wasPressed('dodge') || (tapped >= 0 && tapped < SPRINT_HOLD)) this.dodgeBuffered = input.now;
+    if (this.dodgeBuffered >= 0 && input.now - this.dodgeBuffered > 0.28) this.dodgeBuffered = -1;
+    if (this.dodgeBuffered >= 0 && this.dodgeCooldown <= 0 && this.grounded &&
       (canAct || (this.state === 'attack' && this.attack && this.attackClipTime >= this.attack.recoveryCancel) ||
         (this.state === 'hit' && this.hitStun < 0.12))) {
+      this.dodgeBuffered = -1;
+      this.buffered = null;
       this.beginDodge(moving ? wish.clone().normalize() : this.facing.clone().multiplyScalar(-1));
     }
     // ---- jump
@@ -215,7 +221,7 @@ export class Player {
     // ---- crouch toggle
     if (input.wasPressed('crouch') && this.grounded && (this.state === 'move' || this.state === 'crouch')) {
       if (this.crouching) { if (this.tryStand(world, tstate)) { this.crouching = false; this.anim.play('crouch_exit', { speed: 1.6, fade: 0.1 }); this.setState('land'); } }
-      else { this.crouching = true; this.anim.play('crouch_enter', { speed: 1.8, fade: 0.1 }); this.setState('crouch'); }
+      else { this.crouching = true; this.autoCrouched = false; this.anim.play('crouch_enter', { speed: 1.8, fade: 0.1 }); this.setState('crouch'); }
     }
     // ---- attacks from neutral
     if (this.buffered && (canAct || this.state === 'air') && this.state !== 'channel') {
@@ -245,7 +251,8 @@ export class Player {
       case 'move':
       case 'crouch':
       case 'land': {
-        this.sprinting = input.isDown('sprint') && moving && !this.crouching && input.heldFor('sprint') >= SPRINT_HOLD && !lock;
+        this.sprinting = (input.analogSprint || (input.isDown('sprint') && input.heldFor('sprint') >= SPRINT_HOLD)) && moving && !this.crouching && !lock;
+        if (input.autoCrouch && this.grounded) this.autoCrouch(wish, moving, world, tstate);
         const speed = this.crouching ? CROUCH : this.sprinting ? SPRINT : RUN;
         const target = wish.clone().multiplyScalar(speed);
         const accel = this.grounded ? 38 : 7;
@@ -402,6 +409,41 @@ export class Player {
         this.vel.y = 0;
       }
     }
+  }
+
+  /** 'dodge' press time while waiting to be allowed (-1 = none) */
+  dodgeBuffered = -1;
+  /** crouch entered by autoCrouch (touch): only these are stood up automatically */
+  private autoCrouched = false;
+  /**
+   * Touch has no crouch button: walking into a gap too low to stand in (but open at crouch height) crouches,
+   * and an auto-crouch stands back up once there is headroom here and a step ahead.
+   */
+  private autoCrouch(wish: THREE.Vector3, moving: boolean, world: CollisionWorld, tstate: TimeState) {
+    if (this.state !== 'move' && this.state !== 'crouch') return;
+    const dir = moving ? _v.copy(wish).setY(0).normalize() : null;
+    if (!this.crouching) {
+      if (!dir) return;
+      const probe = this.pos.clone().addScaledVector(dir, 0.5);
+      probe.y += 0.02;
+      if (world.overlap(probe, RADIUS - 0.03, H_STAND, tstate) > 0.02 && world.overlap(probe, RADIUS - 0.03, H_CROUCH, tstate) < 0.02) {
+        this.crouching = true;
+        this.autoCrouched = true;
+        this.anim.play('crouch_enter', { speed: 2.2, fade: 0.08 });
+        this.setState('crouch');
+      }
+      return;
+    }
+    if (!this.autoCrouched || this.stateTime < 0.25 || !this.tryStand(world, tstate)) return;
+    if (dir) {
+      const probe = this.pos.clone().addScaledVector(dir, 0.55);
+      probe.y += 0.02;
+      if (world.overlap(probe, RADIUS - 0.03, H_STAND, tstate) > 0.02) return;
+    }
+    this.crouching = false;
+    this.autoCrouched = false;
+    this.anim.play('crouch_exit', { speed: 1.8, fade: 0.1 });
+    this.setState('move');
   }
 
   tryStand(world: CollisionWorld, tstate: TimeState) {

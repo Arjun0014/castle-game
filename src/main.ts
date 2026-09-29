@@ -2,7 +2,11 @@ import { Game } from './game/Game';
 import { AutoPilot } from './game/AutoPilot';
 import { FLOORS, takeCarry } from './levels/Floors';
 import { LoadingScreen } from './ui/LoadingScreen';
+import { Platform } from './platform/Platform';
 
+const stage = document.getElementById('stage')!;
+// portrait stage + input mode first: the renderer sizes itself from the stage
+Platform.init(stage, document.getElementById('rotate')!);
 const app = document.getElementById('app')!;
 const hud = document.getElementById('hud')!;
 const overlay = document.getElementById('overlay')!;
@@ -14,7 +18,9 @@ const params = new URLSearchParams(location.search);
  * the ambience beds). Normal play is never muted: players get the full mix including the ambience.
  */
 const automated = params.has('autopilot') || params.has('mute') || params.has('bench') || navigator.webdriver === true;
-const game = new Game(app, hud, { muted: automated });
+const game = new Game(app, hud, { muted: automated, stage });
+// automated runs measure fixed quality; adaptive resolution is for players
+if (automated) game.dynResEnabled = false;
 const loader = new LoadingScreen(overlay);
 const floorId = FLOORS[Number(params.get('floor'))] ? Number(params.get('floor')) : 1;
 const floor = FLOORS[floorId];
@@ -75,9 +81,24 @@ game.onNextFloor = async (next) => {
 
 btn.addEventListener('click', () => {
   begin();
-  game.renderer.domElement.requestPointerLock?.();
+  if (Platform.isTouch) Platform.enterImmersive();
+  else game.renderer.domElement.requestPointerLock?.();
 });
-game.renderer.domElement.addEventListener('click', () => { if (game.paused) game.togglePause(false); });
+const resume = () => {
+  if (!game.paused || Platform.rotateBlocked) return;
+  game.togglePause(false);
+  if (!Platform.isTouch) game.renderer.domElement.requestPointerLock?.();
+};
+game.renderer.domElement.addEventListener('click', resume);
+game.hud.pauseEl.addEventListener('click', resume);
+// a handheld turned sideways pauses behind the rotate overlay (turning back shows the pause card: tap to resume)
+Platform.onChange(() => {
+  if (Platform.rotateBlocked && game.started && !game.paused && !game.finished) game.togglePause(true);
+});
+// hidden tab / app switch: pause so nobody dies while away (players only; automation keeps running)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && !automated && game.started && !game.paused && !game.finished) game.togglePause(true);
+});
 window.addEventListener('keydown', (e) => {
   if (e.code === 'F9' && game.level) game.level.collision.meshes[game.time.state].visible = !game.level.collision.meshes[game.time.state].visible;
   if (e.code === 'KeyM' && game.started) game.audio.setMuted(!game.audio.muted);

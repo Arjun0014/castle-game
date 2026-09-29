@@ -24,6 +24,10 @@ import type { EnemyTemplate } from '../assets/GameAssets';
 import { warmup, type WarmupReport } from '../assets/Warmup';
 import floorManifests from '../data/floorManifests.json';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
+import { Platform } from '../platform/Platform';
+import { TouchControls } from '../ui/TouchControls';
+import { promptText } from '../ui/Hints';
+import type { Threat } from '../ui/HUD';
 
 /** Loading-screen sink: fraction 0..1 of the whole operation + what is happening. */
 export type LoadSink = (f: number, label: string) => void;
@@ -98,10 +102,20 @@ export class Game {
   /** per-load record: floor, timings, keys released/kept (tests + CONTEXT benchmarks) */
   loadLog: { floor: number; ms: number; assetsMs: number; buildMs: number; warmup: WarmupReport | null; released: string[] }[] = [];
 
-  constructor(container: HTMLElement, hudRoot: HTMLElement, opts: { muted?: boolean } = {}) {
+  touch: TouchControls | null = null;
+  /** Adaptive resolution: multiplier on the device pixel-ratio cap (see updateDynRes). */
+  renderScale = 1;
+  dynResEnabled = true;
+  /** Fog distances are measured from the camera: the portrait camera sits farther back, so shift them by
+   *  the difference to keep the hero's surroundings exactly as smoky as in the widescreen tuning. */
+  private fogShift = 0;
+
+  constructor(container: HTMLElement, hudRoot: HTMLElement, opts: { muted?: boolean; stage?: HTMLElement } = {}) {
     installAtmosphereFog();
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    // MSAA is expensive on phone GPUs and mostly redundant at their pixel densities
+    const msaa = !Platform.handheld || window.devicePixelRatio < 1.5;
+    this.renderer = new THREE.WebGLRenderer({ antialias: msaa, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(this.pixelRatio());
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
@@ -113,6 +127,14 @@ export class Game {
     this.input = new Input(this.renderer.domElement);
     this.hud = new HUD(hudRoot);
     this.rig = new CameraRig(this.camera);
+    this.rig.setProfile(Platform.view);
+    this.fogShift = this.rig.profile.distance - 4.4;
+    if (opts.stage) {
+      this.touch = new TouchControls(opts.stage, this.input);
+      this.touch.onPause = () => { if (this.started && !this.finished) this.togglePause(); };
+      this.hud.onInteractText = (t) => this.touch?.setInteract(t);
+    }
+    this.input.autoCrouch = Platform.isTouch;
     this.perf = new Perf(this.renderer);
     this.audio = new AudioFX({ muted: opts.muted });
     this.assets = new GameAssets(this.renderer, Math.min(8, this.renderer.capabilities.getMaxAnisotropy()));
@@ -121,7 +143,9 @@ export class Game {
     this.fill.position.set(-0.55, 0.45, 0.7);
     this.atmo = new Atmosphere(this.scene, new THREE.Vector3(0.45, 0.42, -0.79));
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    // phones: half the shadow resolution (same coverage — the dark Present look is unchanged)
+    const sm = Platform.handheld ? 1024 : 2048;
+    this.sun.shadow.mapSize.set(sm, sm);
     const sc = this.sun.shadow.camera as THREE.OrthographicCamera;
     sc.left = -32; sc.right = 32; sc.top = 32; sc.bottom = -32; sc.near = 1; sc.far = 160;
     this.sun.shadow.bias = -0.0006;
@@ -133,16 +157,66 @@ export class Game {
       const h = this.level.collision.raycast(o, d, far, this.time.state);
       return h ? { point: h.point, normal: h.face ? h.face.normal.clone() : new THREE.Vector3(0, 1, 0) } : null;
     });
-    window.addEventListener('resize', () => this.resize());
+    Platform.onChange(() => {
+      this.input.autoCrouch = Platform.isTouch;
+      if (Platform.isTouch) document.exitPointerLock?.();
+      this.resize();
+    });
     this.resize();
     (window as any).__game = this;
   }
 
+  /**
+   * Device pixel ratio policy: desktop <= 1.75; handhelds <= 2 and <= a 1.6 MP render budget (a 1080x1920-class
+   * portrait phone renders ~0.9-1.6 MP instead of 2-4 MP), times the adaptive render scale.
+   */
+  pixelRatio() {
+    const dpr = window.devicePixelRatio || 1;
+    let pr = Math.min(dpr, 1.75);
+    if (Platform.handheld) {
+      const px = Math.max(1, Platform.width * Platform.height);
+      pr = Math.min(dpr, 2, Math.sqrt(1.6e6 / px));
+    }
+    return Math.max(0.5, pr * this.renderScale);
+  }
+
   resize() {
-    const w = window.innerWidth, h = window.innerHeight;
+    const w = Platform.width, h = Platform.height;
+    this.renderer.setPixelRatio(this.pixelRatio());
     this.renderer.setSize(w, h);
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
+    this.rig.applyViewport(w, h, Platform.isTouch);
+  }
+
+  /**
+   * Adaptive resolution from real frame intervals (1.5 s windows): drop the render scale 10 % when frames run
+   * slower than ~45 fps, raise it 5 % after sustained headroom. A drop that does not speed frames up (a 30 Hz
+   * cap or a CPU-bound phase) is reverted and that floor remembered, so quality is never lost for nothing.
+   */
+  private dyn = { acc: 0, n: 0, good: 0, lastAvg: 0, pendingCheck: false, floor: 0.6 };
+  private updateDynRes(realDt: number) {
+    if (!this.dynResEnabled || this.paused || !this.started) return;
+    const d = this.dyn;
+    d.acc += realDt; d.n++;
+    if (d.acc < 1.5) return;
+    const avg = (d.acc / d.n) * 1000;
+    d.acc = 0; d.n = 0;
+    if (d.pendingCheck) {
+      d.pendingCheck = false;
+      if (avg > d.lastAvg * 0.93) { d.floor = Math.min(1, this.renderScale + 0.1); this.setRenderScale(this.renderScale + 0.1); return; }
+    }
+    if (avg > 22 && this.renderScale > d.floor + 1e-3) {
+      d.lastAvg = avg; d.pendingCheck = true; d.good = 0;
+      this.setRenderScale(this.renderScale - 0.1);
+    } else if (avg < 17.5) {
+      if (++d.good >= 3 && this.renderScale < 1) { d.good = 0; this.setRenderScale(this.renderScale + 0.05); }
+    } else d.good = 0;
+  }
+  setRenderScale(s: number) {
+    const v = Math.round(THREE.MathUtils.clamp(s, 0.6, 1) * 100) / 100;
+    if (v === this.renderScale) return;
+    this.renderScale = v;
+    this.perf.mark('render scale ' + v);
+    this.resize();
   }
 
   floor: FloorDef = FLOORS[1];
@@ -374,7 +448,7 @@ export class Game {
   private currentEnv(): EnvPreset {
     const f = this.scene.fog as THREE.Fog;
     return {
-      bg: (this.scene.background as THREE.Color)?.clone() ?? new THREE.Color(), fog: f.color.clone(), near: f.near, far: f.far,
+      bg: (this.scene.background as THREE.Color)?.clone() ?? new THREE.Color(), fog: f.color.clone(), near: f.near - this.fogShift, far: f.far - this.fogShift,
       hemiSky: this.hemi.color.clone(), hemiGround: this.hemi.groundColor.clone(), hemi: this.hemi.intensity,
       sun: this.sun.color.clone(), sunI: this.sun.intensity, sunDir: this.sunDir.clone(), exposure: this.renderer.toneMappingExposure, heroLight: this.heroLight,
       fill: this.fill.color.clone(), fillI: this.fill.intensity,
@@ -386,8 +460,8 @@ export class Game {
     (this.scene.background as THREE.Color).copy(a.bg).lerp(b.bg, k);
     const f = this.scene.fog as THREE.Fog;
     f.color.copy(a.fog).lerp(b.fog, k);
-    f.near = THREE.MathUtils.lerp(a.near, b.near, k);
-    f.far = THREE.MathUtils.lerp(a.far, b.far, k);
+    f.near = THREE.MathUtils.lerp(a.near, b.near, k) + this.fogShift;
+    f.far = THREE.MathUtils.lerp(a.far, b.far, k) + this.fogShift;
     this.hemi.color.copy(a.hemiSky).lerp(b.hemiSky, k);
     this.hemi.groundColor.copy(a.hemiGround).lerp(b.hemiGround, k);
     this.hemi.intensity = THREE.MathUtils.lerp(a.hemi, b.hemi, k);
@@ -412,6 +486,7 @@ export class Game {
 
   private frame() {
     let dt = this.clock.getDelta();
+    this.updateDynRes(dt);
     dt = Math.min(dt, 1 / 20);
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = this.fpsN / this.fpsAcc; this.fpsAcc = 0; this.fpsN = 0; }
@@ -431,7 +506,46 @@ export class Game {
   togglePause(on?: boolean) {
     this.paused = on ?? !this.paused;
     this.hud.pauseEl.classList.toggle('on', this.paused);
-    if (this.paused) document.exitPointerLock?.();
+    if (this.paused) { document.exitPointerLock?.(); this.touch?.releaseAll(); this.input.releaseAll(); }
+  }
+
+  /** Portrait: pull the camera back when a fight crowds the narrow frame (a melee pack, a boss). */
+  private fightPull() {
+    if (!Platform.isPortrait || !this.enemies.inCombat) return 0;
+    let near = 0, boss = false;
+    for (const e of this.enemies.threats(this.player.pos, 9, 0)) {
+      if (e.arch.boss) boss = true;
+      else if (!e.isRanged) near++;
+    }
+    return Math.max(0, near - 1) * 0.45 + (boss ? 1.1 : 0);
+  }
+
+  private threatList: Threat[] = [];
+  private _tv = new THREE.Vector3();
+  private _tp = new THREE.Vector3();
+  /**
+   * Off-screen threat markers (portrait): engaged enemies outside the frame, placed on the stage edge in the
+   * direction you would turn to face them (radar mapping: screen-up = camera forward). Telegraphing or aiming
+   * enemies glow hot; archers are tinted so the long-range threat is always accounted for.
+   */
+  private updateThreats() {
+    const out = this.threatList;
+    out.length = 0;
+    if (Platform.isPortrait && this.started && this.player.alive) {
+      const fwd = this.rig.forward(this._tv);
+      const fx = fwd.x, fz = fwd.z;
+      const pp = this.player.pos;
+      for (const e of this.enemies.threats(pp, 13, 34)) {
+        const v = this._tp.copy(e.center).project(this.camera);
+        if (v.z < 1 && Math.abs(v.x) < 0.92 && Math.abs(v.y) < 0.9) continue;
+        const dx = e.pos.x - pp.x, dz = e.pos.z - pp.z;
+        const right = dx * -fz + dz * fx, ahead = dx * fx + dz * fz;
+        const hot = e.isRanged ? e.state === 'shoot' && e.shootPhase === 1 : e.state === 'attack' || e.state === 'windup' || e.state === 'dive' || e.state === 'lunge';
+        out.push({ x: right, y: -ahead, ranged: e.isRanged, hot });
+        if (out.length >= 6) break;
+      }
+    }
+    this.hud.setThreats(out);
   }
 
   step(dt: number) {
@@ -468,7 +582,9 @@ export class Game {
     this.sun.position.copy(p.pos).addScaledVector(this.sunDir, 70);
     this.sun.target.position.copy(p.pos);
     this.rig.inCombat = this.enemies.inCombat;
+    this.rig.pullWant = this.fightPull();
     this.rig.update(dt, p.pos, this.input.consumeLook(), this.level.collision, this.time.state, p.crouching);
+    this.updateThreats();
     // hero light: above and slightly toward the camera, so what the player faces is lit
     const toCam = this.camera.position.clone().sub(p.pos).setY(0).normalize();
     this.playerLight.position.copy(p.pos).addScaledVector(toCam, 1.1).setY(p.pos.y + 2.3);
@@ -480,10 +596,11 @@ export class Game {
     this.fx.update(dt, this.t);
     if (this.gore.state !== this.time.state) this.gore.setState(this.time.state);
     this.gore.update(dt);
-    if (this.fovPunch > 0.01 || this.camera.fov !== 58) {
+    const baseFov = this.rig.baseFov;
+    if (this.fovPunch > 0.01 || this.camera.fov !== baseFov) {
       this.fovPunch *= Math.max(0, 1 - dt * 9);
       if (this.fovPunch <= 0.01) this.fovPunch = 0;
-      this.camera.fov = 58 - this.fovPunch;
+      this.camera.fov = baseFov - this.fovPunch;
       this.camera.updateProjectionMatrix();
     }
     this.audio.setListener(this.camera);
@@ -496,6 +613,12 @@ export class Game {
     else this.hud.setChannel(false);
     this.hud.update(dt);
     this.updateReticle();
+    if (this.touch && Platform.isTouch) {
+      this.touch.update({
+        channel: p.isChanneling ? p.channelTime / p.channelDuration : 0,
+        locked: !!p.lockTarget, canShift: this.time.unlocked && this.time.charge >= PER_SHIFT, guarding: p.state === 'block',
+      });
+    }
     if (this.debug) this.hud.debugEl.textContent = this.debugText();
   }
 
@@ -534,8 +657,8 @@ export class Game {
     const v = lt.pos.clone().add(new THREE.Vector3(0, 1.2, 0)).project(this.camera);
     if (v.z > 1) { this.hud.reticle.style.display = 'none'; return; }
     this.hud.reticle.style.display = 'block';
-    this.hud.reticle.style.left = ((v.x + 1) / 2) * window.innerWidth + 'px';
-    this.hud.reticle.style.top = ((1 - v.y) / 2) * window.innerHeight + 'px';
+    this.hud.reticle.style.left = ((v.x + 1) / 2) * Platform.width + 'px';
+    this.hud.reticle.style.top = ((1 - v.y) / 2) * Platform.height + 'px';
   }
 
   private updateVoidAndPrompts() {
@@ -551,7 +674,7 @@ export class Game {
       if (!m.box.containsPoint(head)) continue;
       if (!this.requirementMet(m.props.requires)) continue;
       this.promptsShown.add(m.name);
-      this.hud.prompt(m.props.text, 6);
+      this.hud.prompt(promptText(m.props.pid ?? m.name, m.props.text), 6);
     }
     // exit
     const exit = this.level.marker('exit', 'EXIT');

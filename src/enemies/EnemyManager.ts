@@ -7,6 +7,7 @@ import type { TimeState } from '../levels/Materials';
 import type { Marker } from '../levels/Level';
 import type { EnemyTemplate } from '../assets/GameAssets';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
+import { Hints } from '../ui/Hints';
 
 interface Encounter {
   id: string; state: TimeState | 'BOTH'; box: THREE.Box3; enemies: Enemy[];
@@ -309,6 +310,22 @@ export class EnemyManager {
     return { get pos() { return e.pos; }, get alive() { return e.alive && !e.removed && (e.owner === st || e.owner === 'BOTH'); } };
   }
 
+  /** Engaged enemies of the current state near `from` (camera framing, off-screen markers), most urgent first. */
+  threats(from: THREE.Vector3, melee: number, ranged: number): Enemy[] {
+    const st = this.g.time.state;
+    const out: { e: Enemy; score: number }[] = [];
+    for (const list of [this.enemies, this.remnants]) for (const e of list) {
+      if (!e.alive || e.removed || !e.triggered || e.state === 'hidden' || e.state === 'dormant' || e.state === 'rise') continue;
+      if (e.owner !== st && e.owner !== 'BOTH') continue;
+      const d = e.pos.distanceTo(from);
+      if (d > (e.isRanged ? ranged : melee)) continue;
+      const hot = e.isRanged ? e.state === 'shoot' && e.shootPhase === 1 : e.state === 'attack' || e.state === 'windup' || e.state === 'dive' || e.state === 'lunge';
+      out.push({ e, score: d - (hot ? 100 : 0) - (e.isRanged ? 20 : 0) });
+    }
+    out.sort((a, b) => a.score - b.score);
+    return out.map((x) => x.e);
+  }
+
   autoTarget(from: THREE.Vector3, facing: THREE.Vector3): THREE.Vector3 | null {
     const st = this.g.time.state;
     let best: Enemy | null = null, bestD = 4.2;
@@ -520,7 +537,7 @@ export class EnemyManager {
       this.g.audio.bossSting();
       this.g.pendingArenaLock = true;
     }
-    if (enc.tutorial) this.g.hud.prompt('LMB light · RMB heavy · hold Q guard (tap = parry) · Shift tap dodge · F kick', 8);
+    if (enc.tutorial) this.g.hud.prompt(Hints.combatTutorial(), 8);
   }
 
   private updateWaves(enc: Encounter) {

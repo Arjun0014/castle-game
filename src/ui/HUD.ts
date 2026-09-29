@@ -1,4 +1,9 @@
 import type { TimeState } from '../levels/Materials';
+import { Platform } from '../platform/Platform';
+
+/** One off-screen threat marker: stage-space angle from the centre, ranged/telegraphing flags. */
+export interface Threat { x: number; y: number; ranged: boolean; hot: boolean }
+const THREAT_MARKERS = 6;
 
 /** Minimal HTML HUD: health, resonance (2 segments), state badge, channel bar, prompts, boss bar. */
 export class HUD {
@@ -25,6 +30,9 @@ export class HUD {
   pauseEl: HTMLElement;
   endEl: HTMLElement;
   reticle: HTMLElement;
+  private threatEls: HTMLElement[] = [];
+  /** touch HUD hook: contextual interact pill */
+  onInteractText?: (text: string | null) => void;
   private promptTimer = 0;
   private messageTimer = 0;
   private denyTimer = 0;
@@ -49,7 +57,7 @@ export class HUD {
       <div class="flash"></div>
       <div class="fade"></div>
       <div class="debug"></div>
-      <div class="pause"><h3>PAUSED</h3><p>Click to resume · \` toggles debug · F9 collision view</p></div>
+      <div class="pause"><h3>PAUSED</h3><p class="pause-kbm">Click or Esc to resume · \` toggles debug · F9 collision view</p><p class="pause-touch">Tap to resume</p></div>
       <div class="end-card"><h1>FLOOR I COMPLETE</h1><p class="end-sub"></p><p>The way to the Upper Keep lies open.</p></div>`;
     const q = (s: string) => root.querySelector(s) as HTMLElement;
     this.hpFill = q('.hp-fill');
@@ -73,6 +81,31 @@ export class HUD {
     this.pauseEl = q('.pause');
     this.endEl = q('.end-card');
     this.reticle = q('.reticle');
+    for (let i = 0; i < THREAT_MARKERS; i++) {
+      const el = document.createElement('div');
+      el.className = 'offscreen';
+      root.appendChild(el);
+      this.threatEls.push(el);
+    }
+  }
+
+  /**
+   * Off-screen threat markers (portrait): each threat is a direction in stage space (x right, y down, from the
+   * centre). The chevron sits on an inset ellipse at the stage edge, pointing outward toward the enemy.
+   */
+  setThreats(list: Threat[]) {
+    const w = Platform.width, h = Platform.height;
+    const rx = w * 0.5 - 22, ry = h * 0.5 - 30;
+    for (let i = 0; i < this.threatEls.length; i++) {
+      const el = this.threatEls[i];
+      const t = list[i];
+      if (!t) { if (el.classList.contains('on')) el.className = 'offscreen'; continue; }
+      const ang = Math.atan2(t.y, t.x);
+      const x = w * 0.5 + Math.cos(ang) * rx;
+      const y = h * 0.5 + Math.sin(ang) * ry;
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(ang * 180 / Math.PI).toFixed(1)}deg)`;
+      el.className = 'offscreen on' + (t.ranged ? ' ranged' : '') + (t.hot ? ' hot' : '');
+    }
   }
 
   setHealth(hp: number, max: number) {
@@ -110,9 +143,13 @@ export class HUD {
     this.promptTimer = seconds;
   }
 
+  private interactText: string | null = null;
   interact(text: string | null) {
+    if (text === this.interactText) return;
+    this.interactText = text;
     if (text) { this.interactEl.innerHTML = `<b>E</b>${text}`; this.interactEl.classList.add('on'); }
     else this.interactEl.classList.remove('on');
+    this.onInteractText?.(text);
   }
 
   message(title: string, sub = '', seconds = 3.5) {
