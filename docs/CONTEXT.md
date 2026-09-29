@@ -628,10 +628,9 @@ A parry staggers the attacker and grants +12 resonance.
 # 8. Next Concrete Tasks
 
 **Session 11 follow-ups (do these first):**
-1. Run what this session could not: `dev/bossBot.js` on `?at=lastcrown` (god + real damage) with the new Crownheart,
+1. Run what this session could not: `dev/bossBot.js` on `?at=lastcrown` with real damage (god passed: 67 s, 0 errors),
    a real-damage Maw fight (`dev/mawProbe.js` with `god: false`; its numbers: `EnemyTypes` maw attacks, `Maw.ts`
-   LEAP_* / WAVE_* / cooldowns), `?view=wide` + desktop kbm passes, `npm run package:itch` + production preview, a walked
-   F1 → F2 → King's lift → F3 run (lift ridden only from the `?floor=2` warp this session).
+   LEAP_* / WAVE_* / cooldowns), a desktop-kbm play pass, a walked F1 → F2 → King's lift → F3 run (lift ridden only from the `?floor=2` warp this session).
 2. Human / phone: is the Maw fair in portrait (leap ring, quake jump timing, the hook's tell, 1150 HP)? Does the
    Crownheart's breathing read (weights in `Game.applyHeartTone`, ramp in `vfx/Crownheart.ts`)? Passive regen feel
    (1.6/s, cap 100, `TimeSystem` PASSIVE_*). The finishers in portrait (contact now true; framing per variant in
@@ -913,9 +912,12 @@ all 5 finishers kill/credit/camera, both rewards + reveals, touch layout, wall/h
 clipped its edge); `dev/mawProbe.js` kite / fight / parry→stun; `dev/finisherContact.js` matrix; grounding probes;
 stair drift probes; passive curve; transition failure / retry / prefetch; portrait screenshots (the Maw, its leap,
 the Crownheart, the headsman contact).
-**Not run this session (next session / human):** the Last Crown fight bot (`dev/bossBot.js`) after the Crownheart
-change, a real-damage Maw bot, `?view=wide` and desktop-kbm passes, `npm run package:itch` + production preview, a full
-F1 → F2 → lift → F3 playthrough by walking (the lift was ridden from the `?floor=2` warp; F1 → F2 → F3 by the in-place
+After the handoff commit: `dev/bossBot.js` god fight with the new Crownheart → phases 2 + 3, death, ending, 67 s,
+0 errors; `npm run package:itch` → 166 MB zip, 535 files, 194 MB unpacked (mutant.glb + maw_* in, no lamia);
+production preview (:4174) boot → in-place transition to Floor 3 in 4.7 s with the Maw, its and the boss's sounds and
+CP1/CP2/CP2B/CP3; `?view=wide` production: wide profile, no touch HUD, passive regen running.
+**Not run this session (next session / human):** a real-damage Maw bot and real-damage Last Crown bot, a desktop-kbm
+portrait play pass, a full F1 → F2 → lift → F3 playthrough by walking (the lift was ridden from the `?floor=2` warp; F1 → F2 → F3 by the in-place
 transition), passive-regen tuning against a human's traversal, everything by ear and on a real phone.
 
 ### Session 10 (2026-09-30) — title screen, chapter cards, Guided tutorial, enemy audit, Floor 3 played end to end
