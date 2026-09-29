@@ -1,0 +1,432 @@
+{
+ "fps": 24,
+ "duration": 66.0,
+ "stretch": 1.07,
+ "narration_take": "A",
+ "narration": [
+  {
+   "id": "P1",
+   "src": [
+    0.45,
+    3.12
+   ],
+   "start": 1.0,
+   "end": 3.495
+  },
+  {
+   "id": "P2",
+   "src": [
+    4.1,
+    6.8
+   ],
+   "start": 3.83,
+   "end": 6.353
+  },
+  {
+   "id": "P3",
+   "src": [
+    7.74,
+    10.72
+   ],
+   "start": 6.94,
+   "end": 9.725
+  },
+  {
+   "id": "P4",
+   "src": [
+    11.55,
+    14.82
+   ],
+   "start": 10.07,
+   "end": 13.126
+  },
+  {
+   "id": "P5",
+   "src": [
+    15.93,
+    20.36
+   ],
+   "start": 13.83,
+   "end": 17.97
+  },
+  {
+   "id": "P6",
+   "src": [
+    21.3,
+    23.38
+   ],
+   "start": 18.36,
+   "end": 20.304
+  },
+  {
+   "id": "P8",
+   "src": [
+    28.2,
+    31.98
+   ],
+   "start": 22.6,
+   "end": 26.133
+  },
+  {
+   "id": "P9",
+   "src": [
+    32.73,
+    36.26
+   ],
+   "start": 28.0,
+   "end": 31.299
+  },
+  {
+   "id": "P10",
+   "src": [
+    37.44,
+    39.62
+   ],
+   "start": 31.79,
+   "end": 33.827
+  },
+  {
+   "id": "P11",
+   "src": [
+    40.69,
+    43.34
+   ],
+   "start": 36.4,
+   "end": 38.877
+  },
+  {
+   "id": "P12",
+   "src": [
+    43.7,
+    47.06
+   ],
+   "start": 39.22,
+   "end": 42.36
+  },
+  {
+   "id": "P13",
+   "src": [
+    48.08,
+    50.6
+   ],
+   "start": 42.85,
+   "end": 45.205
+  },
+  {
+   "id": "P14",
+   "src": [
+    51.22,
+    53.64
+   ],
+   "start": 45.54,
+   "end": 47.802
+  },
+  {
+   "id": "P15",
+   "src": [
+    54.71,
+    58.88
+   ],
+   "start": 48.4,
+   "end": 52.297
+  },
+  {
+   "id": "P16",
+   "src": [
+    59.21,
+    60.88
+   ],
+   "start": 52.64,
+   "end": 54.201
+  }
+ ],
+ "subtitles": [
+  {
+   "text": "Before Veyr had a king, the mountain had a heart.",
+   "start": 0.88,
+   "end": 6.76
+  },
+  {
+   "text": "It answered only to blood.",
+   "start": 6.82,
+   "end": 9.89
+  },
+  {
+   "text": "And House Vaelor gave it theirs.",
+   "start": 9.95,
+   "end": 13.576
+  },
+  {
+   "text": "“The castle remembers its rightful ruler.”",
+   "start": 13.71,
+   "end": 18.18
+  },
+  {
+   "text": "So their people were taught.",
+   "start": 18.24,
+   "end": 20.754
+  },
+  {
+   "text": "On the last night, the gates were sealed…",
+   "start": 22.48,
+   "end": 26.583
+  },
+  {
+   "text": "…and the king went down to the heart.",
+   "start": 27.88,
+   "end": 31.61
+  },
+  {
+   "text": "Whatever he asked of it…",
+   "start": 31.67,
+   "end": 34.277
+  },
+  {
+   "text": "Caer Veyr was torn between two memories of itself.",
+   "start": 36.28,
+   "end": 42.67
+  },
+  {
+   "text": "The kingdom became a story. Then a warning.",
+   "start": 42.73,
+   "end": 48.22
+  },
+  {
+   "text": "Now, a daughter of the forgotten line has come home.",
+   "start": 48.28,
+   "end": 54.651
+  }
+ ],
+ "shots": [
+  {
+   "id": "S01_heart",
+   "start": 0.0,
+   "end": 6.9,
+   "frames": [
+    0,
+    166
+   ],
+   "note": "Black. The Crownheart wakes in the dark beneath the mountain."
+  },
+  {
+   "id": "S02_blood",
+   "start": 6.9,
+   "end": 13.8,
+   "frames": [
+    166,
+    331
+   ],
+   "note": "Torchlit founders; a cut palm; the drop lands on \"blood\"; gold runs through the whorls."
+  },
+  {
+   "id": "S03_rise",
+   "start": 13.8,
+   "end": 20.3,
+   "frames": [
+    331,
+    487
+   ],
+   "note": "Cutaway: the camera rises through the rock as Caer Veyr grows above it, gilded at dusk."
+  },
+  {
+   "id": "S04_war",
+   "start": 20.3,
+   "end": 22.6,
+   "frames": [
+    487,
+    542
+   ],
+   "note": "Same composition: the sky bleeds red, the valley fills with the fires of an army."
+  },
+  {
+   "id": "S05_sealed",
+   "start": 22.6,
+   "end": 26.13,
+   "frames": [
+    542,
+    627
+   ],
+   "note": "Inside the gate passage: the portcullis slams on \"sealed\"; guards turn their spears inward."
+  },
+  {
+   "id": "S06_child",
+   "start": 26.13,
+   "end": 28.0,
+   "frames": [
+    627,
+    672
+   ],
+   "note": "A servants' door: a woman's hand pushes a hooded child into the dark; she looks back; the door shuts."
+  },
+  {
+   "id": "S07_descent",
+   "start": 28.0,
+   "end": 31.29,
+   "frames": [
+    672,
+    751
+   ],
+   "note": "The spiral stair from above: the crowned shadow descends toward red-gold light."
+  },
+  {
+   "id": "S08_asking",
+   "start": 31.29,
+   "end": 33.81,
+   "frames": [
+    751,
+    811
+   ],
+   "note": "His gauntlet on the heart; the whorls blaze; bells toll above."
+  },
+  {
+   "id": "S09a_surge",
+   "start": 33.81,
+   "end": 34.9,
+   "frames": [
+    811,
+    838
+   ],
+   "note": "Cutaway: the heart flares; a column of light rises through the rock toward the castle."
+  },
+  {
+   "id": "S09b_sundering",
+   "start": 34.9,
+   "end": 42.35,
+   "frames": [
+    838,
+    1016
+   ],
+   "note": "The castle blazes gold; its gilded image crazes like old varnish; silence; the Past flakes away to reveal the ruin in register; flakes hang where windows were."
+  },
+  {
+   "id": "S10_centuries",
+   "start": 42.35,
+   "end": 47.6,
+   "frames": [
+    1016,
+    1142
+   ],
+   "note": "Time-lapse on the ruin: moon, stars, snow, rain, growth; one gold window flickers, then goes out."
+  },
+  {
+   "id": "S11_road",
+   "start": 47.6,
+   "end": 52.7,
+   "frames": [
+    1142,
+    1265
+   ],
+   "note": "Night, now. A woman climbs the overgrown road beneath the dead silhouette."
+  },
+  {
+   "id": "S12_gate",
+   "start": 52.7,
+   "end": 55.0,
+   "frames": [
+    1265,
+    1320
+   ],
+   "note": "Behind her, low: the rotted gate, the faded crest; her shield on her back."
+  },
+  {
+   "id": "S13_touch",
+   "start": 55.0,
+   "end": 56.2,
+   "frames": [
+    1320,
+    1349
+   ],
+   "note": "Her hand on the crest; the engraving fills with a hairline of red-gold."
+  },
+  {
+   "id": "S14_glimpse",
+   "start": 56.2,
+   "end": 57.3,
+   "frames": [
+    1349,
+    1375
+   ],
+   "note": "Gilding sweeps out from her palm: the living gate, torches, banners, guards turning their heads."
+  },
+  {
+   "id": "S15_ruin",
+   "start": 57.3,
+   "end": 58.2,
+   "frames": [
+    1375,
+    1397
+   ],
+   "note": "It cracks away. Ruin. Silence. She does not understand."
+  },
+  {
+   "id": "S16_threshold",
+   "start": 58.2,
+   "end": 62.0,
+   "frames": [
+    1397,
+    1488
+   ],
+   "note": "From inside the dark: the gate groans open, moonlight, her silhouette; she crosses into darkness."
+  },
+  {
+   "id": "S17_title",
+   "start": 62.0,
+   "end": 66.0,
+   "frames": [
+    1488,
+    1584
+   ],
+   "note": "Gold flakes drift up in the dark and assemble: THE CASTLE REMEMBERS."
+  }
+ ],
+ "music": [
+  {
+   "name": "crownheart",
+   "start": 0.0,
+   "end": 6.9,
+   "style": "darkness, a single low sustained tone, glass harmonica shimmer, sub pulse like a slow heartbeat, sacred and ancient"
+  },
+  {
+   "name": "binding",
+   "start": 6.9,
+   "end": 13.8,
+   "style": "the tone blooms into warm low strings, a slow reverent swell, first hint of the Veyr theme on solo cello"
+  },
+  {
+   "name": "rise",
+   "start": 13.8,
+   "end": 20.3,
+   "style": "noble, reverent processional: the Veyr theme on solo cello over strings and soft horns, building to a warm golden peak"
+  },
+  {
+   "name": "last_night",
+   "start": 20.3,
+   "end": 33.8,
+   "style": "the warmth drains away: low war drums far off, tremolo strings, dissonant low brass, the theme fragmented, dread building, heavy bells tolling at the end"
+  },
+  {
+   "name": "sundering",
+   "start": 33.8,
+   "end": 37.0,
+   "style": "a massive swelling crescendo that shatters, then sudden near-silence"
+  },
+  {
+   "name": "two_memories",
+   "start": 37.0,
+   "end": 47.6,
+   "style": "mournful and suspended: solo cello plays the theme slowly over a thin high string drone, reversed textures, a distant bell, centuries passing"
+  },
+  {
+   "name": "return",
+   "start": 47.6,
+   "end": 56.2,
+   "style": "intimate and restrained: a low heartbeat pulse, sparse piano-less strings, the first notes of the theme, tension rising gently"
+  },
+  {
+   "name": "threshold",
+   "start": 56.2,
+   "end": 66.0,
+   "style": "one brief full statement of the theme, then hush: a low sustained drone as she enters the dark, resolving to a final deep chord for the title"
+  }
+ ]
+}

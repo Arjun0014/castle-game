@@ -105,6 +105,11 @@ export class AudioFX {
     this.channelStop();
   }
 
+  /** Unlock the context inside a user gesture without starting any sound (the opening film plays first). */
+  unlock() {
+    if (this.ctx && this.ctx.state !== 'running') void this.ctx.resume();
+  }
+
   /** Resume on the first user gesture and start the ambience beds. */
   init() {
     if (!this.ctx || !this.loaded) return;

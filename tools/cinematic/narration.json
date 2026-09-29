@@ -1,0 +1,24 @@
+{
+  "voice": {
+    "id": "VhuTJN7jTXadMoTbfY1r",
+    "account_name": "Cthulu female",
+    "why": "Account-owned designed voice (free-tier API cannot use library voices or design new ones). Measured on v3: median F0 151 Hz, 8.4 st range, warm spectrum, long deliberate pauses: an old woman's low contralto, timeless accent. Tags steer the delivery from reverent to intimate.",
+    "model": "eleven_v3"
+  },
+  "pronunciation": {
+    "Veyr": "Vair",
+    "Caer Veyr": "Kair Vair",
+    "Vaelor": "Vaylor"
+  },
+  "lines": [
+    { "id": "L1", "act": "before",    "text": "Before Veyr had a king, the mountain had a heart.",                     "tts": "[slowly] Before Vair had a king... the mountain had a heart." },
+    { "id": "L2", "act": "before",    "text": "It answered only to blood. And House Vaelor gave it theirs.",           "tts": "[softly] It answered only to blood. And House Vaylor gave it theirs." },
+    { "id": "L3", "act": "before",    "text": "“The castle remembers its rightful ruler.” So their people were taught.", "tts": "[reverently] The castle remembers its rightful ruler. [quietly] So their people were taught." },
+    { "id": "L4", "act": "war",       "text": "Then war came to Veyr.",                                                "tts": "[gravely] Then war came to Vair." },
+    { "id": "L5", "act": "war",       "text": "On the last night, the gates were sealed… and the king went down to the heart.", "tts": "[uneasy] On the last night, the gates were sealed... [hushed] and the king went down to the heart." },
+    { "id": "L6", "act": "war",       "text": "Whatever he asked of it…",                                              "tts": "[whispers] Whatever he asked of it..." },
+    { "id": "L7", "act": "sundering", "text": "Caer Veyr was torn between two memories of itself.",                   "tts": "[sorrowful] Kair Vair was torn... between two memories of itself." },
+    { "id": "L8", "act": "centuries", "text": "The kingdom became a story. Then a warning.",                          "tts": "[mournfully] The kingdom became a story. Then a warning." },
+    { "id": "L9", "act": "return",    "text": "Now, a daughter of the forgotten line has come home.",                  "tts": "[tenderly] Now, a daughter of the forgotten line... has come home." }
+  ]
+}

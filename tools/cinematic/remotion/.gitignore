@@ -1,0 +1,14 @@
+node_modules
+dist
+.DS_Store
+.env
+
+# Ignore the output video from Git but not videos you import into src/.
+out
+
+# regenerable media (see docs/CINEMATIC_V2.md "Rebuild the edit's inputs"): panels, the v1 film, the mix, the title
+public/audio
+public/panels
+public/v1
+public/title
+public/tex

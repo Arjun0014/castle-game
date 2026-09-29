@@ -103,3 +103,21 @@ runtime OGGs used only on Floor 3: `mage_charge` (3), `mage_bolt` (4), `mage_imp
 `mage_teleport` (3), `mage_beam` (2), `mage_ward` (2), `mage_rune` (3), `crown_resonance` (2), `boss_scream` (3),
 `boss_death` (1), `final_collapse` (1). The API key stays in the git-ignored `.env`; nothing is exposed to client code.
 Not yet reviewed by ear.
+
+## Session 6 — the opening film (build-time only; the game ships one mixed soundtrack inside the video)
+
+Everything below is mixed by `python tools/cinematic/mix.py` into `build/cinematic/audio/mix.wav` (−16 LUFS
+integrated, −1.5 dBFS peak), which `tools/cinematic/post.py` muxes (AAC 192 kbps) into `public/cinematic/opening_*.mp4`.
+No individual file reaches the runtime; the API key stays in the git-ignored `.env`.
+
+| Part | Source | Files |
+|---|---|---|
+| Narration | ElevenLabs `eleven_v3` TTS with timestamps (free tier), account-owned designed voice "Cthulu female" (`VhuTJN7jTXadMoTbfY1r`), script + audio tags in `tools/cinematic/narration.json`, one request for the whole script (take A: stability 0.5, seed 11); QA transcription with Scribe v2 (85/85 words) | `assets/audio/cinematic/narration/A.mp3`, `A.json` (alignment) |
+| Score stems (`t_*`) | ElevenLabs sound generation `eleven_text_to_sound_v2` (free tier; the Music API is paid-only): cello, strings, choir, minor strings, tremolo, brass, war drums, swell, hit, second cello — pitched/stretched/cut in `mix.py` | `assets/audio/cinematic/sfx/t_*_0.mp3` |
+| Sound effects (`sfx_*`) | ElevenLabs sound generation `eleven_text_to_sound_v2` (free tier): heart hum, blood drop, stone rising, bells, war, portcullis, frightened crowd, door, stair steps, crack, collapse, gauntlet on iron, the glimpse, gate opening, night ruin wind | `assets/audio/cinematic/sfx/sfx_*_0.mp3` |
+| Synthesised score | Code (`tools/cinematic/synth.py`, numpy/scipy): modal bells (the Veyr theme D–F–E–D–A), glass-harmonica tones, heartbeats, drones, risers, the Sundering's ring, a synthetic hall reverb | generated at mix time |
+| CC0 beds / foley | Already listed above: Fireplace loop (PagDev), Kenney RPG Audio footsteps, Kenney Impact Sounds concrete footsteps, wind whoosh loop (SketchMan3), Loopable Dungeon Ambience (JaggedStone), 100 CC0 SFX #2 thunder (rubberduck) | `assets/audio/_downloads/` |
+
+Prompts, durations and generation times for every ElevenLabs file: `assets/audio/cinematic/sfx/MANIFEST.json` and
+`tools/cinematic/sfx.json`. Free-tier limits met on the way (verified 2026-09-29): Music API 402, voice design 403,
+library voices 402 via the API, MP3 above 128 kbps 403.

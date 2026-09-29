@@ -26,3 +26,6 @@ assets/blender/
 .wolf/
 
 __pycache__/
+
+# third-party reference footage (study only, copyrighted): never commit
+reference video/

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>The Castle Remembers — title</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: 'Cormorant Garamond';
+        src: url('assets/cormorant-garamond-latin-600-normal.woff2') format('woff2');
+        font-weight: 600;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
+      /* the stage: everything that fades out together at the end */
+      #stage { position: absolute; inset: 0; }
+      /* warm haze where the gold condenses (the light of the crest) */
+      #haze {
+        position: absolute; left: 90px; top: 520px; width: 900px; height: 900px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(214,160,72,0.34) 0%, rgba(150,80,30,0.14) 38%, rgba(0,0,0,0) 70%);
+        filter: blur(20px); opacity: 0;
+      }
+      #crest-wrap { position: absolute; left: 0; right: 0; top: 640px; height: 240px; display: flex; justify-content: center; }
+      #crest { width: 240px; height: 240px; filter: drop-shadow(0 0 18px rgba(230,170,70,0.55)); opacity: 0; }
+      .line-wrap { position: absolute; left: 0; right: 0; display: flex; justify-content: center; }
+      #l1-wrap { top: 960px; }
+      #l2-wrap { top: 1100px; }
+      .line {
+        font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 116px; line-height: 1; white-space: nowrap;
+        letter-spacing: 0.15em; padding-left: 0.15em;
+        background-image: linear-gradient(100deg, #6e4a1c 0%, #c9974a 22%, #f3dca0 38%, #fff6d8 46%, #e2b865 55%, #9a6a2a 78%, #5a3a14 100%);
+        background-size: 300% 100%; background-position: 100% 0;
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        filter: drop-shadow(0 0 10px rgba(220,150,60,0.35));
+        opacity: 0;
+      }
+      #rule {
+        position: absolute; left: 50%; top: 1244px; width: 520px; margin-left: -260px; height: 2px;
+        background: linear-gradient(90deg, rgba(200,150,70,0), rgba(230,190,110,0.9), rgba(200,150,70,0));
+        transform-origin: 50% 50%; opacity: 0;
+      }
+      .ember { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #ffcf7a; box-shadow: 0 0 10px 3px rgba(255,170,70,0.7); opacity: 0; }
+      #black { position: absolute; inset: 0; background: #000; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="4" data-fps="24">
+      <section id="title-card" class="clip" data-start="0" data-duration="4" data-track-index="0" style="position:absolute;inset:0;">
+        <div id="stage">
+          <div id="haze"></div>
+          <div id="embers"></div>
+          <div id="crest-wrap"><img id="crest" src="assets/crest.svg" alt="" /></div>
+          <div id="l1-wrap" class="line-wrap"><div id="l1" class="line">THE CASTLE</div></div>
+          <div id="l2-wrap" class="line-wrap"><div id="l2" class="line">REMEMBERS</div></div>
+          <div id="rule"></div>
+        </div>
+        <div id="black"></div>
+      </section>
+    </div>
+    <script>
+      // Timing (seconds, local to the title = film 62.0 s): bells of the score at 0.9 (crest), 1.5 (THE CASTLE),
+      // 2.05 (REMEMBERS); a light runs across the gold 2.2-3.15; fade to black 3.25-4.0.
+      const tl = gsap.timeline({ paused: true });
+      // seeded embers (deterministic: no Math.random)
+      let seed = 7;
+      const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      const host = document.getElementById('embers');
+      for (let i = 0; i < 34; i++) {
+        const e = document.createElement('div');
+        e.className = 'ember';
+        e.id = 'ember-' + i;
+        const x = 240 + rnd() * 600, y = 1000 + rnd() * 420, s = 3 + rnd() * 5;
+        e.style.left = x + 'px'; e.style.top = y + 'px'; e.style.width = s + 'px'; e.style.height = s + 'px';
+        host.appendChild(e);
+        const t0 = 0.6 + rnd() * 2.2, life = 1.2 + rnd() * 1.4;
+        tl.fromTo(e, { opacity: 0, y: 0, x: 0 }, { opacity: 0.9, duration: life * 0.3, ease: 'sine.out' }, t0);
+        tl.to(e, { y: -260 - rnd() * 360, x: (rnd() - 0.5) * 120, duration: life, ease: 'none' }, t0);
+        tl.to(e, { opacity: 0, duration: life * 0.5, ease: 'sine.in' }, t0 + life * 0.5);
+      }
+      tl.fromTo('#haze', { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 1.4, ease: 'sine.out' }, 0.25);
+      tl.fromTo('#crest', { opacity: 0, scale: 1.12, filter: 'blur(14px) drop-shadow(0 0 30px rgba(230,170,70,0.9))' },
+        { opacity: 1, scale: 1, filter: 'blur(0px) drop-shadow(0 0 18px rgba(230,170,70,0.55))', duration: 0.7, ease: 'power2.out' }, 0.9);
+      tl.fromTo('#l1', { opacity: 0, scaleX: 1.22, scaleY: 1.06, filter: 'blur(10px) drop-shadow(0 0 10px rgba(220,150,60,0.35))' },
+        { opacity: 1, scaleX: 1, scaleY: 1, filter: 'blur(0px) drop-shadow(0 0 10px rgba(220,150,60,0.35))', duration: 0.8, ease: 'power3.out' }, 1.5);
+      tl.fromTo('#l2', { opacity: 0, scaleX: 1.22, scaleY: 1.06, filter: 'blur(10px) drop-shadow(0 0 10px rgba(220,150,60,0.35))' },
+        { opacity: 1, scaleX: 1, scaleY: 1, filter: 'blur(0px) drop-shadow(0 0 10px rgba(220,150,60,0.35))', duration: 0.8, ease: 'power3.out' }, 2.05);
+      tl.fromTo('#rule', { opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.6, ease: 'power2.out' }, 2.2);
+      tl.fromTo('.line', { backgroundPosition: '100% 0' }, { backgroundPosition: '0% 0', duration: 0.95, ease: 'sine.inOut' }, 2.2);
+      tl.fromTo('#black', { opacity: 0 }, { opacity: 1, duration: 0.75, ease: 'sine.in' }, 3.25);
+      window.__timelines['main'] = tl;
+    </script>
+  </body>
+</html>

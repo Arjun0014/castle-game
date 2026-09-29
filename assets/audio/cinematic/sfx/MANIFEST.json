@@ -1,0 +1,227 @@
+{
+ "t_cello_0.mp3": {
+  "id": "t_cello",
+  "prompt": "Solo cello playing a slow mournful melody in D minor, long bowed notes, intimate, dark cathedral reverb, no percussion, no other instruments",
+  "duration": 8,
+  "influence": 0.7,
+  "generated": "2026-09-29T07:04:36.937Z",
+  "bytes": 129193,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "t_strings_0.mp3": {
+  "id": "t_strings",
+  "prompt": "Orchestral string section slowly swelling on a sustained D minor chord, warm and reverent, cathedral reverb, no percussion, no melody",
+  "duration": 8,
+  "influence": 0.7,
+  "generated": "2026-09-29T07:04:39.599Z",
+  "bytes": 129193,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "t_choir_0.mp3": {
+  "id": "t_choir",
+  "prompt": "Low wordless choir singing a sustained ahh on a D minor chord, sacred and ancient, large stone hall reverb, no instruments",
+  "duration": 8,
+  "influence": 0.7,
+  "generated": "2026-09-29T07:04:41.749Z",
+  "bytes": 129193,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "t_strings_minor_0.mp3": {
+  "id": "t_strings_minor",
+  "prompt": "Dark sad orchestral strings holding a sustained minor chord of D, F and A, low cellos and violas, sul tasto, cathedral reverb, no percussion, no melody",
+  "duration": 10,
+  "influence": 0.75,
+  "generated": "2026-09-29T07:07:17.609Z",
+  "bytes": 160958,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "t_tremolo_0.mp3": {
+  "id": "t_tremolo",
+  "prompt": "Low tremolo strings, dark and anxious, building dread in D minor, cinematic, no percussion",
+  "duration": 10,
+  "influence": 0.7,
+  "generated": "2026-09-29T07:07:21.165Z",
+  "bytes": 160958,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "t_brass_0.mp3": {
+  "id": "t_brass",
+  "prompt": "Ominous low brass swell, horns and trombones, dark dissonant minor chord rising slowly, cinematic, no percussion",
+  "duration": 7,
+  "influence": 0.7,
+  "generated": "2026-09-29T07:07:23.022Z",
+  "bytes": 112893,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "t_wardrums_0.mp3": {
+  "id": "t_wardrums",
+  "prompt": "Distant slow war drums echoing across a valley at night, heavy low toms, a vast army approaching, big natural reverb, no melody",
+  "duration": 10,
+  "influence": 0.7,
+  "generated": "2026-09-29T07:07:24.960Z",
+  "bytes": 160958,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "t_swell_0.mp3": {
+  "id": "t_swell",
+  "prompt": "Massive dark orchestral and choir crescendo rising to a shattering climax in D minor, cinematic, then stops",
+  "duration": 6,
+  "influence": 0.7,
+  "generated": "2026-09-29T07:07:27.140Z",
+  "bytes": 97010,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "t_hit_0.mp3": {
+  "id": "t_hit",
+  "prompt": "Huge deep cinematic orchestral impact hit with sub boom and long dark reverb tail",
+  "duration": 4,
+  "influence": 0.7,
+  "generated": "2026-09-29T07:07:28.805Z",
+  "bytes": 65245,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "t_cello2_0.mp3": {
+  "id": "t_cello2",
+  "prompt": "Solo cello lament, a slow descending melody in D minor, long sustained notes, lonely, very reverberant stone hall, no other instruments",
+  "duration": 10,
+  "influence": 0.75,
+  "generated": "2026-09-29T07:07:30.815Z",
+  "bytes": 160958,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_heart_hum_0.mp3": {
+  "id": "sfx_heart_hum",
+  "prompt": "Deep resonant hum of an enormous ancient stone relic buried in a cavern, low and alive, slowly pulsing like a heartbeat, no music",
+  "duration": 7,
+  "influence": 0.6,
+  "generated": "2026-09-29T07:07:32.760Z",
+  "bytes": 112893,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_drop_0.mp3": {
+  "id": "sfx_drop",
+  "prompt": "A single drop of blood falling onto a stone surface and ringing faintly like glass, vast cavern echo, close, no music",
+  "duration": 3,
+  "influence": 0.65,
+  "generated": "2026-09-29T07:07:34.279Z",
+  "bytes": 48945,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_stone_rise_0.mp3": {
+  "id": "sfx_stone_rise",
+  "prompt": "Time-lapse of a castle being built: heavy stone blocks grinding and thudding into place in rapid succession, rising rumble, no music",
+  "duration": 6,
+  "influence": 0.6,
+  "generated": "2026-09-29T07:07:36.104Z",
+  "bytes": 97010,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_bells_peal_0.mp3": {
+  "id": "sfx_bells_peal",
+  "prompt": "Distant medieval crowd cheering and castle church bells pealing joyfully at dusk, far away, no music",
+  "duration": 6,
+  "influence": 0.6,
+  "generated": "2026-09-29T07:07:38.290Z",
+  "bytes": 97010,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_war_0.mp3": {
+  "id": "sfx_war",
+  "prompt": "War horns blowing across a valley at night, a vast army, distant shouting and clashing, fires roaring, no music",
+  "duration": 5,
+  "influence": 0.6,
+  "generated": "2026-09-29T07:07:40.406Z",
+  "bytes": 81128,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_portcullis_0.mp3": {
+  "id": "sfx_portcullis",
+  "prompt": "Heavy iron portcullis chains rattling fast as the gate drops, then slamming into stone with a massive iron crash, echo in a stone passage",
+  "duration": 4,
+  "influence": 0.65,
+  "generated": "2026-09-29T07:07:42.285Z",
+  "bytes": 65245,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_crowd_fear_0.mp3": {
+  "id": "sfx_crowd_fear",
+  "prompt": "Frightened crowd murmuring and pleading in a stone gate passage, muffled voices, shuffling, torches crackling, no music",
+  "duration": 4,
+  "influence": 0.6,
+  "generated": "2026-09-29T07:07:44.114Z",
+  "bytes": 65245,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_door_close_0.mp3": {
+  "id": "sfx_door_close",
+  "prompt": "Small heavy wooden door pushed shut with a dull thud and an iron latch clicking, stone corridor, quiet and close",
+  "duration": 2,
+  "influence": 0.65,
+  "generated": "2026-09-29T07:07:45.563Z",
+  "bytes": 33062,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_steps_stair_0.mp3": {
+  "id": "sfx_steps_stair",
+  "prompt": "Slow heavy armored footsteps descending a stone spiral staircase, a long cloak dragging, deep echo, no music",
+  "duration": 4,
+  "influence": 0.6,
+  "generated": "2026-09-29T07:07:47.305Z",
+  "bytes": 65245,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_crack_0.mp3": {
+  "id": "sfx_crack",
+  "prompt": "Old gilded varnish and glass crazing: a fast spreading crackle like ice cracking across a frozen lake, crisp and close",
+  "duration": 3,
+  "influence": 0.65,
+  "generated": "2026-09-29T07:07:49.756Z",
+  "bytes": 48945,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_collapse_0.mp3": {
+  "id": "sfx_collapse",
+  "prompt": "Massive stone castle towers collapsing, huge masonry falling and rumbling, debris, deep and distant",
+  "duration": 5,
+  "influence": 0.6,
+  "generated": "2026-09-29T07:07:51.653Z",
+  "bytes": 81128,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_glove_iron_0.mp3": {
+  "id": "sfx_glove_iron",
+  "prompt": "A leather gloved hand pressed slowly against cold rusted iron, a faint metallic creak, very close",
+  "duration": 2,
+  "influence": 0.65,
+  "generated": "2026-09-29T07:07:53.136Z",
+  "bytes": 33062,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_glimpse_0.mp3": {
+  "id": "sfx_glimpse",
+  "prompt": "Sudden burst of a living medieval castle gate at night: torches roaring, crowd voices, horses, banners flapping in wind",
+  "duration": 2,
+  "influence": 0.6,
+  "generated": "2026-09-29T07:07:54.570Z",
+  "bytes": 33062,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_gate_open_0.mp3": {
+  "id": "sfx_gate_open",
+  "prompt": "Enormous ancient wooden castle gate groaning open slowly on rusted iron hinges, deep creaking, stone echo",
+  "duration": 5,
+  "influence": 0.65,
+  "generated": "2026-09-29T07:07:56.825Z",
+  "bytes": 81128,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ },
+ "sfx_night_ruin_0.mp3": {
+  "id": "sfx_night_ruin",
+  "prompt": "Cold night wind through ruined stone battlements, soft whistling, distant owl, desolate, no music",
+  "duration": 8,
+  "influence": 0.55,
+  "generated": "2026-09-29T07:07:58.935Z",
+  "bytes": 129193,
+  "source": "ElevenLabs sound generation (eleven_text_to_sound_v2), free tier"
+ }
+}

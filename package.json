@@ -31,10 +31,12 @@
     "assets:voice": "node tools/voice/gen_voice.mjs && python tools/voice/build_voice.py"
   },
   "dependencies": {
+    "@fontsource/eb-garamond": "^5.3.0",
     "three": "^0.186.1",
     "three-mesh-bvh": "^0.9.15"
   },
   "devDependencies": {
+    "@fontsource/cormorant-garamond": "^5.3.0",
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/extensions": "^4.5.1",
     "@types/three": "^0.186.0",
