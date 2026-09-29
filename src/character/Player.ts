@@ -181,6 +181,8 @@ export class Player {
 
   // ------------------------------------------------------------------ main update
   update(dt: number, input: Input, cam: CameraRig, world: CollisionWorld, tstate: TimeState, autoTarget: () => THREE.Vector3 | null) {
+    this.world = world;
+    this.tstate = tstate;
     this.stateTime += dt;
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
     this.invuln = Math.max(0, this.invuln - dt);
@@ -295,6 +297,8 @@ export class Player {
         const t = this.stateTime / DODGE.duration;
         const sp = (DODGE.distance / DODGE.duration) * (t < 0.7 ? 1.25 : 1.25 * (1 - (t - 0.7) / 0.3) + 0.2);
         hv.copy(this.dodgeDir).multiplyScalar(sp);
+        // the dash stops at an edge (like attack lunges): dodging is for fights, falling is for jumps
+        if (this.grounded && !world.hasFooting(this.pos.clone().addScaledVector(this.dodgeDir, 0.75), 1.2, tstate)) hv.set(0, 0, 0);
         this.invuln = this.stateTime > DODGE.iframes[0] && this.stateTime < DODGE.iframes[1] ? 0.05 : this.invuln;
         if (Math.floor(this.stateTime * 30) % 2 === 0) this.onAfterimage?.();
         if (this.stateTime >= DODGE.duration) {
@@ -688,7 +692,7 @@ export class Player {
       }
       if (!opts.guardBreak) {
         this.hp -= damage * BLOCK_DAMAGE_SCALE;
-        this.vel.addScaledVector(toAttacker, -(opts.knock ?? 1.5) * 0.6);
+        this.vel.addScaledVector(toAttacker, -this.ledgeSafeKnock(toAttacker.clone().negate(), (opts.knock ?? 1.5) * 0.6));
         this.anim.play(this.crouching ? 'crouch_block_impact' : 'block_impact', { speed: 1.6, fade: 0.04 });
         this.events.onBlock?.(false);
         if (this.hp <= 0) this.die();
@@ -704,12 +708,29 @@ export class Player {
     if (this.crouching && this.tryStandSafe) this.crouching = false;
     this.setState('hit');
     this.hitStun = heavy ? 0.62 : 0.34;
-    this.vel.set(0, this.vel.y, 0).addScaledVector(toAttacker, -(opts.knock ?? (heavy ? 4 : 2)));
+    this.vel.set(0, this.vel.y, 0).addScaledVector(toAttacker, -this.ledgeSafeKnock(toAttacker.clone().negate(), opts.knock ?? (heavy ? 4 : 2)));
     this.anim.play(heavy ? 'hit_heavy' : 'hit_light', { speed: heavy ? 1.2 : 1.5, fade: 0.05 });
     this.invuln = 0.22;
     return 'hit';
   }
   private tryStandSafe = false;
+  private world: CollisionWorld | null = null;
+  private tstate: TimeState = 'PRESENT';
+
+  /**
+   * Knockback never carries the hero over an edge into a void (the Kingsguard's kicks threw real-damage runs
+   * into the Present apartments' floor holes 4-5 times per fight). Walking or dodging into a hole still can.
+   */
+  private ledgeSafeKnock(dir: THREE.Vector3, amount: number) {
+    const w = this.world;
+    if (!w || amount <= 0.5) return amount;
+    for (const d of [0.9, 1.8]) {
+      const probe = this.pos.clone().addScaledVector(dir, d);
+      probe.y += 0.6;
+      if (!w.hasFooting(probe, 1.6, this.tstate) || w.inVoid(probe.clone().setY(this.pos.y - 0.3), this.tstate)) return amount * (d < 1 ? 0.12 : 0.35);
+    }
+    return amount;
+  }
 
   die() {
     if (this.state === 'dead') return;
