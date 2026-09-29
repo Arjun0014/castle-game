@@ -8,7 +8,6 @@ import type { TimeState } from '../levels/Materials';
 import type { Marker } from '../levels/Level';
 import type { EnemyTemplate } from '../assets/GameAssets';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
-import { Hints } from '../ui/Hints';
 import { FEEL } from '../combat/CombatData';
 import { Platform } from '../platform/Platform';
 
@@ -81,6 +80,8 @@ export class EnemyManager {
   private hitRegistry = new Set<string>();
   private sightT = 0;
   inCombat = false;
+  /** blows the hero has landed (tutorials) */
+  playerHits = 0;
   activeCount = 0;
   fissureCooldown = new Map<string, number>();
   remnants: Enemy[] = [];
@@ -586,18 +587,20 @@ export class EnemyManager {
     enc.triggered = true;
     enc.wave = 1;
     for (const e of enc.enemies) if (e.wave <= 1) e.activate();
+    this.g.signals.emit('encounter:start', { id: enc.id, boss: enc.bossFight || enc.finale, title: enc.title,
+      kinds: [...new Set(enc.enemies.map((e) => e.arch.id))] });
     if (enc.bossFight && !enc.finale) {
       const boss = enc.enemies.find((e) => e.arch.boss);
-      if (boss) { this.boss = boss; this.bossName = enc.title ?? this.bossName; }
+      if (boss) { this.boss = boss; this.bossName = enc.title ?? this.bossName; this.g.signals.emit('boss:start', { id: boss.arch.id }); }
       this.g.hud.message(enc.title ?? 'A GUARDIAN WAKES', boss?.arch.id === 'last_crown' ? "Aldren's imprint, wearing the Queen's face" : 'Echo of the royal guard', 3.5);
       this.g.audio.bossSting();
     }
     if (enc.finale) {
       this.g.hud.message('THE LAST MUSTER', 'The Gate Warden wakes', 3.5);
+      this.g.signals.emit('boss:start', { id: 'gate_warden' });
       this.g.audio.bossSting();
       this.g.pendingArenaLock = true;
     }
-    if (enc.tutorial) this.g.hud.prompt(Hints.combatTutorial(), 8);
   }
 
   private updateWaves(enc: Encounter) {
@@ -631,6 +634,8 @@ export class EnemyManager {
 
   private clear(enc: Encounter) {
     enc.cleared = true;
+    this.g.signals.emit('encounter:clear', { id: enc.id });
+    if (enc.surge) this.g.signals.emit('boss:dead', { id: this.boss?.arch.id ?? enc.id });
     if (enc.surge) {
       if (enc.finale) this.g.setArenaLock(false);
       this.g.time.gain(Math.max(0, 100 - this.g.time.charge) + 100, 'surge');
@@ -740,6 +745,7 @@ export class EnemyManager {
         }
         if (!hit) continue;
         this.hitRegistry.add(key);
+        this.playerHits++;
         p.hitsDone.add(index * 1000 + e.id);
         const cm = p.attack?.charge ? 1 + p.chargeLevel : 1; // the Crownbreaker's charge doubles its blow
         const res = e.takeHit(win.damage * cm, win.poise * cm, win.knock, p.pos, { knockdown: win.knockdown, guardBreak: win.guardBreak });
@@ -828,6 +834,7 @@ export class EnemyManager {
     this.g.fx.resonanceFrom(e.center.clone(), this.g.player, e.arch.reward);
     this.g.audio.release(e.center.clone());
     if (voidDeath) this.g.hud.prompt('Cast into the void.', 2);
+    this.g.signals.emit('kill', { arch: e.arch.id, boss: !!e.arch.boss, ranged: e.isRanged, voidDeath, execution: this.g.player.attack?.id === 'EXECUTE' });
     if (e.arch.boss) { /* surge handled by encounter clear */ }
   }
 
@@ -946,6 +953,7 @@ export class EnemyManager {
   /** The Last Crown's death sequence finished: the ending follows (Game.endGame). */
   onBossDefeated(e: Enemy) {
     this.killCount++;
+    this.g.signals.emit('boss:dead', { id: e.arch.id });
     this.g.time.gain(e.arch.reward, 'kill');
     this.g.schedule(4.5, () => this.g.endGame());
   }

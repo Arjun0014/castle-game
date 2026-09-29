@@ -28,6 +28,9 @@ import { Platform } from '../platform/Platform';
 import { TouchControls } from '../ui/TouchControls';
 import { promptText } from '../ui/Hints';
 import type { Threat } from '../ui/HUD';
+import { TargetAssist } from '../combat/TargetAssist';
+import { Signals } from './Signals';
+import { Objectives, type Learned } from './Objectives';
 
 /** Loading-screen sink: fraction 0..1 of the whole operation + what is happening. */
 export type LoadSink = (f: number, label: string) => void;
@@ -103,6 +106,17 @@ export class Game {
   loadLog: { floor: number; ms: number; assetsMs: number; buildMs: number; warmup: WarmupReport | null; released: string[] }[] = [];
 
   touch: TouchControls | null = null;
+  /** what the tutorials have seen the player do (kept across floors) */
+  learned: Learned = { moved: 0, looked: 0, hits: 0, guarded: false, dodged: false, shifted: false, sigil: false, resonance: false, heavy: false };
+  objectives!: Objectives;
+  /** level prompt ids now taught by the persistent tutorials (Objectives) instead of a timed prompt */
+  private static TAUGHT_PROMPTS = new Set(['T_MOVE', 'T_COMBAT', 'T_SHIFT']);
+  /** gameplay announcements for objectives / dialogue / tutorials (see Signals.ts) */
+  signals = new Signals();
+  /** soft combat camera (touch) + attack magnetism (all inputs) */
+  assist: TargetAssist;
+  /** `?camassist=0|1` pins the soft camera; otherwise it follows the input mode (touch only) */
+  camAssistPin: boolean | null = null;
   /** Adaptive resolution: multiplier on the device pixel-ratio cap (see updateDynRes). */
   renderScale = 1;
   dynResEnabled = true;
@@ -132,9 +146,12 @@ export class Game {
     if (opts.stage) {
       this.touch = new TouchControls(opts.stage, this.input);
       this.touch.onPause = () => { if (this.started && !this.finished) this.togglePause(); };
-      this.hud.onInteractText = (t) => this.touch?.setInteract(t);
+      this.hud.onInteractText = (t, title, off) => this.touch?.setInteract(t, title, off);
     }
     this.input.autoCrouch = Platform.isTouch;
+    const ca = new URLSearchParams(location.search).get('camassist');
+    if (ca === '0' || ca === '1') this.camAssistPin = ca === '1';
+    this.assist = new TargetAssist(() => this.enemyList(), () => this.level.collision, () => this.time.state);
     this.perf = new Perf(this.renderer);
     this.audio = new AudioFX({ muted: opts.muted });
     this.assets = new GameAssets(this.renderer, Math.min(8, this.renderer.capabilities.getMaxAnisotropy()));
@@ -307,6 +324,7 @@ export class Game {
     this.enemies = new EnemyManager(this);
     this.enemies.build(rigs);
     this.checkpoints = new Checkpoints(this);
+    this.objectives = new Objectives(this, this.learned);
     this.fractures = new Fractures(this);
     this.wireEvents();
     const spawn = this.level.marker('spawn', 'SPAWN');
@@ -351,6 +369,8 @@ export class Game {
   private unloadFloor() {
     this.autopilot = null;
     this.enemies.dispose();
+    this.checkpoints.dispose();
+    this.objectives.dispose();
     this.level.dispose();
     this.mats.dispose();
     this.atmo.clearShafts();
@@ -365,6 +385,7 @@ export class Game {
     this.hud.boss(null);
     this.hud.setChannel(false);
     this.player.lockTarget = null;
+    this.assist.reset();
   }
 
   /** Memory / residency snapshot (console: __game.memoryReport()). */
@@ -388,7 +409,7 @@ export class Game {
     const p = this.player;
     p.events.onChannelStart = () => {
       const c = this.time.canBegin(p);
-      if (!c.ok) { this.hud.deny(c.reason!); this.audio.deny(); return false; }
+      if (!c.ok) { this.hud.deny(c.reason!); this.audio.deny(); this.signals.emit('shift:deny', { reason: c.reason, at: 'begin' }); return false; }
       this.audio.channelStart();
       this.fx.channelStart(p.pos, this.time.other);
       return true;
@@ -397,7 +418,8 @@ export class Game {
     p.events.onChannelComplete = () => {
       this.fx.channelStop();
       const v = this.time.commit(p);
-      if (!v.ok) { this.audio.channelStop(); this.hud.deny(v.reason); this.audio.deny(); return; }
+      if (!v.ok) { this.audio.channelStop(); this.hud.deny(v.reason); this.audio.deny(); this.signals.emit('shift:deny', { reason: v.reason, at: 'commit' }); return; }
+      this.signals.emit('shift', { to: this.time.state, count: this.time.shiftCount });
       // the Last Crown's wards and bindings exist in one memory only: the hero's own shift breaks them
       for (const e of this.enemies.enemies) (e as { onPlayerShift?: () => void }).onPlayerShift?.();
     };
@@ -459,6 +481,7 @@ export class Game {
       this.hud.flash(to === 'PAST' ? '#ffd9a0' : '#bfe0ff', 0.55);
       this.rig.addShake(0.35);
       this.fx.shiftBurst(this.player.pos, to);
+      this.signals.emit('state', { to });
     };
     this.time.onGain = (amt, reason) => { if (reason !== 'hit') this.fx.resonance(this.player, amt); };
   }
@@ -597,17 +620,18 @@ export class Game {
     this.runTimers();
     const p = this.player;
     this.autopilot?.update(dt);
-    // lock-on
+    // lock-on (keyboard/mouse; the touch HUD relies on the soft camera instead)
     if (this.input.wasPressed('lock')) {
       if (p.lockTarget) p.lockTarget = null;
       else p.lockTarget = this.enemies.pickLockTarget(p.pos, this.rig.forward());
     }
     if (p.lockTarget && !p.lockTarget.alive) p.lockTarget = null;
     this.rig.lockTarget = p.lockTarget?.pos ?? null;
-    p.update(dt, this.input, this.rig, this.level.collision, this.time.state, () => this.enemies.autoTarget(p.pos, p.facing));
+    p.update(dt, this.input, this.rig, this.level.collision, this.time.state, (kind, wish) => this.assist.meleeTarget(kind, p.pos, wish, p.facing, this.t));
     this.enemies.update(dt);
     this.time.update(dt);
     this.checkpoints.update(dt);
+    this.objectives.update(dt);
     this.fractures.update(dt);
     this.updateVoidAndPrompts();
     // engage the finale lock only once the player stands on the hall floor clear of the hatch
@@ -625,7 +649,14 @@ export class Game {
     this.sun.target.position.copy(p.pos);
     this.rig.inCombat = this.enemies.inCombat;
     this.rig.pullWant = this.fightPull();
-    this.rig.update(dt, p.pos, this.input.consumeLook(), this.level.collision, this.time.state, p.crouching);
+    const look = this.input.consumeLook();
+    this.assist.cameraEnabled = (this.camAssistPin ?? Platform.isTouch) && !p.lockTarget && p.alive && !this.autopilot;
+    this.rig.yaw += this.assist.cameraYaw({
+      dt, now: this.t, yaw: this.rig.yaw, halfHFov: Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * this.camera.aspect),
+      playerPos: p.pos, camPos: this.camera.position, wish: this.wishWorld(), manual: Math.abs(look.dx) + Math.abs(look.dy) > 1e-4,
+    });
+    this.learned.looked += Math.abs(look.dx) + Math.abs(look.dy);
+    this.rig.update(dt, p.pos, look, this.level.collision, this.time.state, p.crouching);
     this.updateThreats();
     // hero light: above and slightly toward the camera, so what the player faces is lit
     const toCam = this.camera.position.clone().sub(p.pos).setY(0).normalize();
@@ -658,10 +689,20 @@ export class Game {
     if (this.touch && Platform.isTouch) {
       this.touch.update({
         channel: p.isChanneling ? p.channelTime / p.channelDuration : 0,
-        locked: !!p.lockTarget, canShift: this.time.unlocked && this.time.charge >= PER_SHIFT, guarding: p.state === 'block',
+        canShift: this.time.unlocked && this.time.charge >= PER_SHIFT, guarding: p.state === 'block',
       });
     }
     if (this.debug) this.hud.debugEl.textContent = this.debugText();
+  }
+
+  /** every enemy of the floor (placed + fissure remnants) */
+  *enemyList() { if (!this.enemies) return; yield* this.enemies.enemies; yield* this.enemies.remnants; }
+  private _wish = new THREE.Vector3();
+  /** the stick / WASD direction in world space (camera-relative), zero when idle */
+  private wishWorld() {
+    const ax = this.input.moveAxes();
+    const f = this.rig.forward(this._tv);
+    return this._wish.set(f.x * ax.y - f.z * ax.x, 0, f.z * ax.y + f.x * ax.x);
   }
 
   private ambCtx: AmbientContext = { state: 'PRESENT', openSky: 0, fire: 0, underground: 0, inCombat: false };
@@ -710,7 +751,7 @@ export class Game {
     // prompt volumes
     const head = p.pos.clone().add(new THREE.Vector3(0, 0.9, 0));
     for (const m of this.level.markersOf('prompt')) {
-      if (!m.box || this.promptsShown.has(m.name)) continue;
+      if (!m.box || this.promptsShown.has(m.name) || Game.TAUGHT_PROMPTS.has(m.props.pid ?? m.name)) continue;
       const st = m.props.state;
       if (st !== 'BOTH' && st !== this.time.state) continue;
       if (!m.box.containsPoint(head)) continue;
@@ -803,11 +844,13 @@ export class Game {
 
   private onPlayerDeath() {
     this.deaths++;
+    this.signals.emit('hero:death', { deaths: this.deaths });
     this.audio.death();
     this.schedule(1.6, () => this.hud.fade(true));
     this.schedule(2.8, () => {
       this.perf.mark('respawn');
       this.checkpoints.respawn();
+      this.signals.emit('hero:respawn', {});
       this.hud.fade(false);
       this.hud.message('THE CASTLE REMEMBERS YOU', 'Returned to the last Blood Sigil', 3);
     });

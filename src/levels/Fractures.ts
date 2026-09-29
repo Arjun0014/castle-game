@@ -85,6 +85,7 @@ export class Fractures {
   private settle(fr: FractureSpec) {
     const g = this.g;
     g.level.setFlag(fr.flag);
+    g.signals.emit('fracture', { id: fr.flag });
     if (fr.impact) {
       const c = fr.impact.getCenter(new THREE.Vector3());
       for (let i = 0; i < 6; i++) g.fx.dust(c.clone().add(new THREE.Vector3((Math.random() - 0.5) * 5, 0.2, (Math.random() - 0.5) * 5)), 10);

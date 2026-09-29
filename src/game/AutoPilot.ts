@@ -10,7 +10,7 @@ import type { TimeState } from '../levels/Materials';
 type Step =
   | { go: [number, number, number]; tol?: number; crouch?: boolean; sprint?: boolean; note?: string; drop?: boolean }
   | { shift: TimeState; note?: string }
-  | { interact: string }
+  | { interact: string; again?: boolean; note?: string }
   | { fight: string[]; radius?: number; note?: string }
   | { clear: string; timeout?: number }
   | { wait: number }
@@ -112,7 +112,7 @@ export const ROUTE: Step[] = [
  * Floor 2 "Complicity" — as built by tools/blender/floor02_layout.py (Blender coordinates). Critical path:
  * E1 → CP1 → G1 Past → E1b → E3 → timber stair → mezzanine → G2 Present → slope → CP2 → Wardens' Walk → E4 →
  * truss ramp → ridge (E6) → tower (CP3) → tower top → south walk → G3 Past → E7 → crown bridge → G4 Present →
- * loft → G5 Past → E8 → FR1 (winch) → G6 Present → drop → E9 → CP4 → chandelier bridge → E10 Kingsguard →
+ * loft → G5 Past → E8 → FR1 (winch) → G6 Present → drop → E9 → CP1 again → chandelier bridge → E10 Kingsguard →
  * CP5 → G7 Past → conduit stair → bell chamber → exit.
  */
 export const ROUTE2: Step[] = [
@@ -187,10 +187,10 @@ export const ROUTE2: Step[] = [
   { go: [-7.8, 74.2, 9.6], note: 'drop onto the heap', drop: true },
   { fight: ['E9'], radius: 12, note: 'E9 wraiths over the void' },
   { go: [-10.3, 72.5, 8], tol: 0.9, note: 'off the heap, west side' },
-  { go: [-9.2, 65.3, 8] },
-  { interact: 'CP4' },
   { go: [-9.2, 64.2, 8] },
   { go: [0, 64.4, 8], note: 'south strip, clear of the piers' },
+  { go: [0, 63.6, 8] },
+  { interact: 'CP1', again: true, note: 'rekindle the antechamber sigil (it also serves the return)' },
   { go: [0, 67.2, 8], tol: 0.4 },
   { go: [0, 72, 8.3], tol: 0.5, note: 'the fallen chandelier' },
   { go: [0, 77.4, 8], tol: 0.5 },
@@ -393,7 +393,7 @@ export class AutoPilot {
       this.release();
       if (this.stepT > 0.2 && this.stepT < 0.3) inp.tapVirtual('interact');
       if (this.stepT > 2.4) {
-        if (g.checkpoints.activated.has(step.interact)) { this.note('sigil ' + step.interact + ' activated'); this.next(); }
+        if (step.again ? g.checkpoints.save?.cid === step.interact : g.checkpoints.activated.has(step.interact)) { this.note('sigil ' + step.interact + ' activated'); this.next(); }
         else this.fail('could not activate sigil ' + step.interact);
       }
       return;

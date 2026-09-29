@@ -2,19 +2,24 @@ import type { Action, Input } from '../game/Input';
 import { Platform } from '../platform/Platform';
 
 /**
- * Touch HUD (shown only while Platform.inputMode === 'touch').
+ * Touch HUD (shown only while Platform.inputMode === 'touch'). Layout (session 7, portrait thumbs):
+ *
+ *                                   (SHIFT)   temporal, rare: top of the right column, out of the prime zone
+ *                                   (JUMP)
+ *       [ free camera pocket ]      (HEAVY)   above Attack along the right edge
+ *                   (GUARD)                   up-left of Attack: slides onto Attack (bash) / Heavy (kick)
+ *        (DODGE)          [ATTACK]            Attack = the right thumb's resting spot; Dodge = a flick left
  *
  *   left thumb   floating joystick (lower-left zone); pushing to the rim sprints
- *   right thumb  drag any empty area to turn the camera
- *   buttons      Light (large) with Heavy · Guard · Dodge · Jump in an arc around it, Hold-to-Shift above,
- *                a small lock-on toggle, a contextual Interact pill, pause
+ *   right thumb  drag any empty area - the pocket above Guard / left of the column is kept clear for it
  *
+ * The soft combat camera (combat/TargetAssist) keeps the important enemy framed, so there is no lock-on button.
  * Every pointer is owned by exactly one role (stick / look / button) from pointerdown to pointerup, and holds
  * are registered with Input per pointer id, so one finger can never release or cancel another's input:
  * move + look, move + attack, move + guard, look + attack all work together.
  *
  * Guard + attack with one thumb: a finger that went down on Guard keeps guarding while it slides; sliding onto
- * Light (shield bash) or Heavy (kick) fires that attack once. A second finger tapping them works too.
+ * Attack (shield bash) or Heavy (kick) fires that attack once. A second finger tapping them works too.
  */
 type Role =
   | { kind: 'stick'; ox: number; oy: number }
@@ -22,14 +27,14 @@ type Role =
   | { kind: 'button'; action: Action; el: HTMLElement; slid: Set<HTMLElement> };
 
 const ICONS: Record<string, string> = {
-  light: '<path d="M6 42 L38 10 L42 6 L40 12 L10 44 Z" /><path d="M9 33 l8 8 M4 44 l4 -4" stroke-width="3"/>',
-  heavy: '<path d="M8 40 L34 8 L42 4 L40 12 L12 42 Z" /><path d="M4 30 l16 16 M14 26 L22 34" stroke-width="3"/><path d="M40 30 a14 14 0 0 1 -12 14" fill="none" stroke-width="2.5"/>',
-  block: '<path d="M24 4 L41 10 L39 26 C37 36 31 42 24 45 C17 42 11 36 9 26 L7 10 Z" /><path d="M24 11 V38 M15 20 H33" stroke-width="2.5" fill="none"/>',
-  dodge: '<path d="M8 30 C16 14 30 10 42 14" fill="none" stroke-width="4"/><path d="M36 6 L44 14 L34 20" fill="none" stroke-width="4"/><path d="M6 38 h10 M10 44 h8" stroke-width="3"/>',
-  jump: '<path d="M10 30 L24 14 L38 30" fill="none" stroke-width="5"/><path d="M24 16 V42" stroke-width="4"/>',
-  shift: '<path d="M14 6 H34 M14 42 H34 M16 6 C16 18 32 20 32 24 C32 28 16 30 16 42 M32 6 C32 18 16 20 16 24 C16 28 32 30 32 42" fill="none" stroke-width="3"/>',
-  lock: '<circle cx="24" cy="24" r="12" fill="none" stroke-width="3"/><path d="M24 4 V14 M24 34 V44 M4 24 H14 M34 24 H44" stroke-width="3"/>',
+  light: '<path d="M9 39 L35 13 L41 7 L39 14 L13 42 Z"/><path d="M8 30 l10 10 M5 43 l4 -4" stroke-width="3" fill="none"/>',
+  heavy: '<path d="M7 41 L32 9 L41 5 L38 14 L11 44 Z"/><path d="M4 31 l14 14 M13 27 L21 35" stroke-width="3" fill="none"/><path d="M40 27 a15 15 0 0 1 -13 16" fill="none" stroke-width="2.6"/><path d="M44 21 a21 21 0 0 1 -9 22" fill="none" stroke-width="1.8" opacity=".6"/>',
+  block: '<path d="M11 40 L37 8" stroke-width="4" fill="none"/><path d="M6 33 l9 9" stroke-width="3.2" fill="none"/><path d="M26 7 C33 9 38 12 41 15" stroke-width="2.4" fill="none" opacity=".75"/><path d="M42 21 C43 27 41 33 37 38" stroke-width="2.4" fill="none" opacity=".75"/>',
+  dodge: '<path d="M9 31 C16 17 29 12 41 15" fill="none" stroke-width="3.6"/><path d="M34 8 L42 15 L33 21" fill="none" stroke-width="3.6"/><path d="M5 38 h11 M9 44 h9" stroke-width="2.6" opacity=".7"/>',
+  jump: '<path d="M11 28 L24 15 L37 28" fill="none" stroke-width="4"/><path d="M24 17 V41" stroke-width="3.4"/><path d="M15 44 h18" stroke-width="2.4" opacity=".6"/>',
+  shift: '<path d="M14 6 H34 M14 42 H34 M16 6 C16 18 32 20 32 24 C32 28 16 30 16 42 M32 6 C32 18 16 20 16 24 C16 28 32 30 32 42" fill="none" stroke-width="2.8"/><path d="M20 38 C22 33 26 33 28 38 Z" stroke-width="1"/>',
   pause: '<path d="M15 10 H21 V38 H15 Z M27 10 H33 V38 H27 Z"/>',
+  look: '<path d="M10 24 a14 14 0 0 1 28 0" fill="none" stroke-width="2.6"/><path d="M34 18 l4 6 l-7 1" fill="none" stroke-width="2.6"/><path d="M38 28 a14 14 0 0 1 -28 0" fill="none" stroke-width="2.6" opacity=".55"/>',
 };
 
 const BUTTONS: { action: Action; icon: string; label: string; cls: string }[] = [
@@ -39,8 +44,11 @@ const BUTTONS: { action: Action; icon: string; label: string; cls: string }[] = 
   { action: 'dodge', icon: 'dodge', label: 'DODGE', cls: 't-dodge' },
   { action: 'jump', icon: 'jump', label: 'JUMP', cls: 't-jump' },
   { action: 'shift', icon: 'shift', label: 'SHIFT', cls: 't-shift' },
-  { action: 'lock', icon: 'lock', label: '', cls: 't-lock' },
 ];
+
+/** the look hint fades for good once the player has turned the camera this far (px of drag) */
+const LOOK_LEARNED_PX = 900;
+const LOOK_KEY = 'tcr-look-learned';
 
 const svg = (id: string) => `<svg viewBox="0 0 48 48" aria-hidden="true">${ICONS[id]}</svg>`;
 
@@ -64,13 +72,17 @@ export class TouchControls {
       <div class="t-stick-home"></div>
       <div class="t-stick"><div class="t-knob"></div></div>
       <div class="t-cluster">${BUTTONS.map((b) => `<div class="t-btn ${b.cls}" data-a="${b.action}">${svg(b.icon)}${b.label ? `<span>${b.label}</span>` : ''}</div>`).join('')}</div>
-      <div class="t-interact t-btn" data-a="interact"><span></span></div>
+      <div class="t-look-hint">${svg('look')}<span>LOOK</span></div>
+      <div class="t-interact t-btn" data-a="interact"><b></b><span></span></div>
       <div class="t-pause" role="button" aria-label="Pause">${svg('pause')}</div>`;
     stage.appendChild(root);
     this.root = root;
     this.stickBase = root.querySelector('.t-stick') as HTMLElement;
     this.stickKnob = root.querySelector('.t-knob') as HTMLElement;
     this.interactEl = root.querySelector('.t-interact') as HTMLElement;
+    this.lookHint = root.querySelector('.t-look-hint') as HTMLElement;
+    try { this.lookLearned = localStorage.getItem(LOOK_KEY) === '1'; } catch { /* storage unavailable */ }
+    this.lookHint.classList.toggle('gone', this.lookLearned);
     root.querySelectorAll<HTMLElement>('.t-btn').forEach((el) => this.buttons.set(el.dataset.a as Action, el));
     this.shiftRing = document.createElement('i');
     this.shiftRing.className = 't-ring';
@@ -91,17 +103,32 @@ export class TouchControls {
     this.root.style.setProperty('--tu', String(Math.max(0.82, Math.min(1.3, Platform.width / 400))));
   }
 
-  /** Contextual interact pill (null hides it). */
-  setInteract(text: string | null) {
+  private lookHint: HTMLElement;
+  private lookLearned = false;
+  private lookPx = 0;
+
+  /**
+   * Contextual interact pill: `title` names the thing ("Blood Sigil"), `text` the action ("Activate
+   * Checkpoint"); `disabled` shows it greyed (a sigil still recovering) and taps do nothing.
+   */
+  setInteract(text: string | null, title = '', disabled = false) {
     this.interactEl.classList.toggle('on', !!text);
-    if (text) (this.interactEl.firstElementChild as HTMLElement).textContent = text;
+    this.interactEl.classList.toggle('off', !!text && disabled);
+    if (text) {
+      (this.interactEl.children[0] as HTMLElement).textContent = title;
+      (this.interactEl.children[1] as HTMLElement).textContent = text;
+    }
   }
 
-  /** Per-frame HUD state: guard/shift feedback, lock-on state, shift channel ring. */
-  update(state: { channel: number; locked: boolean; canShift: boolean; guarding: boolean }) {
+  /** Pulse one button (tutorial: the first shift, the first guard ...); null clears. */
+  highlight(action: Action | null) {
+    for (const [a, el] of this.buttons) el.classList.toggle('teach', a === action);
+  }
+
+  /** Per-frame HUD state: guard/shift feedback, shift channel ring. */
+  update(state: { channel: number; canShift: boolean; guarding: boolean }) {
     this.shiftRing.style.setProperty('--p', String(state.channel));
     this.buttons.get('shift')!.classList.toggle('dim', !state.canShift);
-    this.buttons.get('lock')!.classList.toggle('active', state.locked);
     this.buttons.get('block')!.classList.toggle('held', state.guarding);
     this.buttons.get('light')!.classList.toggle('bash', state.guarding);
     this.buttons.get('heavy')!.classList.toggle('bash', state.guarding);
@@ -116,7 +143,7 @@ export class TouchControls {
     try { this.root.setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ }
     const btn = (e.target as HTMLElement).closest('.t-btn') as HTMLElement | null;
     const src = 'touch:' + e.pointerId;
-    if (btn && btn.dataset.a && (btn !== this.interactEl || btn.classList.contains('on'))) {
+    if (btn && btn.dataset.a && (btn !== this.interactEl || (btn.classList.contains('on') && !btn.classList.contains('off')))) {
       const action = btn.dataset.a as Action;
       this.input.press(action, src);
       btn.classList.add('down');
@@ -154,6 +181,14 @@ export class TouchControls {
       const k = 2.6 / Math.max(240, Platform.width);
       this.input.virtualLook.dx += (e.clientX - role.x) * k;
       this.input.virtualLook.dy += (e.clientY - role.y) * k * 0.75;
+      if (!this.lookLearned) {
+        this.lookPx += Math.abs(e.clientX - role.x) + Math.abs(e.clientY - role.y);
+        if (this.lookPx > LOOK_LEARNED_PX) {
+          this.lookLearned = true;
+          this.lookHint.classList.add('gone');
+          try { localStorage.setItem(LOOK_KEY, '1'); } catch { /* storage unavailable */ }
+        }
+      }
       role.x = e.clientX; role.y = e.clientY;
     } else if (role.action === 'block') {
       // slide from Guard onto an attack button: bash (light) / kick (heavy), once per entry, guard stays held

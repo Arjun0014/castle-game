@@ -32,7 +32,7 @@ export class HUD {
   reticle: HTMLElement;
   private threatEls: HTMLElement[] = [];
   /** touch HUD hook: contextual interact pill */
-  onInteractText?: (text: string | null) => void;
+  onInteractText?: (text: string | null, title: string, disabled: boolean) => void;
   private promptTimer = 0;
   private messageTimer = 0;
   private denyTimer = 0;
@@ -48,6 +48,9 @@ export class HUD {
         <div class="charge-label">RESONANCE</div>
       </div>
       <div class="channel"><div class="channel-track"><div class="channel-fill"></div></div><div class="channel-text">SHIFTING</div></div>
+      <div class="objective"><i>◆</i><span></span></div>
+      <div class="subtitle"><span></span></div>
+      <div class="tutorial"><b></b><span></span></div>
       <div class="prompt"></div>
       <div class="interact"></div>
       <div class="message"></div>
@@ -81,6 +84,12 @@ export class HUD {
     this.pauseEl = q('.pause');
     this.endEl = q('.end-card');
     this.reticle = q('.reticle');
+    this.objectiveEl = q('.objective');
+    this.subtitleEl = q('.subtitle');
+    this.tutorialEl = q('.tutorial');
+    this.guideEl = document.createElement('div');
+    this.guideEl.className = 'offscreen guide';
+    root.appendChild(this.guideEl);
     for (let i = 0; i < THREAT_MARKERS; i++) {
       const el = document.createElement('div');
       el.className = 'offscreen';
@@ -106,6 +115,72 @@ export class HUD {
       el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(ang * 180 / Math.PI).toFixed(1)}deg)`;
       el.className = 'offscreen on' + (t.ranged ? ' ranged' : '') + (t.hot ? ' hot' : '');
     }
+  }
+
+  private objectiveEl!: HTMLElement;
+  private subtitleEl!: HTMLElement;
+  private tutorialEl!: HTMLElement;
+  private guideEl!: HTMLElement;
+  private objectiveText: string | null = null;
+  private tutorialKey = '';
+  private noticeTimer = 0;
+  private notice: { title: string; text: string } | null = null;
+  private persist: { title: string; text: string } | null = null;
+
+  /** The current objective (one short line, top-left). `fresh` = a new objective replaced the old one. */
+  objective(text: string | null, fresh = false) {
+    if (text === this.objectiveText) return;
+    this.objectiveText = text;
+    const el = this.objectiveEl;
+    if (!text) { el.classList.remove('on'); return; }
+    (el.lastElementChild as HTMLElement).textContent = text;
+    el.classList.add('on');
+    if (fresh) { el.classList.remove('fresh'); void el.offsetWidth; el.classList.add('fresh'); }
+  }
+
+  /**
+   * Persistent tutorial card (set every frame by the objective system; null hides it). A timed notice
+   * (see notice()) takes precedence while it runs.
+   */
+  tutorial(title: string | null, text = '') {
+    this.persist = title ? { title, text } : null;
+    this.renderTutorial();
+  }
+  /** A one-off explanatory card for `seconds` (e.g. the first Resonance). */
+  noticeCard(title: string, text: string, seconds = 7) {
+    this.notice = { title, text };
+    this.noticeTimer = seconds;
+    this.renderTutorial();
+  }
+  private renderTutorial() {
+    const c = this.notice ?? this.persist;
+    const key = c ? c.title + '|' + c.text : '';
+    if (key === this.tutorialKey) return;
+    this.tutorialKey = key;
+    const el = this.tutorialEl;
+    if (!c) { el.classList.remove('on'); return; }
+    (el.children[0] as HTMLElement).textContent = c.title;
+    (el.children[1] as HTMLElement).textContent = c.text;
+    el.classList.add('on');
+  }
+
+  /** The heroine's line as a subtitle (null clears). */
+  subtitle(text: string | null) {
+    const el = this.subtitleEl;
+    if (!text) { el.classList.remove('on'); return; }
+    (el.firstElementChild as HTMLElement).textContent = text;
+    el.classList.add('on');
+  }
+
+  /** Gold objective chevron on the frame edge (direction like threats: x right, y down); null hides. */
+  guide(dir: { x: number; y: number } | null) {
+    const el = this.guideEl;
+    if (!dir) { el.classList.remove('on'); return; }
+    const w = Platform.width, h = Platform.height;
+    const ang = Math.atan2(dir.y, dir.x);
+    const x = w * 0.5 + Math.cos(ang) * (w * 0.5 - 26), y = h * 0.5 + Math.sin(ang) * (h * 0.5 - 34);
+    el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(ang * 180 / Math.PI).toFixed(1)}deg)`;
+    el.classList.add('on');
   }
 
   setHealth(hp: number, max: number) {
@@ -143,13 +218,22 @@ export class HUD {
     this.promptTimer = seconds;
   }
 
-  private interactText: string | null = null;
-  interact(text: string | null) {
-    if (text === this.interactText) return;
-    this.interactText = text;
-    if (text) { this.interactEl.innerHTML = `<b>E</b>${text}`; this.interactEl.classList.add('on'); }
-    else this.interactEl.classList.remove('on');
-    this.onInteractText?.(text);
+  private interactKey = '';
+  /**
+   * Contextual interaction card: `title` names the thing (BLOOD SIGIL), `text` says what pressing does
+   * (Activate Checkpoint). Keyboard shows the E key; the touch HUD mirrors it on its tappable pill.
+   * `disabled` = visible but unavailable right now (e.g. a sigil recovering), shown greyed without a key.
+   */
+  interact(text: string | null, title = '', disabled = false) {
+    const key = text ? `${title}|${text}|${disabled}` : '';
+    if (key === this.interactKey) return;
+    this.interactKey = key;
+    if (text) {
+      this.interactEl.innerHTML = (title ? `<i>${title}</i>` : '') + (disabled ? `<span>${text}</span>` : `<span><b>E</b>${text}</span>`);
+      this.interactEl.classList.add('on');
+      this.interactEl.classList.toggle('off', disabled);
+    } else this.interactEl.classList.remove('on');
+    this.onInteractText?.(text, title, disabled);
   }
 
   message(title: string, sub = '', seconds = 3.5) {
@@ -165,6 +249,7 @@ export class HUD {
   }
 
   boss(name: string | null, f = 1) {
+    this.root.classList.toggle('boss-on', !!name);
     if (!name) { this.bossEl.classList.remove('on'); return; }
     this.bossName.textContent = name;
     this.bossFill.style.width = Math.max(0, f) * 100 + '%';
@@ -181,6 +266,7 @@ export class HUD {
   fade(on: boolean) { this.fadeEl.style.opacity = on ? '1' : '0'; }
 
   update(dt: number) {
+    if (this.noticeTimer > 0 && (this.noticeTimer -= dt) <= 0) { this.notice = null; this.renderTutorial(); }
     if (this.promptTimer > 0 && (this.promptTimer -= dt) <= 0) this.promptEl.classList.remove('on');
     if (this.messageTimer > 0 && (this.messageTimer -= dt) <= 0) this.messageEl.classList.remove('on');
     if (this.denyTimer > 0 && (this.denyTimer -= dt) <= 0) this.denyEl.classList.remove('on');

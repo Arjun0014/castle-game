@@ -53,7 +53,6 @@ def build_bell(B):
         B.slab(17, 27, 89, 101, 34, 34.6, "stone_block")
         B.beams(18, 26, 90, 100, 33.4, "x", spacing=2.4)
         B.marker("spawn", (25.0, 93.0, Z), name="SPAWN", yaw=math.pi / 2, state="PRESENT")
-        sigil(B, "CP1", (25.0, 97.5, Z), yaw=math.pi / 2)
         trace(B, "T1", (19.2, 91.2, Z + 1.0), "The bell rang once for the coronation. It was meant to ring again when the King came down. It never did.")
         prompt(B, "C_ARRIVE", (18, 26, 90, 100, Z - 1, Z + 4), "The Crown is above you. The castle's memories no longer hold still here.", state="BOTH")
     with B.at(S, "PAST"):
@@ -81,6 +80,8 @@ def build_gallery(B):
         B.slab(-6, 4, 96, 100, Z - 0.5, Z, "stone_block")
         B.slab(10, 18, 96, 100, Z - 0.5, Z, "stone_block")
         fissure(B, "F1", (14.0, 98.0, Z))
+        # CP1 anchors the far side of the first weave (session 7 checkpoint audit: it used to sit on the spawn)
+        sigil(B, "CP1", (-4.9, 97.6, Z), yaw=math.pi / 2)
         prompt(B, "C_GAP", (10, 14, 96, 100, Z - 1, Z + 4), "The gallery fell here — in this memory. It stood in the other.", state="PRESENT")
         prompt(B, "C_GATE", (2, 4.2, 96, 100, Z - 1, Z + 4), "The wardens' gate stands in this memory. In the other it lies in the dust.", state="PAST")
         encounter(B, "E0", "PAST", (4, 10, 96, 100, Z - 1, Z + 4))

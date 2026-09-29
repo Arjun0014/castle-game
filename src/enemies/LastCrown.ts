@@ -484,6 +484,7 @@ export class LastCrown extends Enemy {
     if (this.t > 2.8 && this.curName === 'kneel_idle') this.once('rise', 1.2, 0, 0.2);
     if (this.t > 3.7) {
       this.phase = this.breakTo;
+      this.g.signals.emit('boss:phase', { id: 'last_crown', phase: this.phase });
       this.invuln = false;
       this.mode = 'idle'; this.t = 0; this.gap = 0.8;
       this.nextSlip = this.g.t + 8; this.nextWard = this.g.t + 5; this.nextBind = this.g.t + 10;

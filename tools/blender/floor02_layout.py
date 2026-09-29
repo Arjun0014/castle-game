@@ -99,8 +99,9 @@ def build_royal(B):
         B.parapet(-9.5, 12, 65.3, 65.5, ZL, h=1.1)
         B.parapet(-9.5, 12, 75.5, 75.7, ZL, h=1.1)
         B.parapet(-9.7, -9.5, 68, 73, ZL, h=1.1)
+        # one Blood Sigil for the antechamber (session 7 checkpoint audit): CP1 also serves the return after the
+        # crown loft drop — the old CP4 on the west strip stood 9 m away in the same room
         sigil(B, "CP1", (0, 64.6, Z), yaw=0.0)
-        sigil(B, "CP4", (-9.2, 66.4, Z), yaw=0.0)
         fissure(B, "F1", (4.5, 64.2, Z))
         fissure(B, "F5", (6, 64.3, ZL))
         B.marker("light", (0, 60, 12.0), kind="moon", color="9fb8ff", intensity=2.0, range=10.0, state="PRESENT")
@@ -494,4 +495,4 @@ SECTIONS = {
     "R5_APART": {"bounds": (-13, 31, 78, 102), "neighbors": ["R1_ROYAL"]},
 }
 
-EXPECTED = {"sigils": ["CP1", "CP2", "CP3", "CP4", "CP5"], "fissures": ["F1", "F2", "F3", "F4", "F5", "F6"]}
+EXPECTED = {"sigils": ["CP1", "CP2", "CP3", "CP5"], "fissures": ["F1", "F2", "F3", "F4", "F5", "F6"]}

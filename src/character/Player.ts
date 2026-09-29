@@ -4,7 +4,8 @@ import type { CameraRig } from './CameraRig';
 import type { Input } from '../game/Input';
 import type { CollisionWorld, CapsuleResult } from '../game/Physics';
 import type { TimeState } from '../levels/Materials';
-import { ATTACKS, type AttackDef, type HitWindow, DODGE, PARRY_WINDOW, BLOCK_ARC_DEG, BLOCK_DAMAGE_SCALE, PLAYER_HP, PAUSE_GRACE, COUNTER_WINDOW, speedAt } from '../combat/CombatData';
+import type { AssistTarget } from '../combat/TargetAssist';
+import { ATTACKS, type AttackDef, type AttackKind, type HitWindow, DODGE, PARRY_WINDOW, BLOCK_ARC_DEG, BLOCK_DAMAGE_SCALE, PLAYER_HP, PAUSE_GRACE, COUNTER_WINDOW, speedAt } from '../combat/CombatData';
 import { HERO_CLIPS, JUMP_PHASES, LOOPING, rootAt } from '../data/animationManifest';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
 
@@ -45,6 +46,15 @@ const CROUCH = 1.55;
 const CROUCH_CLIP_SPEED = HERO_CLIPS.crouch_walk.speed ?? 1.21;
 /** a light press this long (real s) after the combo window passed = the pause route (next.pause) */
 const PAUSE_DELAY = 0.25;
+/**
+ * Attack magnetism (TargetAssist picks the enemy): forward correction speed cap (m/s) by attack kind when the
+ * attack has no explicit `lunge`, and the most ground one swing may close on its own (m). Root motion still
+ * plays on top; nothing ever teleports.
+ */
+const MAGNET_SPEED: Record<AttackKind, number> = { light: 5.5, heavy: 4.5, finisher: 4.5, kick: 4.5, bash: 4.5, crouch: 3.5, sprint: 7.5, air: 0 };
+const MAGNET_BUDGET: Record<AttackKind, number> = { light: 1.6, heavy: 1.5, finisher: 1.5, kick: 1.3, bash: 1.3, crouch: 1.1, sprint: 2.4, air: 0 };
+/** how fast the hero turns onto the chosen target during an attack's start-up (rad/s; ~0.1 s for 180°) */
+const ATTACK_TURN = 30;
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
@@ -205,7 +215,7 @@ export class Player {
   }
 
   // ------------------------------------------------------------------ main update
-  update(dt: number, input: Input, cam: CameraRig, world: CollisionWorld, tstate: TimeState, autoTarget: () => THREE.Vector3 | null) {
+  update(dt: number, input: Input, cam: CameraRig, world: CollisionWorld, tstate: TimeState, pickTarget: (kind: AttackKind, wish: THREE.Vector3) => AssistTarget | null) {
     this.world = world;
     this.tstate = tstate;
     this.stateTime += dt;
@@ -276,7 +286,7 @@ export class Player {
         if (def) {
           const exec = def === ATTACKS.EXECUTE ? this.events.executionTarget?.() : null;
           this.buffered = null;
-          this.beginAttack(def, exec ?? lock ?? autoTarget());
+          this.beginAttack(def, exec ?? lock ?? pickTarget(def.kind, wish));
         }
       }
     }
@@ -350,7 +360,8 @@ export class Player {
         break;
       }
       case 'attack': {
-        hv = this.updateAttack(dt, input, lock ?? autoTarget(), world, tstate);
+        this.pickTarget = (k) => pickTarget(k, wish);
+        hv = this.updateAttack(dt, input, lock, world, tstate);
         break;
       }
       case 'hit': {
@@ -623,7 +634,16 @@ export class Player {
   }
 
   // ------------------------------------------------------------------ attacks
-  beginAttack(def: AttackDef, target: THREE.Vector3 | null) {
+  /** follow-up attacks re-pick their target (set each frame while attacking) */
+  private pickTarget: ((kind: AttackKind) => AssistTarget | null) | null = null;
+  /** the enemy (or lock / execution point) this swing is aimed at, chosen once when it starts */
+  attackTarget: AssistTarget | null = null;
+  /** ground closed by magnetism during this swing (m) */
+  private magnetUsed = 0;
+
+  beginAttack(def: AttackDef, target: AssistTarget | THREE.Vector3 | null) {
+    this.attackTarget = target instanceof THREE.Vector3 ? { pos: target, radius: 0.45, valid: () => true } : target;
+    this.magnetUsed = 0;
     this.attack = def;
     this.attackSerial++;
     this.attackClipTime = def.start;
@@ -636,12 +656,21 @@ export class Player {
     this.lastRoot = rootAt(def.clip, def.start);
     this.setState('attack');
     this.anim.play(def.clip, { start: def.start, speed: speedAt(def, def.start), fade: 0.09 });
-    if (target) this.turnToward(_v.subVectors(target, this.pos).setY(0), 100, 1);
+    // a very close target behind the hero gets an instant turn (the blade would otherwise open away from it);
+    // anything else is turned onto quickly during the wind-up (updateAttack)
+    const tg = this.attackTarget;
+    if (tg) {
+      const to = _v.subVectors(tg.pos, this.pos).setY(0);
+      if (to.lengthSq() > 1e-4 && to.length() < 1.6 && this.facing.angleTo(to.normalize()) > 2.2) this.turnToward(to, 100, 1);
+    }
     this.events.onAttackStart?.(def);
   }
 
-  private updateAttack(dt: number, input: Input, target: THREE.Vector3 | null, world: CollisionWorld, tstate: TimeState): THREE.Vector3 {
+  private updateAttack(dt: number, input: Input, lock: THREE.Vector3 | null, world: CollisionWorld, tstate: TimeState): THREE.Vector3 {
     const def = this.attack!;
+    if (this.attackTarget && !this.attackTarget.valid()) this.attackTarget = null;
+    const aim = this.attackTarget;
+    const target = lock ?? aim?.pos ?? null;
     const prevT = this.attackClipTime;
     this.attackClipTime = this.anim.overlayTime;
     const t = this.attackClipTime;
@@ -661,7 +690,8 @@ export class Player {
     this.anim.setOverlaySpeed(speedAt(def, t));
     for (let i = this.hitCue + 1; i < def.hits.length && t >= def.hits[i].t0; i++) { this.hitCue = i; this.events.onHitWindow?.(def, i); }
     if (t >= def.cancelAt && this.cancelPassedAt < 0) this.cancelPassedAt = input.now;
-    if (target && t < def.start + def.track) this.turnToward(_v.subVectors(target, this.pos).setY(0), 7, dt);
+    // turn onto the target fast at the start of the swing, then keep tracking it gently
+    if (target && t < def.start + def.track) this.turnToward(_v.subVectors(target, this.pos).setY(0), t < def.start + 0.12 ? ATTACK_TURN : 9, dt);
     // root motion: clip-space delta → world velocity
     const r = rootAt(def.clip, t);
     const df = (r[0] - this.lastRoot[0]) * def.rootScale;
@@ -670,15 +700,28 @@ export class Player {
     const f = this.facing.clone();
     const rt = new THREE.Vector3().crossVectors(f, UP);
     const hv = f.multiplyScalar(df).addScaledVector(rt, dr).divideScalar(Math.max(1e-4, dt));
-    // magnetism: during the wind-up, close the gap to a target just out of reach so the blade connects
+    // magnetism: through the wind-up and the start of the first strike, close the gap to the chosen target so
+    // the blade connects — capped in speed and in total distance per swing (a correction, never a dash)
     const first = def.hits[0];
-    if (def.lunge && target && first && t < first.t0) {
+    if (target && first && t < first.t0 + (first.t1 - first.t0) * 0.4) {
       const to = _v.subVectors(target, this.pos).setY(0);
       const d = to.length();
-      const ideal = Math.max(1.1, (first.reach ?? 1.9) * 0.62);
-      if (d > ideal && d < 5.5) {
-        const left = Math.max(0.08, (first.t0 - t) / speedAt(def, t));
-        hv.addScaledVector(to.divideScalar(d), Math.min(def.lunge, (d - ideal) / left));
+      const rad = aim?.radius ?? 0.45;
+      const ideal = Math.max(0.75 + rad, (first.reach ?? 1.9) * 0.62);
+      const cap = def.lunge ? Math.max(def.lunge, MAGNET_SPEED[def.kind]) : MAGNET_SPEED[def.kind];
+      const budget = MAGNET_BUDGET[def.kind] - this.magnetUsed;
+      if (d > 1e-3) {
+        to.divideScalar(d);
+        const fwd = hv.dot(to);
+        if (d > ideal && d < 6.8 && budget > 0 && cap > 0) {
+          const left = Math.max(0.08, (first.t0 - t) / speedAt(def, t));
+          const v = Math.min(cap, (d - ideal) / left, budget / Math.max(dt, 1e-3));
+          hv.addScaledVector(to, v);
+          this.magnetUsed += v * dt;
+        } else if (d < ideal && fwd > 0) {
+          // already in reach: the clip's own forward root motion must not carry the hero into / through it
+          hv.addScaledVector(to, -fwd * THREE.MathUtils.clamp(1 - (d - (0.55 + rad)) / Math.max(0.3, ideal - 0.55 - rad), 0, 1));
+        }
       }
     }
     // clamp root motion speed (safety against clip discontinuities)
@@ -694,9 +737,9 @@ export class Player {
       // a light press one beat after the combo window passed takes the alternative (pause) route
       const late = buf.kind === 'light' && def.next.pause && this.cancelPassedAt >= 0 && buf.t - this.cancelPassedAt >= PAUSE_DELAY;
       const nextId = late ? def.next.pause : buf.kind === 'heavy' ? def.next.heavy : buf.kind === 'light' ? def.next.light : buf.kind === 'kick' ? def.next.kick : undefined;
-      if (buf.kind === 'kick' && !def.next.kick && t >= def.recoveryCancel) { this.buffered = null; this.beginAttack(ATTACKS.KICK, target); return hv; }
+      if (buf.kind === 'kick' && !def.next.kick && t >= def.recoveryCancel) { this.buffered = null; this.beginAttack(ATTACKS.KICK, lock ?? this.pickTarget?.('kick') ?? aim); return hv; }
       if (nextId) buf.queued = true;
-      if (nextId && t >= def.cancelAt) { this.buffered = null; this.beginAttack(ATTACKS[nextId], target); return hv; }
+      if (nextId && t >= def.cancelAt) { const nd = ATTACKS[nextId]; this.buffered = null; this.beginAttack(nd, lock ?? this.pickTarget?.(nd.kind) ?? aim); return hv; }
     }
     if (input.isDown('block') && t >= def.recoveryCancel) {
       this.setState('block');
