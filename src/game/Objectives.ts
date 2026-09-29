@@ -31,7 +31,6 @@ export class Objectives {
   private ringMat: THREE.ShaderMaterial;
   private ringAt = new THREE.Vector3();
   private lastPos = new THREE.Vector3();
-  private teachStage = 0;
   private teachStageT = 0;
   private offs: (() => void)[] = [];
   /** the current objective's target in world space (null = none) */
@@ -44,7 +43,7 @@ export class Objectives {
     this.offs.push(g.signals.on('shift', () => { this.learned.shifted = true; }));
     this.offs.push(g.signals.on('sigil:activate', () => { this.learned.sigil = true; }));
     this.offs.push(g.signals.on('kill', () => {
-      if (!this.learned.resonance && g.time.unlocked === false && g.floorId === 1) {
+      if (!this.learned.resonance && g.time.unlocked === false && g.floorId === 1 && !g.tutorial?.active) {
         // the first Echo released: explain where its resonance went (the bar top-left)
         this.learned.resonance = true;
         g.hud.noticeCard('RESONANCE', 'Destroyed Echoes release Resonance into your blood — the bar under your health. One full segment lets you shift the castle.', 9);
@@ -156,7 +155,6 @@ void main() {
     this.current = this.list[i] ?? null;
     this.activeT = 0;
     this.hintIdx = 0;
-    this.teachStage = 0;
     this.teachStageT = 0;
     const cur = this.current;
     this.target = cur?.at ? b2t(cur.at[0], cur.at[1], cur.at[2]) : null;
@@ -171,7 +169,8 @@ void main() {
   private _v = new THREE.Vector3();
   private updateGuide(cur: ObjectiveDef | null) {
     const g = this.g;
-    const first = cur?.hints?.[0]?.after ?? 45;
+    // Guided players see the marker soon after an objective begins; Minimal players once they seem stuck
+    const first = this.g.tutorial?.active ? 12 : Math.min(30, cur?.hints?.[0]?.after ?? 30);
     if (!cur || !this.target || this.activeT < first || g.enemies.inCombat || !g.player.alive || g.paused) { g.hud.guide(null); return; }
     const v = this._v.copy(this.target).setY(this.target.y + 1).project(g.camera);
     if (v.z < 1 && Math.abs(v.x) < 0.9 && Math.abs(v.y) < 0.85) { g.hud.guide(null); return; }
@@ -183,7 +182,7 @@ void main() {
   private updateRing(cur: ObjectiveDef | null, dt: number) {
     const g = this.g;
     let want = 0;
-    if (cur?.shiftAt && g.time.unlocked) {
+    if (cur?.shiftAt && g.time.unlocked && (!cur.shiftFrom || cur.shiftFrom === g.time.state)) {
       this.ringAt.copy(b2t(cur.shiftAt[0], cur.shiftAt[1], cur.shiftAt[2]));
       const d = this.ringAt.distanceTo(g.player.pos);
       if (d < 30 && !g.enemies.inCombat) want = d < 1.2 ? 0.45 : 0.9;
@@ -198,6 +197,8 @@ void main() {
   // ------------------------------------------------------------------ tutorials
   private updateTeach(cur: ObjectiveDef | null, dt: number) {
     const g = this.g, L = this.learned, touch = Platform.isTouch;
+    // Guided: the tutorial owns the card (game/Tutorial.ts) until its last lesson
+    if (g.tutorial?.ownsCard) return;
     const teach: TeachId | undefined = cur?.teach;
     this.teachStageT += dt;
     let title: string | null = null, text = '', btn: Parameters<NonNullable<typeof g.touch>['highlight']>[0] = null;
@@ -206,20 +207,13 @@ void main() {
       text = touch ? 'Drag your left thumb to move — push to the edge to sprint. Drag the empty right side to look around.'
         : 'WASD to move · mouse to look · hold Shift to sprint · Space to jump';
     } else if (teach === 'combat' && g.enemies.encounters.get('E1')?.triggered) {
-      // staged: strike → guard → dodge, each until done (or long enough to have read it)
-      const stages = [
-        () => L.hits - (this.hitsAtStart ?? 0) >= 2,
-        () => L.guarded || this.teachStageT > 11,
-        // touch has no Dodge button (session 8): that stage is skipped there
-        () => L.dodged || touch || this.teachStageT > 11,
-      ];
-      while (this.teachStage < stages.length && stages[this.teachStage]()) { this.teachStage++; this.teachStageT = 0; }
-      title = 'FIGHT';
-      if (this.teachStage === 0) { text = touch ? 'Tap ATTACK to strike. Your blade finds the nearest foe.' : 'Left-click to strike · right-click for a heavy blow'; btn = 'light'; }
-      else if (this.teachStage === 1) { text = touch ? 'Hold GUARD to block. Tap it just as a blow lands to PARRY.' : 'Hold Q to guard · tap it just as a blow lands to parry'; btn = 'block'; }
-      else if (this.teachStage === 2) { text = touch ? 'DODGE slips out of a strike — toward where your left thumb points.' : 'Tap Shift to dodge'; btn = 'dodge'; }
-      else if (this.teachStageT < 7) { text = touch ? 'HEAVY breaks guards. GUARD + ATTACK bashes, GUARD + HEAVY kicks.' : 'Q + left-click bashes · F kicks · pause a beat between strikes for other combos'; }
-      else title = null;
+      // Minimal guidance: one compact card with the essentials (Guided teaches each in turn: game/Tutorial.ts)
+      if (this.teachStageT < 9 && !(L.hits - (this.hitsAtStart ?? 0) >= 3 && L.guarded)) {
+        title = 'FIGHT';
+        text = touch ? 'ATTACK strikes · HEAVY staggers · hold GUARD to block, tap it as a blow lands to parry.'
+          : 'Left-click strike · right-click heavy · hold Q to guard, tap it as a blow lands to parry · tap Shift to dodge';
+        btn = 'light';
+      }
     } else if (teach === 'sigil') {
       const at = g.checkpoints.sigilPos(cur!.sigil!);
       if (at && at.distanceTo(g.player.pos) < 9) {
@@ -235,6 +229,15 @@ void main() {
         text = touch ? 'Stand still and HOLD SHIFT until the castle turns. The gate stood open in its memory.' : 'Stand still and HOLD R until the castle turns. The gate stood open in its memory.';
         btn = 'shift';
       } else text = 'Your blood can force the castle into another memory of itself. Go back to the rusted gate.';
+    } else if (teach === 'shiftback' && g.time.state === 'PAST' && g.time.unlocked && this.zone('-1,24,-26,-4,-1,5', g.player.pos) && g.enemies.isCleared('E3')) {
+      title = 'SHIFT BACK';
+      text = g.time.charge < 100 ? 'The barracks are barricaded in this memory. Gather a full segment of Resonance, then shift back to the Present.'
+        : touch ? 'The barracks are barricaded in this memory. Hold SHIFT here to return to the Present, where the door lies broken.'
+          : 'The barracks are barricaded in this memory. Hold R here to return to the Present, where the door lies broken.';
+      btn = 'shift';
+    } else if (teach === 'crouch' && this.zone('27.5,34,-1.5,7.5,-1,3', g.player.pos)) {
+      title = 'CROUCH';
+      text = touch ? 'The vault has fallen. Walk into the low gap — you stoop through it on your own.' : 'The vault has fallen. Press C to crouch through the low gap — C again to stand.';
     }
     if (this.hitsAtStart === null && teach === 'combat') this.hitsAtStart = L.hits;
     if (teach !== 'combat') this.hitsAtStart = null;

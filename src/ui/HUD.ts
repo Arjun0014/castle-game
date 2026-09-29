@@ -50,7 +50,7 @@ export class HUD {
       <div class="channel"><div class="channel-track"><div class="channel-fill"></div></div><div class="channel-text">SHIFTING</div></div>
       <div class="objective"><i>◆</i><span></span></div>
       <div class="subtitle"><span></span></div>
-      <div class="tutorial"><b></b><span></span></div>
+      <div class="tutorial"><b></b><span></span><em></em></div>
       <div class="gift"><small>THE CASTLE ANSWERS YOUR BLOOD</small><b></b><span class="gift-key"></span></div>
       <div class="gift-tip"><b></b><span></span></div>
       <div class="prompt"></div>
@@ -62,7 +62,7 @@ export class HUD {
       <div class="flash"></div>
       <div class="fade"></div>
       <div class="debug"></div>
-      <div class="pause"><h3>PAUSED</h3><p class="pause-kbm">Click or Esc to resume · \` toggles debug · F9 collision view</p><p class="pause-touch">Tap to resume</p></div>
+      <div class="pause"></div>
       <div class="end-card"><h1>FLOOR I COMPLETE</h1><p class="end-sub"></p><p>The way to the Upper Keep lies open.</p></div>`;
     const q = (s: string) => root.querySelector(s) as HTMLElement;
     this.hpFill = q('.hp-fill');
@@ -157,8 +157,8 @@ export class HUD {
   private objectiveText: string | null = null;
   private tutorialKey = '';
   private noticeTimer = 0;
-  private notice: { title: string; text: string } | null = null;
-  private persist: { title: string; text: string } | null = null;
+  private notice: { title: string; text: string; cue?: string } | null = null;
+  private persist: { title: string; text: string; cue?: string } | null = null;
 
   /** The current objective (one short line, top-left). `fresh` = a new objective replaced the old one. */
   objective(text: string | null, fresh = false) {
@@ -175,10 +175,20 @@ export class HUD {
    * Persistent tutorial card (set every frame by the objective system; null hides it). A timed notice
    * (see notice()) takes precedence while it runs.
    */
-  tutorial(title: string | null, text = '') {
-    this.persist = title ? { title, text } : null;
+  tutorial(title: string | null, text = '', cue = '') {
+    this.persist = title ? { title, text, cue } : null;
     this.renderTutorial();
   }
+  /** Guided tutorial: the lesson was performed — the card flashes gold before the next one. */
+  lessonDone() {
+    const el = this.tutorialEl;
+    el.classList.remove('done'); void el.offsetWidth; el.classList.add('done');
+    setTimeout(() => el.classList.remove('done'), 800);
+  }
+  /** Guided tutorial: point at the Resonance bar (a gold pulse round it). */
+  teachBar(on: boolean) { this.root.querySelector('.hud-bars')?.classList.toggle('teach', on); }
+  /** Guided tutorial slow motion: the frame darkens at its edges. */
+  setFreeze(on: boolean) { this.root.classList.toggle('freeze', on); }
   /** A one-off explanatory card for `seconds` (e.g. the first Resonance). */
   noticeCard(title: string, text: string, seconds = 7) {
     this.notice = { title, text };
@@ -187,20 +197,24 @@ export class HUD {
   }
   private renderTutorial() {
     const c = this.notice ?? this.persist;
-    const key = c ? c.title + '|' + c.text : '';
+    const key = c ? c.title + '|' + c.text + '|' + (c.cue ?? '') : '';
     if (key === this.tutorialKey) return;
     this.tutorialKey = key;
     const el = this.tutorialEl;
     if (!c) { el.classList.remove('on'); return; }
     (el.children[0] as HTMLElement).textContent = c.title;
     (el.children[1] as HTMLElement).textContent = c.text;
+    (el.children[2] as HTMLElement).textContent = c.cue ?? '';
+    el.classList.toggle('cue', !!c.cue);
     el.classList.add('on');
   }
 
+  /** Settings → Subtitles (the heroine's lines still play when off) */
+  subtitlesOn = true;
   /** The heroine's line as a subtitle (null clears). */
   subtitle(text: string | null) {
     const el = this.subtitleEl;
-    if (!text) { el.classList.remove('on'); return; }
+    if (!text || !this.subtitlesOn) { el.classList.remove('on'); return; }
     (el.firstElementChild as HTMLElement).textContent = text;
     el.classList.add('on');
   }

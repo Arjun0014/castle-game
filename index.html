@@ -15,32 +15,9 @@
     <div id="stage">
       <div id="app"></div>
       <div id="hud"></div>
-      <div id="overlay">
-        <div id="title-card">
-          <h1>THE CASTLE REMEMBERS</h1>
-          <h2>Floor I — Inheritance</h2>
-          <div id="loader">
-            <div id="load-heading">LOADING CAER VEYR</div>
-            <div id="load-row"><span id="load-blocks"></span><span id="load-pct">0%</span></div>
-            <div id="load-bar"><div id="load-fill"></div></div>
-            <p id="load-status">Preparing…</p>
-          </div>
-          <button id="start-btn" disabled>Enter the Keep</button>
-          <div id="controls-help">
-            <div class="help-kbm">
-              <div><b>WASD</b> move · <b>Mouse</b> look · <b>Shift</b> hold sprint / tap dodge · <b>Space</b> jump · <b>C</b> crouch</div>
-              <div><b>LMB</b> light · <b>RMB</b> heavy · <b>Q</b> hold guard, tap to parry · <b>Q+LMB</b> shield bash · <b>F</b> kick</div>
-              <div><b>R</b> hold to shift Past / Present (costs one resonance) · <b>E</b> interact · <b>Tab</b> lock on · <b>Esc</b> pause</div>
-            </div>
-            <div class="help-touch">
-              <div><b>Left thumb</b> move — push to the rim to sprint · <b>Drag</b> anywhere else to look</div>
-              <div><b>Attack</b> light · <b>Heavy</b> · hold <b>Guard</b> (tap just before a hit to parry)</div>
-              <div><b>Guard + Attack</b> shield bash · <b>Guard + Heavy</b> kick · <b>Jump</b> to leap gaps</div>
-              <div>Hold <b>Shift</b> to force the castle between Past and Present</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div id="overlay"></div>
+      <!-- test hook: dev probes click it to start play without the menu (main.ts) -->
+      <button id="start-btn" hidden></button>
     </div>
     <div id="rotate">
       <div class="rotate-card">

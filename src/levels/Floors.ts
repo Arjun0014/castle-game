@@ -29,6 +29,7 @@ export const FLOORS: Record<number, FloorDef> = {
   1: {
     id: 1, title: 'CAER VEYR', subtitle: 'Floor I — Inheritance',
     loadingText: 'Preparing the Lower Keep', readyText: 'The gate of Caer Veyr stands before you.', next: 2, autopilot: true,
+    epigraph: 'A gate that will not open for the living may still open for the blood.',
     moonHoles: [
       [-3, 3, -38, -35.5, 8.4],     // gate passage vault hole
       [11, 15, -37, -33, 6.0],      // east guardroom ceiling (NE corner)
@@ -44,6 +45,7 @@ export const FLOORS: Record<number, FloorDef> = {
   2: {
     id: 2, title: 'THE ROYAL FLOOR', subtitle: 'Floor II — Complicity',
     loadingText: 'Preparing the Royal Floor', readyText: "The Royal Stair ends at the court's own rooms.", next: 3, autopilot: true,
+    epigraph: 'Every order that sealed the gates was signed up here, in a steady hand.',
     // the Present royal floor is mostly roofless: open sky instead of shafts, except the chancery's roof hole
     moonHoles: [],
   },

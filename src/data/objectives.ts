@@ -15,7 +15,7 @@
  * Objectives are sequential; if the player is already past a later one (a skipped fight, a different order)
  * the chain jumps forward.
  */
-export type TeachId = 'move' | 'combat' | 'sigil' | 'shift' | 'resonance';
+export type TeachId = 'move' | 'combat' | 'sigil' | 'shift' | 'resonance' | 'shiftback' | 'crouch';
 
 export interface ObjectiveDef {
   id: string;
@@ -24,6 +24,8 @@ export interface ObjectiveDef {
   at?: [number, number, number];
   sigil?: string;
   shiftAt?: [number, number, number];
+  /** the shift ring shows only in this memory (default: either) */
+  shiftFrom?: 'PAST' | 'PRESENT';
   teach?: TeachId;
   /** heroine line (dialogue id) when this objective begins */
   line?: string;
@@ -39,9 +41,9 @@ export const OBJECTIVES: Record<number, ObjectiveDef[]> = {
     { id: 'f1_shift', text: 'Return to the rusted gate — and make it remember', done: ['shifts:1'], at: [0, -38, 0], shiftAt: [0, -37.5, 0], teach: 'shift',
       hints: [{ after: 40, line: 'f1_shift_stuck' }] },
     { id: 'f1_ward', text: 'Fight through the gate into the inner ward', done: ['zone:-22,22,-28,7,-1,6'], at: [0, -30, 0] },
-    { id: 'f1_bar', text: 'Find a way into the barracks', done: ['zone:24,38,-27,-1,-1,6'], at: [23, -13, 0],
+    { id: 'f1_bar', text: 'Find a way into the barracks', done: ['zone:24,38,-27,-1,-1,6'], at: [23, -13, 0], shiftAt: [15.5, -13, 0], shiftFrom: 'PAST', teach: 'shiftback',
       hints: [{ after: 50, line: 'hint_g2' }] },
-    { id: 'f1_arm', text: 'Press on to the armory', done: ['zone:20,34,10.5,27,-1,2.5'], at: [30.5, 5, 0] },
+    { id: 'f1_arm', text: 'Press on to the armory', done: ['zone:20,34,10.5,27,-1,2.5'], at: [30.5, 5, 0], teach: 'crouch' },
     { id: 'f1_stair', text: "Climb to the landing above the armory", done: ['zone:17,23,23.5,27.5,5,8', 'sigil:CP3'], at: [21.3, 18.3, 3], shiftAt: [21.3, 18.3, 3],
       hints: [{ after: 45, line: 'hint_g3' }] },
     { id: 'f1_gal', text: "Cross the Great Hall's galleries to the west", done: ['zone:-18,-13,9,30,5,9'], at: [15, 11, 6],

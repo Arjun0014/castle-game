@@ -55,6 +55,9 @@ export class Enemy {
   yaw = 0;
   hp: number;
   poise: number;
+  /** Guided tutorial (game/Tutorial.ts): a teacher closes in and waits without striking; `minHp` > 0 = cannot die */
+  tutorialPassive = false;
+  minHp = 0;
   state: EState = 'idle';
   stateTime = 0;
   attack: EnemyAttack | null = null;
@@ -360,6 +363,15 @@ export class Enemy {
           this.turnToward(dirP, a.turnRate, dt);
           if (!this.isFlying) this.loop(a.clips.idle, 1, 0.3);
           this.cooldown = Math.max(this.cooldown, 0.35);
+          break;
+        }
+        // a tutorial teacher: it steps up to striking distance and waits there, facing her, until its lesson
+        if (this.tutorialPassive) {
+          this.turnToward(dirP, a.turnRate, dt);
+          if (this.hasSlot) { ctx.releaseSlot(this); this.hasSlot = false; }
+          this.cooldown = Math.max(this.cooldown, 0.6);
+          if (dist > 2.5 && !this.isFlying) { move = dirP.clone().multiplyScalar(a.walkSpeed); this.loop(a.clips.walk, 1, 0.3); }
+          else this.loop(a.clips.idle, 1, 0.3);
           break;
         }
         // the monsters (enemies/Monsters.ts) have brains of their own
@@ -812,6 +824,14 @@ export class Enemy {
     return list[0];
   }
 
+  /** Seconds until the current melee blow's hit window opens (Infinity when not mid-swing or already landed). */
+  strikeIn() {
+    const atk = this.attack;
+    if (this.state !== 'attack' || !atk || this.attackHit || !this.cur) return Infinity;
+    const t = this.cur.time;
+    return t > atk.window[1] ? Infinity : Math.max(0, (atk.window[0] - t) / Math.max(0.05, atk.speed));
+  }
+
   beginAttack(atk: EnemyAttack) {
     this.attack = atk;
     this.attackHit = false;
@@ -1034,14 +1054,14 @@ export class Enemy {
     const frontal = this.facing.dot(away.clone().negate()) > 0.35;
     this.hitFlash = 1;
     if (this.state === 'block' && frontal && !opts.guardBreak) {
-      this.hp -= damage * 0.2;
+      this.hp = Math.max(this.minHp, this.hp - damage * 0.2);
       this.poise -= poiseDmg * 0.5;
       this.vel.addScaledVector(away, knock * 0.6);
       this.once(this.arch.clips.blockHit ?? this.arch.clips.hitL, 1.4, 0, 0.05);
       if (this.hp <= 0) { this.die(); return 'dead'; }
       if (this.poise > 0) return 'blocked';
     }
-    this.hp -= damage;
+    this.hp = Math.max(this.minHp, this.hp - damage);
     this.poise -= poiseDmg;
     if (this.hp <= 0) { this.vel.addScaledVector(away, knock * 1.2); this.die(); return 'dead'; }
     this.vel.addScaledVector(away, knock * (this.isFlying ? 1.6 : 1));

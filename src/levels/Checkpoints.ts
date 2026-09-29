@@ -149,7 +149,8 @@ export class Checkpoints {
       g.time.unlocked = true;
       g.time.charge = Math.max(g.time.charge, 100);
       g.hud.message('CHECKPOINT ANCHORED', 'If you fall, the castle returns you here', 3.2);
-      g.schedule(3.4, () => g.hud.message('YOUR BLOOD ANSWERS THE CASTLE', Hints.shiftUnlock(), 5));
+      // Guided: the tutorial's own lesson follows instead (game/Tutorial.ts)
+      if (!g.tutorial?.active) g.schedule(3.4, () => g.hud.message('YOUR BLOOD ANSWERS THE CASTLE', Hints.shiftUnlock(), 5));
     } else if (firstEver) {
       g.hud.message('CHECKPOINT ANCHORED', 'If you fall, the castle returns you here', 3.2);
     } else {

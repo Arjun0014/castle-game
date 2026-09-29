@@ -31,6 +31,8 @@ export class Input {
   locked = false;
   virtualLook = { dx: 0, dy: 0 };
   sensitivity = 0.0022;
+  /** Settings → Camera sensitivity (mouse and touch swipes) */
+  lookScale = 1;
   enabled = true;
   /** Analog stick (touch joystick): x right, y forward, magnitude 0..1. Merged with WASD in moveAxes(). */
   analog = { x: 0, y: 0 };
@@ -136,8 +138,8 @@ export class Input {
   }
 
   consumeLook(): { dx: number; dy: number } {
-    const dx = this.mouseDX * this.sensitivity + this.virtualLook.dx;
-    const dy = this.mouseDY * this.sensitivity + this.virtualLook.dy;
+    const dx = (this.mouseDX * this.sensitivity + this.virtualLook.dx) * this.lookScale;
+    const dy = (this.mouseDY * this.sensitivity + this.virtualLook.dy) * this.lookScale;
     this.mouseDX = this.mouseDY = 0;
     this.virtualLook.dx = this.virtualLook.dy = 0;
     return { dx, dy };

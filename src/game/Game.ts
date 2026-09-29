@@ -37,6 +37,9 @@ import { ABILITY_FLOOR, ABILITY_INFO, HOLD_THRESHOLD, WHIRL_MAX, abilitiesForFlo
 import { Finishers } from '../combat/Finishers';
 import { Lift } from '../levels/Lift';
 import { Crownheart, AbyssEmbers } from '../vfx/Crownheart';
+import { Tutorial } from './Tutorial';
+import type { Guidance } from './Save';
+import { LOOPING } from '../data/animationManifest';
 
 /** Loading-screen sink: fraction 0..1 of the whole operation + what is happening. */
 export type LoadSink = (f: number, label: string) => void;
@@ -120,7 +123,7 @@ export class Game {
   /** the heroine's voice + subtitles */
   dialogue: Dialogue;
   /** level prompt ids now taught by the persistent tutorials (Objectives) instead of a timed prompt */
-  private static TAUGHT_PROMPTS = new Set(['T_MOVE', 'T_COMBAT', 'T_SHIFT']);
+  private static TAUGHT_PROMPTS = new Set(['T_MOVE', 'T_COMBAT', 'T_SHIFT', 'T_CROUCH']);
   /** gameplay announcements for objectives / dialogue / tutorials (see Signals.ts) */
   signals = new Signals();
   /** soft combat camera (touch) + attack magnetism (all inputs) */
@@ -133,6 +136,18 @@ export class Game {
   private embers: AbyssEmbers | null = null;
   /** this floor was reached by the lift (Floor 3 opens with the arrival shot) */
   arrivedByLift = false;
+  /** New Game → Guided (Floor 1's lessons, game/Tutorial.ts) or Minimal (objectives + navigation only) */
+  guidance: Guidance = 'minimal';
+  tutorial: Tutorial | null = null;
+  /** simulation speed set by the tutorial's slow-motion beats (hit-stop / slow-mo multiply on top) */
+  timeScale = 1;
+  /** a floor's first start (main.ts saves progress on Floors II and III) */
+  onFloorArrive?: (floor: number) => void;
+  /** Esc while paused: the pause menu may consume it (closing a panel) instead of resuming */
+  pauseBack?: () => boolean;
+  onPause?: (on: boolean) => void;
+  /** seconds played before this session's first floor (Continue): the ending card's total */
+  playTimeBefore?: () => number;
   /** `?camassist=0|1` pins the soft camera; otherwise it follows the input mode (touch only) */
   camAssistPin: boolean | null = null;
   /** Adaptive resolution: multiplier on the device pixel-ratio cap (see updateDynRes). */
@@ -404,6 +419,9 @@ export class Game {
   /** Tear down everything that belongs to the current floor (assets are released separately by scope). */
   private unloadFloor() {
     this.autopilot = null;
+    this.tutorial?.dispose();
+    this.tutorial = null;
+    this.timeScale = 1;
     this.finisher.end();
     for (const l of this.lifts) l.dispose();
     this.lifts = [];
@@ -661,6 +679,7 @@ export class Game {
       else this.heart?.setState(this.time.state);
       // after the floor's title card: the reward this floor's arrival brings (none on Floor 1)
       this.schedule(4.2, () => this.announceAbilities());
+      this.onFloorArrive?.(this.floorId);
     }
     this.clock.start();
     this.renderer.setAnimationLoop(() => this.frame());
@@ -704,13 +723,67 @@ export class Game {
   /** Stop the frame loop (floor transitions). */
   stop() { this.renderer.setAnimationLoop(null); }
 
+  /** New Game's choice. Guided on Floor 1 = the lessons (game/Tutorial.ts); later floors never teach again. */
+  setGuidance(g: Guidance) {
+    this.guidance = g;
+    this.tutorial?.dispose();
+    this.tutorial = g === 'guided' && this.floorId === 1 ? new Tutorial(this) : null;
+  }
+
+  // ------------------------------------------------------------------ title screen backdrop
+  /**
+   * The title screen draws the loaded floor behind the menu: a slow, low shot drifting past the hero toward the
+   * rusted gate (Floor 1) — atmosphere, flames, dust and her idle only; nothing is simulated, nothing wakes.
+   */
+  private menuT = 0;
+  menuScene(on: boolean) {
+    if (!on) {
+      this.renderer.setAnimationLoop(null);
+      this.resize();
+      return;
+    }
+    this.menuT = 0;
+    this.camera.clearViewOffset();
+    this.camera.fov = Platform.isPortrait ? 62 : 44;
+    this.camera.updateProjectionMatrix();
+    this.clock.start();
+    this.renderer.setAnimationLoop(() => this.menuFrame());
+  }
+  private menuFrame() {
+    const dt = Math.min(this.clock.getDelta(), 1 / 20);
+    this.menuT += dt;
+    const p = this.player;
+    p.anim.setBase({ [LOOPING.has('idle') ? 'idle' : 'idle_combat']: 1 });
+    p.anim.update(dt);
+    // the shot: over her shoulder toward the gate, drifting slowly round her (portrait: she stands between the
+    // name above and the menu below; widescreen: she and the gate sit in the right half)
+    const S = Platform.isPortrait ? { dist: 5.8, h: 1.3, look: 2, ty: 0.25, side: -0.3, span: 0.25, lat: 0 } : { dist: 5.4, h: 1.5, look: 5, ty: 1.4, side: -0.15, span: 0.2, lat: -3.2 };
+    Object.assign(S, (window as unknown as { __menuShot?: object }).__menuShot);
+    const k = Math.sin(this.menuT * 0.05) * 0.5 + 0.5;
+    const yaw = p.yaw + Math.PI + S.side + (k - 0.5) * S.span;
+    const cam = this.camera;
+    cam.position.set(p.pos.x + Math.sin(yaw) * S.dist, p.pos.y + S.h + k * 0.2, p.pos.z + Math.cos(yaw) * S.dist);
+    const ahead = new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
+    // lat > 0 aims right of her line (she and the gate move left in the frame), < 0 left of it
+    cam.lookAt(p.pos.x + ahead.x * S.look - ahead.z * S.lat, p.pos.y + S.ty, p.pos.z + ahead.z * S.look + ahead.x * S.lat);
+    const t = this.t + this.menuT;
+    this.atmo.update(dt, t, cam, p.pos, p.pos.y, (this.scene.fog as THREE.Fog).color);
+    this.level.update(dt, t, p.pos);
+    this.fx.update(dt, t);
+    this.playerLight.position.copy(p.pos).add(new THREE.Vector3(0, 2.3, 0));
+    this.playerLight.intensity = this.heroLight;
+    this.sun.position.copy(p.pos).addScaledVector(this.sunDir, 70);
+    this.sun.target.position.copy(p.pos);
+    this.renderer.render(this.scene, cam);
+  }
+
   private frame() {
     let dt = this.clock.getDelta();
     this.updateDynRes(dt);
     dt = Math.min(dt, 1 / 20);
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = this.fpsN / this.fpsAcc; this.fpsAcc = 0; this.fpsN = 0; }
-    if (this.input.wasPressed('pause')) this.togglePause();
+    if (this.input.wasPressed('pause') && !(this.paused && this.pauseBack?.())) this.togglePause();
     if (this.input.wasPressed('debug')) { this.debug = !this.debug; this.hud.debugEl.classList.toggle('on', this.debug); }
     this.perf.beginStep();
     if (!this.paused) this.step(dt);
@@ -726,6 +799,7 @@ export class Game {
   togglePause(on?: boolean) {
     this.paused = on ?? !this.paused;
     this.hud.pauseEl.classList.toggle('on', this.paused);
+    this.onPause?.(this.paused);
     if (this.paused) { document.exitPointerLock?.(); this.touch?.releaseAll(); this.input.releaseAll(); }
   }
 
@@ -785,6 +859,7 @@ export class Game {
   realDt = 1 / 60;
   step(dt: number) {
     this.realDt = dt;
+    if (this.timeScale < 1) dt *= this.timeScale;
     if (this.fx.hitstopTime > 0) { this.fx.hitstopTime -= dt; dt *= 0.06; }
     else if (this.fx.slowTime > 0) { this.fx.slowTime -= dt; dt *= this.fx.slowScale; }
     this.t += dt;
@@ -807,6 +882,7 @@ export class Game {
     this.heart?.update(dt);
     this.embers?.update(dt);
     this.objectives.update(dt);
+    this.tutorial?.update(this.realDt);
     this.dialogue.update(this.realDt);
     this.fractures.update(dt);
     this.updateVoidAndPrompts();
@@ -1061,7 +1137,7 @@ export class Game {
       this.onNextFloor?.(this.floor.next);
       return;
     }
-    const secs = (performance.now() - this.startTime) / 1000;
+    const secs = (performance.now() - this.startTime) / 1000 + (this.playTimeBefore?.() ?? 0);
     if (this.floorId === 3) {
       (this.hud.endEl.querySelector('h1') as HTMLElement).textContent = 'THE CROWNHEART IS SILENT';
       const ps = this.hud.endEl.querySelectorAll('p');

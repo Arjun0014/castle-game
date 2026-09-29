@@ -60,7 +60,8 @@ export class AudioFX {
     this.master.gain.value = this.muted ? 0 : this.volume;
     this.master.connect(comp).connect(ctx.destination);
     for (const b of ['sfx', 'amb']) { const g = ctx.createGain(); g.connect(this.master); this.buses[b] = g; }
-    this.buses.amb.gain.value = 0.8;
+    this.buses.amb.gain.value = 0.8 * this.lv.music;
+    this.buses.sfx.gain.value = this.lv.sfx;
     return ctx;
   }
 
@@ -70,14 +71,36 @@ export class AudioFX {
    */
   voiceOut(): AudioNode | null {
     if (!this.ctx) return null;
-    if (!this.buses.voice) { const g = this.ctx.createGain(); g.gain.value = 1.05; g.connect(this.master); this.buses.voice = g; }
+    if (!this.buses.voice) { const g = this.ctx.createGain(); g.gain.value = 1.05 * this.lv.voice; g.connect(this.master); this.buses.voice = g; }
     return this.buses.voice;
   }
   duck(on: boolean) {
+    this.ducked = on;
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    this.buses.amb.gain.setTargetAtTime(on ? 0.8 * 0.5 : 0.8, t, on ? 0.08 : 0.4);
-    this.buses.sfx.gain.setTargetAtTime(on ? 0.78 : 1, t, on ? 0.08 : 0.4);
+    this.buses.amb.gain.setTargetAtTime(0.8 * this.lv.music * (on ? 0.5 : 1), t, on ? 0.08 : 0.4);
+    this.buses.sfx.gain.setTargetAtTime(this.lv.sfx * (on ? 0.78 : 1), t, on ? 0.08 : 0.4);
+  }
+
+  /** Settings (menu → Settings): multipliers on the tuned bus levels, 1 = as mixed. */
+  private lv = { master: 1, music: 1, sfx: 1, voice: 1 };
+  private ducked = false;
+  setLevels(l: { master: number; music: number; sfx: number; voice: number }) {
+    this.lv = { master: l.master, music: l.music, sfx: l.sfx, voice: l.voice };
+    this.volume = 0.9 * l.master;
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.master.gain.setTargetAtTime(this.muted ? 0 : this.volume, t, 0.05);
+    this.buses.amb.gain.setTargetAtTime(0.8 * l.music * (this.ducked ? 0.5 : 1), t, 0.05);
+    this.buses.sfx.gain.setTargetAtTime(l.sfx * (this.ducked ? 0.78 : 1), t, 0.05);
+    this.buses.voice?.gain.setTargetAtTime(1.05 * l.voice, t, 0.05);
+  }
+  /** A menu sound (title screen / pause menu): a dry one-shot on the effects bus, no position. */
+  ui(kind: 'move' | 'select' | 'back') {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    if (kind === 'move') this.play('blade_ring' as SoundId, { vol: 0.16, rate: 1.9, jitter: 0.04 });
+    else if (kind === 'select') { this.play('blade_ring' as SoundId, { vol: 0.34, rate: 1.25 }); this.play('resonance' as SoundId, { vol: 0.18, rate: 0.8 }); }
+    else this.play('swing' as SoundId, { vol: 0.2, rate: 0.8 });
   }
 
   /** Decoded buffers for a sound id (from the AssetManager). */

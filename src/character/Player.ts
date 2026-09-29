@@ -918,7 +918,7 @@ export class Player {
     if (this.state === 'block' && frontal && !opts.unblockable) {
       // the sword guard meets the blow: square up to the attacker so the blade is across the incoming strike
       this.yaw = Math.atan2(toAttacker.x, toAttacker.z);
-      if (now - this.blockStart < PARRY_WINDOW) {
+      if (now - this.blockStart < PARRY_WINDOW * this.parryScale) {
         this.anim.play(this.crouching ? 'gs_crouch_block_impact' : 'gs_block_impact', { speed: 2.3, fade: 0.03 });
         this.counterUntil = now + COUNTER_WINDOW;
         this.events.onBlock?.(true);
@@ -952,6 +952,8 @@ export class Player {
     return 'hit';
   }
   private tryStandSafe = false;
+  /** Guided tutorial: the parry window widens while its lesson plays the blow in slow motion */
+  parryScale = 1;
   private world: CollisionWorld | null = null;
   private tstate: TimeState = 'PRESENT';
 

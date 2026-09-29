@@ -124,7 +124,9 @@ export class CameraRig {
 
   snapBehind(yaw: number) { this.yaw = yaw + Math.PI; this.pitchAdj = 0; }
 
-  addShake(amount: number) { this.shake = Math.min(0.6, this.shake + amount); }
+  /** Settings → Camera shake (multiplies every shake and punch) */
+  shakeScale = 1;
+  addShake(amount: number) { this.shake = Math.min(0.6, this.shake + amount * this.shakeScale); }
 
   /** Directional camera impulse (world direction, metres/s of kick velocity). Springs back within ~0.2 s. */
   punch(worldDir: THREE.Vector3, strength: number) {
@@ -133,7 +135,7 @@ export class CameraRig {
     // into camera space
     const inv = c.quaternion.clone().invert();
     _q.applyQuaternion(inv);
-    this.kickVel.addScaledVector(_q, strength);
+    this.kickVel.addScaledVector(_q, strength * this.shakeScale);
   }
 
   /** Horizontal forward vector of the camera (where W moves). */
