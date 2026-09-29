@@ -23,7 +23,11 @@ export interface Archetype {
   hp: number; poise: number; runSpeed: number; walkSpeed: number; radius: number; height: number;
   reward: number; blockChance: number; aggroRange: number; turnRate: number;
   attacks: EnemyAttack[];
-  ranged?: { range: [number, number]; projectileSpeed: number; damage: number; interval: [number, number] };
+  /**
+   * Ranged: `range` = [preferred minimum distance (backs off inside it), max shooting distance];
+   * `sight` = detection distance with line of sight (independent of the encounter volume; any height).
+   */
+  ranged?: { range: [number, number]; sight: number; projectileSpeed: number; damage: number; interval: [number, number] };
   flying?: { altitude: number };
   clips: { idle: string; walk: string; run: string; strafeL?: string; strafeR?: string; back?: string; hitL: string; hitH: string; death: string[]; block?: string; blockHit?: string; rise?: string; kneel?: string };
   slotCost: number;       // how many melee attack slots it occupies
@@ -126,14 +130,14 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     clips: KNIGHT_CLIPS, slotCost: 2,
   },
   archer: {
-    id: 'archer', asset: 'archer', scale: 1.0, hp: 40, poise: 20, runSpeed: 2.2, walkSpeed: 1.3, radius: 0.36, height: 1.8,
-    reward: 30, blockChance: 0, aggroRange: 26, turnRate: 6, attacks: [],
-    ranged: { range: [5, 24], projectileSpeed: 26, damage: 12, interval: [2.2, 3.2] }, clips: ARCHER_CLIPS, slotCost: 0,
+    id: 'archer', asset: 'archer', scale: 1.0, hp: 40, poise: 20, runSpeed: 2.6, walkSpeed: 1.5, radius: 0.36, height: 1.8,
+    reward: 30, blockChance: 0, aggroRange: 34, turnRate: 6, attacks: [],
+    ranged: { range: [7, 32], sight: 34, projectileSpeed: 29, damage: 14, interval: [1.5, 2.4] }, clips: ARCHER_CLIPS, slotCost: 0,
   },
   echo_archer: {
     id: 'echo_archer', asset: 'archer', scale: 1.0, aura: 'echo', spectralArrows: true,
-    hp: 36, poise: 20, runSpeed: 2.2, walkSpeed: 1.3, radius: 0.36, height: 1.8, reward: 30, blockChance: 0, aggroRange: 30, turnRate: 6, attacks: [],
-    ranged: { range: [5, 28], projectileSpeed: 24, damage: 11, interval: [2.4, 3.4] }, clips: ARCHER_CLIPS, slotCost: 0,
+    hp: 36, poise: 20, runSpeed: 2.6, walkSpeed: 1.5, radius: 0.36, height: 1.8, reward: 30, blockChance: 0, aggroRange: 34, turnRate: 6, attacks: [],
+    ranged: { range: [7, 32], sight: 34, projectileSpeed: 27, damage: 13, interval: [1.7, 2.6] }, clips: ARCHER_CLIPS, slotCost: 0,
   },
   wraith: {
     id: 'wraith', asset: 'ghost', scale: 1.0, aura: 'echo',

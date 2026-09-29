@@ -50,6 +50,9 @@ function segSegDist(p1: THREE.Vector3, q1: THREE.Vector3, p2: THREE.Vector3, q2:
 const HEAVY_KINDS = new Set(['heavy', 'finisher', 'sprint', 'air', 'kick']);
 const REMNANT_POOL = 4;
 const ARROW_POOL = 16;
+const TRACER_POOL = 8;
+/** arrow gravity (m/s^2) — shots are aimed with the matching ballistic lift */
+const ARROW_GRAVITY = 3.5;
 
 /** Free a skeleton clone that owns its materials (statues, imprints): materials + bone textures, not geometry. */
 function disposeClone(root: THREE.Object3D) {
@@ -75,6 +78,7 @@ export class EnemyManager {
   slotsUsed = new Map<number, number>();
   slotCapacity = 2;
   private hitRegistry = new Set<string>();
+  private sightT = 0;
   inCombat = false;
   activeCount = 0;
   fissureCooldown = new Map<string, number>();
@@ -84,6 +88,10 @@ export class EnemyManager {
   private arrowGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.8, 5).rotateX(Math.PI / 2);
   private arrowMat = new THREE.MeshStandardMaterial({ color: 0x6a5238, roughness: 0.8 });
   private arrowMatEcho = new THREE.MeshBasicMaterial({ color: 0x9ae8ff });
+  /** aim tracers: a thin line from a drawing archer's bow to the player, brightening toward release */
+  private tracerGeo = new THREE.CylinderGeometry(0.012, 0.012, 1, 4, 1, true).translate(0, 0.5, 0).rotateX(Math.PI / 2);
+  private tracerMat = new THREE.MeshBasicMaterial({ color: 0xffb070, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending });
+  private tracers: THREE.Mesh[] = [];
   bossName = 'THE GATE WARDEN';
   boss: Enemy | null = null;
   onBossDeath?: () => void;
@@ -105,6 +113,13 @@ export class EnemyManager {
       const m = new THREE.Mesh(this.arrowGeo, this.arrowMat);
       m.visible = false;
       this.arrowPool.push(m);
+    }
+    for (let i = 0; i < TRACER_POOL; i++) {
+      // own material per tracer (opacity/colour per archer); clones share the warmed program
+      const m = new THREE.Mesh(this.tracerGeo, this.tracerMat.clone());
+      m.visible = false; m.frustumCulled = false; m.renderOrder = 5;
+      this.g.scene.add(m);
+      this.tracers.push(m);
     }
   }
 
@@ -144,6 +159,11 @@ export class EnemyManager {
       m.position.copy(at).add(new THREE.Vector3(0, 1.4, -1.5));
       objects.push(m);
     }
+    {
+      const m = new THREE.Mesh(this.tracerGeo, this.tracerMat);
+      m.position.copy(at).add(new THREE.Vector3(0.4, 1.4, -1.5));
+      objects.push(m);
+    }
     return {
       objects,
       // the materials stay alive until the floor unloads: three frees a program when its last material is
@@ -178,6 +198,9 @@ export class EnemyManager {
     for (const im of this.imprints) { sc.remove(im.obj); disposeClone(im.obj); }
     for (const ar of this.arrows) sc.remove(ar.mesh);
     for (const m of this.arrowPool) sc.remove(m);
+    for (const m of this.tracers) { sc.remove(m); (m.material as THREE.Material).dispose(); }
+    this.tracers = [];
+    this.tracerGeo.dispose(); this.tracerMat.dispose();
     this.enemies = []; this.remnants = []; this.remnantPool = []; this.statues = []; this.imprints = [];
     this.arrows = []; this.arrowPool = [];
     this.encounters.clear();
@@ -402,13 +425,26 @@ export class EnemyManager {
       if (enc.triggered) this.updateWaves(enc);
     }
     // aggro-on-sight for untriggered enemies
+    this.sightT -= dt;
+    const sightTick = this.sightT <= 0;
+    if (sightTick) this.sightT = 0.2;
     for (const e of this.enemies) {
       if (e.triggered || !e.alive || e.state === 'hidden' || e.state === 'dormant') continue;
       if (e.owner !== st && e.owner !== 'BOTH') continue;
-      if (this.encounters.get(e.encounter)?.finale) continue; // the finale starts only from its arena volume
-      if (e.pos.distanceTo(p.pos) < Math.min(9, e.arch.aggroRange) && Math.abs(e.pos.y - p.pos.y) < 3 &&
+      const enc = this.encounters.get(e.encounter)!;
+      if (enc.finale && !enc.triggered) continue; // the finale starts only from its arena volume
+      const d = e.pos.distanceTo(p.pos);
+      if (e.isRanged) {
+        // archers see far and from any height (galleries, perches): they open fire on sight without waking the
+        // rest of their encounter, but never before their wave
+        if (!sightTick || d > e.arch.ranged!.sight || Math.abs(e.pos.y - p.pos.y) > 14) continue;
+        if (e.wave > Math.max(1, enc.wave)) continue;
+        const chest = p.pos.clone().setY(p.pos.y + 1.2);
+        if (ctx.lineOfSight(e.firingPoint(ctx.world, st, chest), chest)) { e.activate(); e.cooldown = Math.max(e.cooldown, 0.4 + Math.random() * 0.5); }
+        continue;
+      }
+      if (d < Math.min(9, e.arch.aggroRange) && Math.abs(e.pos.y - p.pos.y) < 3 &&
         ctx.lineOfSight(e.center.clone(), p.pos.clone().setY(p.pos.y + 1.3))) {
-        const enc = this.encounters.get(e.encounter)!;
         if (!enc.triggered) this.trigger(enc); else e.activate();
       }
     }
@@ -435,6 +471,7 @@ export class EnemyManager {
       if (e.alive && (g.level.collision.inVoid(e.pos, st) || e.pos.y < -30)) { e.die(); this.onKill(e, true); }
     }
     this.separate();
+    this.updateTracers(st);
     this.activeCount = active;
     this.inCombat = combat;
     this.playerHitsEnemies();
@@ -769,14 +806,22 @@ export class EnemyManager {
     if (e.arch.boss) { /* surge handled by encounter clear */ }
   }
 
+  /**
+   * Loose an arrow: aimed at the chest, leading the player's current velocity over the flight time (a
+   * straight-line run gets hit; a change of direction, a stop or a dodge beats it), with the exact ballistic
+   * lift for that flight time, so long shots from the galleries arrive where they were aimed.
+   */
   private shoot(e: Enemy) {
     const g = this.g;
     const st = g.time.state;
-    const from = e.pos.clone().add(new THREE.Vector3(0, 1.45 * e.arch.scale, 0)).addScaledVector(e.facing, 0.5);
-    const target = g.player.pos.clone().add(new THREE.Vector3(0, 1.15, 0)).addScaledVector(g.player.vel.clone().setY(0), 0.25);
     const r = e.arch.ranged!;
+    const chest = g.player.pos.clone().add(new THREE.Vector3(0, 1.15, 0));
+    const from = e.firingPoint(g.level.collision, st, chest);
+    if (!e.opts.perch) from.addScaledVector(e.facing, 0.5);
+    const flight = from.distanceTo(chest) / r.projectileSpeed;
+    const target = chest.addScaledVector(g.player.vel.clone().setY(0), Math.min(1.0, flight * 0.95));
     const vel = target.sub(from).normalize().multiplyScalar(r.projectileSpeed);
-    vel.y += 0.6;
+    vel.y += 0.5 * ARROW_GRAVITY * from.distanceTo(g.player.pos) / r.projectileSpeed;
     const mesh = this.arrowPool.pop() ?? new THREE.Mesh(this.arrowGeo, this.arrowMat);
     mesh.material = e.arch.spectralArrows ? this.arrowMatEcho : this.arrowMat;
     mesh.visible = true;
@@ -793,7 +838,7 @@ export class EnemyManager {
       if (a.life <= 0) continue;
       a.life -= dt;
       if (a.state !== st) { a.life = 0; continue; }
-      a.vel.y -= 3.5 * dt;
+      a.vel.y -= ARROW_GRAVITY * dt;
       const from = a.mesh.position.clone();
       const step = a.vel.clone().multiplyScalar(dt);
       const len = step.length();
@@ -805,8 +850,13 @@ export class EnemyManager {
         const res = p.receiveHit(a.damage, a.owner.pos, { knock: 1 }, g.input.now);
         if (res !== 'ignored') {
           a.life = 0;
-          if (res === 'block' || res === 'parry') g.fx.sparks(to, 10, 0xffd090);
-          else { g.fx.blood(to, 6); g.audio.hurt(); g.rig.addShake(0.15); }
+          if (res === 'block' || res === 'parry') { g.fx.sparks(to, 10, 0xffd090); g.audio.hitEnemy('blocked', 8, to, 0.2); Platform.haptic(10); }
+          else {
+            g.fx.blood(to, 6); g.audio.hurt(); g.rig.addShake(0.18);
+            g.rig.punch(a.vel.clone().setY(0), 1.6);
+            g.hud.flash('#6a0000', 0.16);
+            Platform.haptic(24);
+          }
           continue;
         }
       }
@@ -844,6 +894,33 @@ export class EnemyManager {
       g.fx.shiftBurst(f.pos, g.time.state);
       break;
     }
+  }
+
+  /** Aim tracers for archers in their aim phase (current state, visible, alive). */
+  private updateTracers(st: TimeState) {
+    let i = 0;
+    const p = this.g.player;
+    if (p.alive) {
+      for (const e of this.enemies) {
+        if (i >= this.tracers.length) break;
+        if (!e.isRanged || !e.alive || e.state !== 'shoot' || e.shootPhase !== 1 || !e.root.visible) continue;
+        if (e.owner !== st && e.owner !== 'BOTH') continue;
+        const k = e.aimProgress;
+        const to = p.pos.clone().setY(p.pos.y + 1.15);
+        const from = e.firingPoint(this.g.level.collision, st, to);
+        if (!e.opts.perch) from.addScaledVector(e.facing, 0.45);
+        const len = from.distanceTo(to);
+        const m = this.tracers[i++];
+        const mat = m.material as THREE.MeshBasicMaterial;
+        mat.color.setHex(e.arch.spectralArrows ? 0x9ae8ff : 0xffb070);
+        mat.opacity = 0.08 + 0.5 * k * k;
+        m.position.copy(from);
+        m.lookAt(to);
+        m.scale.set(1 + k * 1.5, 1 + k * 1.5, len);
+        m.visible = true;
+      }
+    }
+    for (; i < this.tracers.length; i++) this.tracers[i].visible = false;
   }
 
   // ------------------------------------------------------------------ checkpoint reset

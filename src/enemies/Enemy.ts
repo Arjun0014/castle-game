@@ -60,6 +60,34 @@ export class Enemy {
   losOk = true;
   shootPhase = 0;
   aimTime = 0;
+  /** total aim duration of the current shot (aimProgress for the tracer / HUD) */
+  aimTotal = 0.6;
+  /** point-blank shot (the player closed in and the archer could not back off) */
+  private panic = false;
+  private repoTarget: THREE.Vector3 | null = null;
+  private repoT = 0;
+  get aimProgress() { return this.shootPhase === 1 ? THREE.MathUtils.clamp(1 - this.aimTime / this.aimTotal, 0, 1) : 0; }
+  /** bow / eye height used for line of sight and arrow release */
+  eye(out = new THREE.Vector3()) { return out.copy(this.pos).setY(this.pos.y + 1.45 * this.arch.scale); }
+
+  /**
+   * Where a shot leaves from. Perched archers stand at gallery parapets whose COLLISION is 1.9 m tall (a
+   * player-only barrier; the stone is 1.2–1.3 m), so from the eye every downward line is "blocked" by
+   * something the archer visibly stands above. A perched archer leans over an obstacle close ahead if it is
+   * parapet-height — the line 2.05 m above its feet is clear — and never through a real wall.
+   */
+  firingPoint(world: CollisionWorld, state: TimeState, target: THREE.Vector3, out = new THREE.Vector3()) {
+    const eye = this.eye(out);
+    if (!this.opts.perch) return eye;
+    const dir = _fw.copy(target).sub(eye).setY(0);
+    if (dir.lengthSq() < 1e-4) return eye;
+    dir.normalize();
+    const hit = world.raycast(eye.clone(), dir.clone(), 1.8, state);
+    if (!hit) return eye;
+    const over = this.pos.clone().setY(this.pos.y + 2.05);
+    if (world.raycast(over, dir.clone(), hit.distance + 0.7, state)) return eye;
+    return eye.addScaledVector(dir, hit.distance + 0.5).setY(this.pos.y + 1.6 * this.arch.scale);
+  }
   hitFlash = 0;
   diveDir = new THREE.Vector3();
   baseAlt = 0;
@@ -588,37 +616,92 @@ export class Enemy {
   }
 
   // ------------------------------------------------------------------ ranged
+  private canSee(ctx: EnemyCtx, from?: THREE.Vector3) {
+    const chest = ctx.playerPos.clone().setY(ctx.playerPos.y + 1.2);
+    const o = from ?? this.firingPoint(ctx.world, ctx.state, chest);
+    return ctx.lineOfSight(o, chest);
+  }
+
+  /**
+   * Archer brain (session 4): archers are the priority threat. They engage from long range whenever they
+   * can see the player (checked 4×/s against the active state's collision — never through walls), keep their
+   * distance (back off inside range[0], sidestep if there is no room), and without a clear shot they look for
+   * a nearby firing spot instead of charging like a melee enemy. Perched archers never leave their perch.
+   */
   private rangedThink(dt: number, dist: number, dirP: THREE.Vector3, ctx: EnemyCtx) {
     const r = this.arch.ranged!;
-    this.turnToward(dirP, this.arch.turnRate, dt);
+    const a = this.arch;
+    this.turnToward(dirP, a.turnRate, dt);
     this.thinkT -= dt;
-    if (this.thinkT <= 0) {
-      this.thinkT = 0.3;
-      this.losOk = ctx.lineOfSight(this.center.clone(), ctx.playerPos.clone().setY(ctx.playerPos.y + 1.2));
-    }
+    if (this.thinkT <= 0) { this.thinkT = 0.25; this.losOk = this.canSee(ctx); }
+    this.repoT -= dt;
     let move = new THREE.Vector3();
     if (!this.opts.perch) {
-      if (dist < r.range[0]) { move = dirP.clone().multiplyScalar(-this.arch.walkSpeed); this.loop(this.arch.clips.back ?? this.arch.clips.walk, 1); }
-      else if (dist > r.range[1] || !this.losOk) { move = dirP.clone().multiplyScalar(this.arch.walkSpeed); this.loop(this.arch.clips.walk, 1); }
-      else this.loop(this.arch.clips.idle, 1);
-    } else this.loop(this.arch.clips.idle, 1);
-    if (this.cooldown <= 0 && dist >= 2.5 && dist <= r.range[1] + 4 && this.losOk) {
+      if (dist < r.range[0]) {
+        // too close: back away (keepFooting turns this aside at ledges); strafe if the way back is blocked
+        const back = dirP.clone().negate();
+        const hit = ctx.world.raycast(this.pos.clone().setY(this.pos.y + 0.6), back, 1.6, ctx.state);
+        if (!hit) { move = back.multiplyScalar(a.walkSpeed * 1.3); this.loop(a.clips.back ?? a.clips.walk, 1.25); }
+        else { move = new THREE.Vector3().crossVectors(UP, dirP).multiplyScalar(this.circleDir * a.walkSpeed * 1.2); this.loop((this.circleDir > 0 ? a.clips.strafeL : a.clips.strafeR) ?? a.clips.walk, 1.2); }
+      } else if (!this.losOk || dist > r.range[1]) {
+        if (this.repoT <= 0) { this.repoT = 1.4; this.repoTarget = this.losOk ? null : this.findFiringSpot(ctx, dirP); }
+        if (this.repoTarget && this.repoTarget.distanceTo(this.pos) > 0.5) {
+          move = new THREE.Vector3().subVectors(this.repoTarget, this.pos).setY(0).normalize().multiplyScalar(a.walkSpeed * 1.2);
+          this.loop(a.clips.walk, 1.2);
+        } else if (dist > r.range[1] && this.pos.distanceTo(this.home) < 10) {
+          move = dirP.clone().multiplyScalar(a.walkSpeed); this.loop(a.clips.walk, 1);
+        } else this.loop(a.clips.idle, 1);
+      } else this.loop(a.clips.idle, 1);
+    } else this.loop(a.clips.idle, 1);
+    if (this.cooldown <= 0 && this.losOk && dist <= r.range[1] + 2) {
+      this.panic = dist < 3.5;
       this.setState('shoot');
       this.shootPhase = 0;
-      this.once('a_draw', 1.5, 0.1, 0.12);
+      this.once('a_draw', this.panic ? 2.4 : 1.6, 0.1, 0.1);
     }
     return move;
   }
 
+  /** A spot within a few metres (and within 9 m of home) with footing and a clear line to the player. */
+  private findFiringSpot(ctx: EnemyCtx, dirP: THREE.Vector3): THREE.Vector3 | null {
+    const side = new THREE.Vector3().crossVectors(UP, dirP);
+    let best: THREE.Vector3 | null = null, bestD = Infinity;
+    for (const [s, f] of [[2.5, 0], [-2.5, 0], [4.5, 0], [-4.5, 0], [3, -2], [-3, -2], [2.5, 2], [-2.5, 2]]) {
+      const c = this.pos.clone().addScaledVector(side, s).addScaledVector(dirP, f);
+      if (c.distanceTo(this.home) > 9) continue;
+      if (!ctx.world.hasFooting(c.clone().setY(c.y + 1), 3.5, ctx.state) || ctx.world.inVoid(c, ctx.state)) continue;
+      const path = ctx.world.raycast(this.pos.clone().setY(this.pos.y + 0.6), c.clone().sub(this.pos).setY(0).normalize(), Math.hypot(s, f), ctx.state);
+      if (path) continue;
+      if (!this.canSee(ctx, c.clone().setY(c.y + 1.45 * this.arch.scale))) continue;
+      const d = Math.hypot(s, f);
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    return best;
+  }
+
+  /**
+   * Draw → aim (readable: glint, bow-draw sound, a tracer that brightens toward release) → loose. Losing
+   * sight of the player while aiming cancels the shot: breaking line of sight is the counterplay.
+   */
   private updateShoot(dt: number, dist: number, dirP: THREE.Vector3, ctx: EnemyCtx) {
-    this.turnToward(dirP, this.arch.turnRate, dt);
     const r = this.arch.ranged!;
-    if (this.shootPhase === 0 && this.stateTime > 0.55) { this.shootPhase = 1; this.aimTime = 0.45 + Math.random() * 0.35; this.loop('a_aim', 1, 0.1); this.hitFlash = 0.8; this.events.push('aim'); }
-    else if (this.shootPhase === 1) {
+    this.turnToward(dirP, this.arch.turnRate * (this.shootPhase === 1 ? 0.7 : 1), dt);
+    const draw = this.panic ? 0.28 : 0.5;
+    if (this.shootPhase === 0 && this.stateTime > draw) {
+      this.shootPhase = 1;
+      this.aimTotal = this.aimTime = this.panic ? 0.32 : 0.55 + Math.random() * 0.3;
+      this.loop('a_aim', 1, 0.1);
+      this.hitFlash = 0.8;
+      this.events.push('aim');
+    } else if (this.shootPhase === 1) {
       this.aimTime -= dt;
+      this.thinkT -= dt;
+      if (this.thinkT <= 0) { this.thinkT = 0.2; this.losOk = this.canSee(ctx); }
+      if (!this.losOk) { this.cooldown = 0.5; this.shootPhase = 0; this.setState('chase'); return new THREE.Vector3(); }
       if (this.aimTime <= 0) { this.shootPhase = 2; this.once('a_recoil', 1.3, 0, 0.05); ctx.shoot(this); }
-    } else if (this.shootPhase === 2 && this.stateTime > 1.6) {
+    } else if (this.shootPhase === 2 && this.stateTime > draw + this.aimTotal + 0.55) {
       this.cooldown = r.interval[0] + Math.random() * (r.interval[1] - r.interval[0]);
+      this.shootPhase = 0;
       this.setState('chase');
     }
     void dist;
