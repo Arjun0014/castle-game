@@ -57,6 +57,18 @@
         "build/itch-sim"
       ],
       "port": 5190
+    },
+    {
+      "name": "time-castle-preview-4175",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--port",
+        "4175",
+        "--strictPort"
+      ],
+      "port": 4175
     }
   ]
 }

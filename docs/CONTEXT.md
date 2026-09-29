@@ -29,11 +29,16 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 **World scope:** one ancestral castle  
 **Total floors:** 3  
 **Game title:** THE CASTLE REMEMBERS (the castle is Caer Veyr).
-**Current implementation priority:** session 9 = polish + encounter redesign (§10 Session 9): frequent cinematic
+**Current implementation priority:** session 10 = finishing polish (§10 Session 10): a real **title screen** over the
+castle itself (Continue / New Game → Guided or Minimal guidance → the opening film / Controls / Settings / Credits), a
+cinematic **chapter card** loading screen with real progress, the **Guided Floor 1 tutorial** (move → crouch, one
+lesson at a time), a **pause menu**, floor-level **saves**, the **enemy audit** of all floors (every archer shoots, bats
+swoop, no blind spawns), **Floor 3 played end to end** (lift → descent → the Maw → the Last Crown → the ending) with its
+fixes, and `LEVEL_03_BLUEPRINT.md` rewritten for v3. Next: human playtests on a real phone (§8).
+Session 9 = polish + encounter redesign (§10 Session 9): frequent cinematic
 finishers (5 variants), faster touch camera + bigger pocket, the quiet crypt water, the four new monsters with their
 own brains + 3 mini-bosses, **Floor 3 rebuilt as the descent to the Crownheart**, the King's lift (F2 -> F3), the
-Last Crown's reveal/heart/death. STILL OPEN from the session-9 brief: loading-screen redesign, main menu, the
-guided Floor 1 tutorial, the idle-archer audit, playtests of Floor 3 end to end (see §8 Session 9 follow-ups).
+Last Crown's reveal/heart/death.
 Session 8 = enemy robustness (stuck enemies, T-pose leftovers, no monsters in
 the Past), a redesigned touch HUD (no Dodge, empty camera pocket), floor-clearing rewards (Crownbreaker = HOLD HEAVY
 after Floor 1, Whirlwind = HOLD LIGHT after Floor 2), cinematic last-enemy finishers, dev-only floor/boss warps
@@ -317,6 +322,14 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
   - Floor 2 "Complicity" (v1.1, self-reviewed): the Royal Floor, resonant fractures, economy, coordinates;
   - mirrored in code by `tools/blender/floor02_layout.py`.
 
+- `LEVEL_03_BLUEPRINT.md`
+  - Floor 3 "The Crownheart" **v3.1 (session 10)**: the descent beneath the castle as built and play-tested (every weave,
+    encounters, economy, the Last Crown's arena, the session-10 fixes). v1/v2 (the summit) are obsolete;
+  - mirrored in code by `tools/blender/floor03_layout.py`.
+
+- `CINEMATIC.md`, `CINEMATIC_V2.md`, `CINEMATIC_HANDOFF.md` — the opening film (v1 pipeline, v2 + the FINAL hybrid cut,
+  handoff state). Committed in session 10 (`796a604`).
+
 - `DIALOGUE.md` — the heroine: character, arc, knowledge boundaries, trigger rules, casting, ElevenLabs settings,
   QA, streaming (session 7). Lines: `src/data/dialogue.json`.
 - `../THE_CASTLE_REMEMBERS_LORE.md` — the user's canonical pre-game lore (untracked file from the user; read it).
@@ -352,7 +365,7 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | Floor 2 geometry | BUILT (v1) | `tools/blender/floor02_layout.py` → `build_floor02.py` → `public/assets/levels/floor02.glb` (14.8k tris) + collision (3.4k tris); 0 validation issues |
 | Floor 2 runtime | WORKING | `?floor=2` loads (44 enemies, 12 encounters, 5 sigils, 6 fissures); Floor 1 exit → chapter reload into Floor 2 with HP/charge carry; FR1 fracture breaks + Present chandelier bridge verified; every route segment walked with 0 falls (see §10) |
 | Floor 2 full playthrough | **VERIFIED (session 3)** | god: spawn → G7 in one run + CP5 → exit segment; **real damage (`?autopilot=full&floor=2`): exit reached at 495 s, 6 deaths → checkpoint respawns (4 in the Kingsguard fight: kicked into floor holes), 35 kills, 7 shifts, 0 compiles / 0 uploads** |
-| Floor 3 blueprint | DONE (**v2.0**, session 5) | `docs/LEVEL_03_BLUEPRINT.md` — mage boss, compact floor (BC → WG weave → warded stair / spire ramp → Hall of Crowns → the Crown). The v1.0 stationary-boss design is obsolete |
+| Floor 3 blueprint | DONE (**v3.1**, session 10) | `docs/LEVEL_03_BLUEPRINT.md` rewritten for the v3 descent (lift foot → Hall of Roots → ossuary → cistern / the Maw → Great Descent → Threshold → the Crownheart) incl. the session-10 play-test fixes. v1/v2 (summit) obsolete |
 | Final boss asset | DONE, VERIFIED | `lastcrown.glb` (Pro Magic Pack Nightshade, 32 clips) — §4 |
 | Floor 3 geometry | BUILT, TRAVERSAL VERIFIED | `tools/blender/floor03_layout.py` + `build_floor03.py` → `floor03.glb` (7.2k tris) + collision (1.8k); 0 validation issues; scripted walks: G1 gap (Present void / Past floor), portcullis (Past blocks / Present passes), stair (Past stops at the Royal Ward, Present spire ramp reaches the hall), Crown doors (Present fused / Past open) |
 | Floor 3 runtime + Last Crown | WORKING (bot-verified) | `src/enemies/LastCrown.ts`, `src/vfx/Spells.ts`; god bot fight: phase 2 at 26 s, phase 3 at 85 s, slips, blinks, wards/bindings broken by the bot's shifts, 0 errors; real-damage bot (never dodges/guards) dies every ~35–40 s and reached phase 2; checkpoint respawn resets the fight. **No human playtest yet** |
@@ -360,7 +373,7 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **Hero Great Sword combat (session 5)** | DONE, VERIFIED (numeric) | `dev/combatHarness.js` matrix: every route/branch below chains and connects on a dummy; skeleton hips scale constant 0.0100 in all 29 attack definitions; root speed ≤ 7 m/s in attacks (12.8 dodge) |
 | **Crouch walk** | DONE, VERIFIED | planted-foot speed p25 0.04 m/s at 1.55 m/s body speed (was 1.55 = full slide); auto-crouch crawl verified on the F1 crawl line |
 | **Asset lifecycle (session 3)** | DONE, VERIFIED | `src/assets/AssetManager.ts` (ref-counted scopes, shared in-flight loads, byte-weighted progress, disposal), `src/assets/GameAssets.ts` (every key + per-floor dependency lists from `src/data/floorManifests.json`). Scopes: `core` (hero, shared sounds), `ambience` (5 beds, skipped when muted), `floorN`. F1→F2→F1→F2 returns identical GL counts |
-| **Loading screen** | DONE | `src/ui/LoadingScreen.ts`: initial + floor transitions; "LOADING CAER VEYR / ████░░ 82% / Preparing the Royal Floor — …"; real progress (bytes, then build, then GPU warm-up) |
+| **Loading screen** | REDESIGNED (s10), VERIFIED | `src/ui/LoadingScreen.ts` + `ui/menu.css`: chapter card (FLOOR II / THE ROYAL FLOOR / Complicity / epigraph) round the Crownheart sigil whose gilt ring = the real byte/build/warm-up progress (never ahead of it), step + detail in words, embers; the heart flares when ready; boot, transitions, Continue ("press any key / tap to enter") |
 | **In-place floor transitions** | DONE, VERIFIED | `Game.transitionTo(next)`: stop loop → retain shared keys → `unloadFloor()` → release old scope (disposes textures/geometries/materials/skeletons/bone textures/audio buffers only it used) → load+build+warm next → carry HP/charge. Duplicate calls share one promise. F1→F2 ≈ 2 s (was page reload 3.4 s + 6.4 s first-frame freeze) |
 | **GPU warm-up** | DONE, VERIFIED | `src/assets/Warmup.ts` + warm kits in EnemyManager/Effects/Gore/Atmosphere + `src/vfx/ShadowDepth.ts`: 0 shader compiles and 0 texture uploads after the loading screen over a 342 s F1 autopilot run |
 | **Pooling** | DONE | fissure remnants (4, pre-instantiated), arrows (16), glints, shift rings, afterimages (no per-dodge buffers), blood decals, gibs, smoke wisps |
@@ -372,7 +385,7 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **Combat feel + new L1** | DONE, VERIFIED (numeric) | L1 contact 0.13 s after press; chain hit every 0.38–0.47 s; L1→Heavy continues into F1c; per-swing hit registry (fixed repeat-swing whiffs) |
 | **Archers** | DONE, VERIFIED | first arrow 1.0 s after sight at 27 m; straight runs hit 4/8, juking 0/8, guard blocks all, cover (gallery slab) 0 shots |
 | **Ledge-safe dodge/knockback** | DONE, VERIFIED | F2 real-damage 0 deaths (was 6) |
-| **itch.io build** | DONE, VERIFIED | `vite base './'`, `npm run package:itch` → `build/caer-veyr-itch.zip` (83 MB, 338 files); served from `/html/12345/`: 0 failed requests, F1→F2 2.1 s |
+| **itch.io build** | DONE, VERIFIED | `vite base './'`, `npm run package:itch` → `build/caer-veyr-itch.zip` — session 10: **162 MB, 535 files, 189 MB unpacked** (the film adds 58 MB; itch limits: ≤ 1,000 files, ≤ 1 GB); production preview verified (title, Continue, pause, New Game → tutorial) |
 | **Mobile quality tier** | DONE, VERIFIED | `Platform.quality`: handheld = 6 point lights + 1024 shadows (−20–25 % GPU at 720×1280) |
 | **Git** | DONE | local repo, pushed to github.com/Arjun0014/castle-game `main` as Arjun0014 (see §10) |
 | **Soft combat camera (s7)** | DONE, VERIFIED (numeric, emulated touch) | `src/combat/TargetAssist.ts`; touch only (`?camassist=0\|1` pins); an off-screen attacker 126° away is eased into view in ≈ 0.8 s, max 2.4 rad/s, no snap; manual swipe = full control for 1.3 s |
@@ -394,9 +407,14 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **Touch camera (s9)** | DONE, VERIFIED (emulated 375x812) | pocket ~40 % larger, gain 5.2 rad/stage-width + flick acceleration; 100 px slow swipe 60°, fast 96° (before 40°) |
 | **Crypt water (s9)** | DONE (numeric; NOT heard by a human) | `amb_drips` low-passed, -21 dB (was 11 dB hotter than every bed), depth ramp, combat duck |
 | **New monsters (s9)** | DONE, VERIFIED (probes on F1 + F2 real encounters) | `enemies/Monsters.ts`: goblin / bat / widow (+ widowling) / lamia brains; KTX2 GLBs; 12 CC0 sounds |
-| **Mini-bosses (s9)** | DONE; Gutter King + Weeping Mother VERIFIED by bot, the Maw NOT fought yet | F2 E4 THE GUTTER KING, F2 E2b THE WEEPING MOTHER (optional lair), F3 E5 THE MAW OF THE CROWNHEART |
-| **Floor 3 v3 (s9)** | BUILT, loads, boss reveal VERIFIED; full playthrough NOT done | `tools/blender/floor03_layout.py` v3 -> floor03*.glb (20k tris, 0 issues), NAV3 baked |
-| **King's lift F2->F3 (s9)** | BUILT; NOT yet played through in the browser | `levels/Lift.ts`, F2 `lift` marker (bell chamber shaft), F3 arrival shot |
+| **Mini-bosses (s9)** | DONE; all three VERIFIED by bot (the Maw in s10: 33–35 s, all 3 waves, real-damage bot survives) | F2 E4 THE GUTTER KING, F2 E2b THE WEEPING MOTHER (optional lair), F3 E5 THE MAW OF THE CROWNHEART |
+| **Floor 3 v3 (s9)** | PLAYED END TO END (s10, bots) | `dev/f3Probe.js`: 9 weaves pass in the right memory, blocked/void in the other; spawn → arena route with 6 accepted shifts; iron gate fixed (layout rebuilt, NAV3 rebaked); audit: every encounter acts; the Maw; the Last Crown fight → death shot → heart shatters → ending card (god bot 100–123 s; real-damage bot dies, respawns at CP3, fight resets). Present lighting raised; roots fade from the camera |
+| **King's lift F2->F3 (s9)** | VERIFIED (s10, browser) | step on → "THE KING'S LIFT" → 7.2 s descent → chapter card → Floor 3 arrival shot; s10 fixed: the ride cost 4 × 25 % health (shaft kill volume) and the exit tore the floor down mid-frame |
+| **Title screen (s10)** | DONE, VERIFIED (dev + production, portrait / wide / phone touch) | `ui/MainMenu.ts`, `ui/menu.css`, `Game.menuScene` (a slow shot of the heroine before the rusted gate): Continue · New Game → Guided / Minimal → the film → Floor 1 · Controls (kbm / touch tabs + combos) · Settings · Credits (all CC BY authors); keyboard / mouse / touch |
+| **Opening film (s10 integration)** | COMMITTED, VERIFIED in browser (muted) | New Game (a gesture) → `ui/Intro.ts` via `import.meta.glob` → subtitles + Skip → play; `?nointro` skips; dev `&film` shows it in a muted test session |
+| **Guided tutorial (s10)** | DONE, VERIFIED (`dev/tutorialProbe.js`: all 19 lessons in order) | `game/Tutorial.ts`: move, look, the way in, light (world near-freeze until the first blow), heavy, combo, guard + parry (slow blows, wider parry window), dodge (desktop), finish, Resonance, sigil, two memories, shift, the Past, the living guard, shift back, crouch, end; E1's Hollows teach (passive, cannot die), the hero is protected (≥ 1/3 HP). Minimal = compact cards + objectives/rings/guide. **Not played by a human** |
+| **Settings / saves / pause (s10)** | DONE, VERIFIED (production) | `game/Settings.ts` (master/ambience/effects/voice, subtitles, camera sensitivity, shake; localStorage), `game/Save.ts` (Floors II/III; Continue restores learned/bestiary/deaths/play time), `PauseMenu` (Resume / Controls / Settings / Quit to title), ending → Return to the title |
+| **Enemy audit (s10)** | DONE, VERIFIED (`dev/auditProbe.js`, all floors) | 4 blind perched archers relocated at load (`checkPerches`), perched archers no longer slide down ramps, bats' swoop counter leak fixed, blind flyer spawns moved (`checkFlyers`), F3 respawn crash fixed; slot rotation fair in every big fight |
 
 ---
 
@@ -450,6 +468,16 @@ Runtime (`src/`):
   shaft dust, smoke wisps. Per-state presets `ATMO`; lighting presets `ENV` in `Game.ts` (Present: low hemi,
   near-vertical shadowing moon so light falls through roof holes, low-angle shadowless `fill`, hero light).
 - `vfx/Fire.ts` — all `fire` markers as one instanced procedural flame shader per state.
+- Session 10: `ui/MainMenu.ts` (title screen + `PauseMenu`; shared Controls / Settings / Credits panels), `ui/menu.css`
+  (loading card, title, panels, pause menu, tutorial card, end card), `ui/LoadingScreen.ts` (chapter card + `sigilSVG`),
+  `data/credits.ts`, `game/Settings.ts`, `game/Save.ts`, `game/Tutorial.ts` (Guided Floor 1), `main.ts` (boot card →
+  title → New Game / Continue; the film through `import.meta.glob('./ui/Intro.ts')`), `Game.menuScene` (title backdrop),
+  `Game.timeScale` (tutorial slow motion), `Game.setGuidance`, `Game.onFloorArrive` (saves), `Game.pendingNext` (floor
+  transitions start at the top of the next frame), `Game.updateRoots` (crystal roots fade from the camera),
+  `Enemy.tutorialPassive/minHp/strikeIn()`, `Player.parryScale`, `EnemyManager.checkPerches/checkFlyers` (load-time
+  sightline fixes, logged in `spawnFixes`), `Materials.variants()`, `AudioFX.setLevels/ui/unlock`, `Input.lookScale`,
+  `CameraRig.shakeScale`, `HUD.subtitlesOn/lessonDone/teachBar/setFreeze`, objectives `shiftFrom` + teaches
+  `shiftback`/`crouch`. Dev: `dev/tutorialProbe.js`, `dev/auditProbe.js`, `dev/f3Probe.js`, `dev/bossBot.js` (v3 arena).
 - Session 9: `enemies/Monsters.ts` (Goblin / Bat / Widow / Lamia brains + MonsterFX pools: web globs, warning rings,
   silk threads), Enemy hooks `brainThink` / `brainSpecial` / `afterAnimate` / `onAttackEnd`, `flyWant/flyRate`,
   `floating`, ctx `hold` (finishers) / `playerAttack` / `playerAirborne`; `EnemyManager.devSpawn`, `bestiary`, BOSS_SUB;
@@ -495,6 +523,8 @@ on release < 0.22 s) / hold sprint · Space jump · C crouch (toggle) · LMB lig
 before a hit = parry) · Q+LMB shield bash · Q+RMB or F kick · R hold 2.4 s to shift · E interact (sigils, memory traces) ·
 Tab or MMB lock-on · Esc pause (click/Esc resumes) · M mute · backquote debug overlay · F9 collision view.
 Session 8: hold RMB = Crownbreaker (from Floor 2), hold LMB = Whirlwind (Floor 3).
+Session 10: Esc opens the pause menu (Esc again resumes or closes an open panel); the title screen takes ↑/↓ or W/S,
+Enter/Space, Esc (back), mouse and touch.
 
 **Touch (handhelds; `?input=touch`), session 8 layout** (centre and diameter in u = stage width/400, from the
 stage's bottom-right; `style.css` `.t-*`): ATTACK ⌀92 (60, 196) · JUMP ⌀76 (58, 302) · HEAVY ⌀70 (148, 166) ·
@@ -546,7 +576,14 @@ A parry staggers the attacker and grants +12 resonance.
     · `?at=range` (F2 wardens' range, Present, E4) · `?at=kingsguard` (F2 King's apartments, E10 Kingsguard Captain)
     · `?at=lastcrown` (F3 the doors of the Crown). Each clears the encounters before it, sets the needed fracture flags
     (FR1 for the Kingsguard), anchors its checkpoint, picks the right memory, 200 Resonance.
-  - Add `&autostart` to skip the title card, `&mute`, `&input=touch`, `&view=wide` as usual.
+  - Add `&autostart` to skip the title screen (and the film), `&mute`, `&input=touch`, `&view=wide` as usual.
+- **Session 10:** the title screen shows for every normal load (also `?mute`); `?autostart` / `?autopilot` go straight
+  into play with **Minimal** guidance unless `&guide=guided`. `window.__begin()` starts play from the menu (probes).
+  Saves/settings are off in automation (`?mute`, webdriver) and on dev floor starts. Dev `&film` shows the opening film
+  even in a muted session (mute the video from the console). Probes: `dev/tutorialProbe.js` (`?mute&autostart&guide=guided`:
+  `T.ready(); await T.run()` → every lesson), `dev/auditProbe.js` (`A.ready(); await A.floor()` → problems per
+  encounter), `dev/f3Probe.js` (`?floor=3&input=kbm`: `F.gates()`, `await F.route()`), `dev/bossBot.js` (`?at=lastcrown`:
+  `bb.setup(); bb.fight(240, false)`). Browser-pane JS calls time out after 45 s: run long loops detached and poll.
 - **Session 8 regression suite:** `http://localhost:5173/?mute&autostart&input=touch` at 375×812, console:
   `const R = await import('/dev/regression.js'); await R.run()` → 43 PASS/FAIL rows (walks F1 → F2 → F3 in place).
   Probes: `dev/enemyProbe.js` (stall scenarios + global stall watcher), `dev/abilityProbe.js`, `dev/finisherProbe.js`.
@@ -571,29 +608,27 @@ A parry staggers the attacker and grants +12 resonance.
 
 # 8. Next Concrete Tasks
 
-**Session 9 follow-ups (do these first — the rest of the session-9 brief):**
-1. **Loading transitions (brief #6):** `ui/LoadingScreen.ts` still shows the block bar. Redesign it (chapter card with the
-   floor's `epigraph` from `levels/Floors.ts`, a real-progress sigil ring / thin gilt line, no fake progress).
-2. **Main menu (brief #9):** replace the title card in `index.html` / `LoadingScreen.showInitial` with a real menu
-   (New Game -> Guided / Minimal, Continue if meaningful, Controls, Credits — CC-BY credits for every Sketchfab model:
-   the four monster GLBs' `asset.extras` + knight/necromorph/night monster; audio packs in SOURCES.md — Settings:
-   volume/voice). Integrate the opening film through `import.meta.glob('./ui/Intro.ts')` so the pushed tree builds
-   without the other session's uncommitted `Intro.ts` (never commit their files: `src/ui/Intro.ts`,
-   `src/data/opening.json`, `public/cinematic/`, `tools/cinematic/`, `docs/CINEMATIC*.md`, `assets/audio/cinematic/`, the
-   intro hunks of `main.ts` / `style.css`, `Audio.unlock`, `package.json` fonts, `.gitignore`, CONTEXT film sections).
-3. **Guided Floor 1 tutorial (brief #10):** from the start of F1 to the end of the first crouch section; Guided vs
-   Minimal (minimal keeps objectives/navigation/shift instructions). Build on `game/Objectives.ts` (persistent teach
-   cards) + `data/objectives.ts` F1 + the heroine's lines; brief slow-mo for first introductions allowed.
-4. **Idle / stuck enemies audit (brief #8):** run `dev/enemyProbe.js` on all three floors (archers that never shoot,
-   slot waiters); F3 is new — run a full F3 bot playthrough (`M.brawl` per encounter or an AutoPilot ROUTES[3]).
-5. **Play Floor 2 -> 3 in the browser:** bell chamber -> lift -> loading -> arrival shot -> F3 start (untested end to end;
-   the lift's dynamic collider, `Game.leaveFloor`, `arrivedByLift`, scripted state reset in `unloadFloor`).
-6. **Floor 3 playthrough:** every weave (Hall chasm/grille, ossuary bridges, cistern doors, ramp gap + Past gate, Threshold
-   ward) walked in both memories; the Maw fight; the Last Crown fight in the new arena (wedge holes, blink points r 12.5,
-   arena r 14.5, bats out of the heart, adds at 35 %), the death shot + heart shatter + ending card.
-7. Floor 3 Present is dark by design — check readability on a phone (env overrides in `levels/Floors.ts`).
-8. `docs/LEVEL_03_BLUEPRINT.md` still describes v2.0 in its body; the authoritative v3 layout is
-   `tools/blender/floor03_layout.py` (header + section comments). Rewrite the blueprint text.
+**Session 10 follow-ups (the session-9 brief is DONE — see §10 Session 10):**
+1. **Real phone + human playtest** (`npm run dev:lan` → `http://192.168.1.39:5173/`, or the itch zip): the title screen on a
+   phone (tap targets, Continue flow), the Guided tutorial end to end by a new player (is each lesson clear? the first
+   strike freeze 0.07×, the guard/parry slow blows 0.28–0.3× and the 2.4× parry window in `game/Tutorial.ts`; lesson
+   texts in the same file), Minimal guidance by someone who knows action games, the film's sound + subtitles on a phone
+   (the film was only checked muted in the browser pane), settings sliders on touch.
+2. **Floor 3 by a human**: the Last Crown's difficulty (the real-damage bot never guards/dodges and dies every 40–60 s),
+   the Maw (33–35 s for the bot), whether the Present arena and the descent read well on a real phone screen (lighting
+   in `levels/Floors.ts` env PRESENT), the E6 skip (a Past player walks past it), the Past iron gate's legibility (dark
+   iron; prompt `C_RDOOR`).
+3. **Floor 2 autopilot** (test harness only): with session 10's bot fixes it passes the range and the Crown Loft on some
+   runs but can still stall after the Gutter King fight at the wardens' range (`src/game/AutoPilot.ts` ROUTES[2] predates
+   session 9's F2 rework; the game itself is fine — the stall spot is walkable in 7 of 8 directions). Floor 3 still has
+   no autopilot route (`dev/f3Probe.js` route() + `dev/bossBot.js` cover it).
+4. Economy note: the lower-bound bot reached Floor 2's G6 (after FR1) with 88 resonance — fissure F5 on the loft level
+   covers it (softlock guarantee holds); a human's hits/parries/combos give far more. Watch it in playtests.
+5. Layout data: the load-time fixes (`EnemyManager.spawnFixes`: 4 perched archers, 2 blind flyers, the older island
+   moves) could be moved into `floor0N_layout.py` so they are in the data (then rebuild + `npm run assets:nav`).
+
+**Session 9 follow-ups — DONE in session 10** (loading screen, main menu + film integration, Guided tutorial,
+enemy audit, F2 → F3 lift, Floor 3 playthrough + fixes, Present readability, `LEVEL_03_BLUEPRINT.md` v3.1).
 
 **Session 8 follow-ups (do these first):**
 1. **Real phone** (`npm run dev:lan`): the v2 touch layout (thumb reach, pocket size, hold vs tap), finishers in
@@ -730,6 +765,67 @@ then generation + `Audio.voice(id)` hook.
 
 # 10. Latest Verified Session
 
+### Session 10 (2026-09-30) — title screen, chapter cards, Guided tutorial, enemy audit, Floor 3 played end to end
+
+Commits (pushed to Arjun0014/castle-game main as Arjun0014): `796a604` the opening film (final cut) + its pipeline
+(committed as its own change: the film session had finished — FINAL at 00:05 — and it was verified in the browser here) ·
+`2a0ff37` title screen, chapter cards, Guided tutorial, settings, saves, pause menu · `d3121f1` enemy audit fixes ·
+`54daa18` Floor 3 play-test fixes (lift, transitions, iron gate, roots, lighting, objectives) + LEVEL_03_BLUEPRINT
+v3.1 · this CONTEXT commit. Every staged tree was type-checked and production-built on its own (blob-level staging).
+`THE_CASTLE_REMEMBERS_LORE.md` (the user's file) stays untracked.
+
+**1. Title screen** (`ui/MainMenu.ts`, `ui/menu.css`): after the boot card, the game's name (Cormorant Garamond, gilt)
+over the loaded castle — `Game.menuScene` renders a slow shot past the heroine toward the rusted gate (portrait: she
+stands between the name and the menu; `?view=wide`: name + menu on the left third, she and the gate on the right).
+Items: Continue (only with a Floor II/III save: "Floor II · Complicity"), New Game (→ Guided / Minimal choice → Enter
+the keep), Controls (keyboard & mouse / touch tabs, the sword's combos, rewards earned later), Settings (master,
+ambience, effects, voice, subtitles, camera sensitivity, camera shake — localStorage), Credits (every CC BY model with
+author + source URL, Mixamo, Poly Haven, all CC0 sound authors, ElevenLabs, fonts, software). Arrow keys / WASD /
+Enter / Esc, mouse hover, touch; quiet UI sounds (blade ring). The pause menu (Resume / Controls / Settings / Quit to
+title) replaces the old "PAUSED" card; the ending card got "Return to the title".
+**2. The film**: New Game is the user gesture: `Intro` (loaded through `import.meta.glob`, fetched while the menu shows)
+plays with subtitles and Skip, then Floor 1 begins with the chosen guidance. Verified in the pane (muted): 720p source,
+subtitles, Esc skips, the guided tutorial starts.
+**3. Loading / chapter cards** (`ui/LoadingScreen.ts`): the block bar is gone. Floor numeral, name, subtitle, epigraph
+(Floors I and II got theirs), the Crownheart sigil whose gilt ring is the real progress (only ever eases toward the last
+reported fraction), the step and its detail in words, embers; the heart flares on ready; fades into the game. Boot uses
+the game's own card; Continue waits for a key / tap (pointer lock + sound need a gesture).
+**4. Guided tutorial** (`game/Tutorial.ts`, Floor 1 start → through the first crawl): 19 lessons, each waiting for the
+action (card flashes gold on success): move · look · the way in · light (the world at 0.07× until the first blow) ·
+heavy · combo (a chained blow) · guard (blows at 0.28× as they land, GUARD cue) · parry (0.3×, parry window ×2.4, NOW
+cue; moves on after a parry, 5 tries or 40 s) · dodge (desktop) · finish them · Resonance (the bar pulses) · the Blood
+Sigil · two memories · the shift · the Past · the living guard (when a guard blocks) · shift back (in the Ward) ·
+crouch · end. E1's Hollows are the teachers (walk up, wait, one strikes during guard/parry, cannot die until "finish
+them"); the hero cannot drop below a third of her health meanwhile. Overtaken lessons are skipped silently. Minimal
+guidance: a compact FIGHT card at E1, the sigil / shift / shift-back / crouch cards, objectives, shift rings (now only in
+the memory to leave: `shiftFrom`), the guide marker after ≤ 30 s. Touch wording everywhere.
+**5. Enemy audit** (`dev/auditProbe.js`: all 39 encounters of the 3 floors, the Last Crown separately; hero walking each arena): fixed — F1 E12c
+scaffold archer slid down its stair ramp and never shot again (perched archers now hold their spot) and its perch was
+blind; F2 E3 ×2 perched mid-gallery 2 m behind the parapet (the lean-over reached 1.8 m) and F2 E8 in a walled bay of the
+Crown Loft: `EnemyManager.checkPerches()` measures each perch's view at load and moves blind ones (0 → 8–13 arrows per
+fight); bats: the "two swooping at once" counter leaked on every bat killed/stunned mid-swoop (after two, no bat ever
+swooped again) — counted live now; F2 E1 bat and F1 E8 wraith spawned in pockets with no sight of their fight:
+`checkFlyers()`; `setArenaLock(false)` (every respawn) threw on Floor 3. Slot rotation checked with no kills: every waiter
+acts 5–11× in 35 s.
+**6. Floor 3 played end to end** (`dev/f3Probe.js`, `dev/bossBot.js`, `monsterProbe.brawl`, screenshots): the lift ride
+cost 4 × 25 % health (the cage crosses the shaft's kill volume — scripted sequences are now exempt); the exit tore the
+floor down inside the frame and threw (transitions now start at the top of the next frame: `Game.pendingNext`); the Past
+iron gate lay along the ramp instead of across it (layout fix, Floor 3 rebuilt, NAV3 rebaked); the camera sat inside the
+crystal shards at the arena entrance (roots fade out when they block the camera); the Present was unreadable on the
+approach bridge in portrait (F3 Present ambient/exposure/hero light raised); retries replay the reveal at 2×; the boss bar
+hides during cinematics; objectives for the two unmarked shifts. All 9 weaves correct in both memories; the whole route
+with 6 shifts passes; the Maw (33–35 s, 3 waves); the Last Crown fight → death shot → heart → ending card.
+**7. Autopilot** (test harness): perched archers on other levels are not chased, flyers are targeted at hover height, a
+nav-grid route when stuck, the fissure fallback no longer blocked by the shift cooldown, fights on the way do not time the
+walk out. Floor 1 god run reaches the exit (t ≈ 350–363 s); Floor 2 still stalls after the Gutter King (§8).
+
+**Tests run:** tsc + vite build on every staged tree; `npm run build` + `npm run package:itch` (162 MB zip, 535 files,
+189 MB unpacked); production preview (port 4175): title portrait (desktop) + wide + phone touch 375×812, Continue →
+Floor II card → play with the save, pause → settings, New Game → Guided → first lesson; dev: `dev/regression.js`
+49/49 (twice), `dev/tutorialProbe.js` all 19 lessons, `dev/auditProbe.js` F1/F2/F3, `dev/f3Probe.js` gates 9/9 +
+route, boss bot god + real damage, the Maw brawl god + real damage, F1 god autopilot → Floor 2, the lift F2 → F3.
+**Needs a human / real phone:** see §8 Session 10 follow-ups.
+
 ### Session 9 (2026-09-29) — finishers, touch camera, water, monsters + mini-bosses, Floor 3 rebuilt, the lift
 
 Commits (pushed to Arjun0014/castle-game main as Arjun0014): `7181783` finishers + touch camera + crypt water ·
@@ -792,6 +888,73 @@ every monster on F1 and real F2 encounters (E4, E2b) with the brawl bot; F3 load
 screenshots of F3 Past/Present, boss reveal; Blender builds F2/F3 0 issues; NAV3 rebaked for F2 + F3.
 **Needs a human / real phone:** the pocket + swipe speed, finisher frequency in real fights, the water bed by ear, the
 monster sounds (generated by varispeed from CC0 packs, unheard), F3 readability in the dark, the lift, the whole finale.
+
+### Opening film FINAL (2026-09-30 00:05) — v1 to 26.125 s, then v2: NOW THE GAME'S FILM
+The user preferred v1's opening (the legend) and v2's rest: `python tools/cinematic/v2/hybrid.py` regenerates v1 frames
+0-626 from the lossless renders (post.py) and joins v2 from frame 627 (a shot boundary: v1's portcullis on "sealed" ends,
+v2's queen-and-child begins) -> `build/cinematic/hybrid/final_{clean,share}_master.mp4`; then
+`CLEAN=... SHARE=... NAME=final bash tools/cinematic/v2/finish.sh`. Verified: 66.000 s / 1,584 frames for all four
+outputs; game `public/cinematic/opening_1080.mp4` (37 MB) + `opening_720.mp4` (20 MB); share
+`build/cinematic/out/the_castle_remembers_final_{portrait,wide}.mp4` (95 / 38 MB); audio from mix.wav (silence
+−102.5 dBFS, portcullis −12.9); cut checked on frames (`build/cinematic/review/final_sheet.png`). Subtitle ink style
+(`paper`) now only on "The kingdom became a story…" (`tools/cinematic/v2/game_data.py`). Pure v1 and pure v2 outputs
+remain (`build/cinematic/v1_backup/`, `build/cinematic/out/the_castle_remembers_v2_*`).
+
+### Opening film v2 (cinematic session, 2026-09-29 night) — "the chronicle in ink" (its second half is in the FINAL)
+
+The user did not like v1 and supplied references (`reference video/`: Witcher 3 intro comic cinematic + Bloody Baron
+flashback — git-ignored, copyrighted). v2 = painted graphic-novel panels (Blender, textured characters, PBR sets, ink +
+hatching finish) + ink-on-parchment passages + regraded v1 shots, edited in **Remotion**, title in **HyperFrames**, on
+the unchanged v1 soundtrack. Full description and rebuild commands: `docs/CINEMATIC_V2.md`.
+- **Outputs (verified: 66.000 s, 1,584 frames, H.264 High yuv420p 24 fps, AAC 48 kHz, faststart):** game
+  `public/cinematic/opening_1080.mp4` (43.5 MB) + `opening_720.mp4` (22.7 MB); share `build/cinematic/out/
+  the_castle_remembers_v2_portrait.mp4` (94 MB, subtitles burned in) + `..._v2_wide.mp4` (39 MB). **v1 kept** in
+  `build/cinematic/v1_backup/` (all four files).
+- **Sync (verified on the encode):** audio muxed from `build/cinematic/audio/mix.wav` (Remotion's own AAC was 42.6 ms
+  late — measured by cross-correlation); Sundering silence −102.5 dBFS, crack −11.4; picture beats checked at 9.72…64.05
+  (`build/cinematic/review/v2_sync.png`).
+- **Game:** `src/ui/Intro.ts` + `style.css`: subtitles flagged `paper` in `src/data/opening.json` (written by
+  `tools/cinematic/v2/game_data.py`) are drawn as dark ink on a paper halo (the parchment passages). `tsc` passes;
+  `npx vite build --outDir build/intro_dist` OK (189 MB unpacked incl. 66 MB of film); served by `vite preview` with
+  HTTP 206. **Not verified by Claude in a browser** (gstack browse is broken on this machine — see below).
+- Tools installed (global skills): Remotion (`remotion-dev/skills`), HyperFrames (`heygen-com/hyperframes`).
+  Projects: `tools/cinematic/remotion` (npm), `tools/cinematic/hyperframes/title`.
+- ElevenLabs: both `.env` keys return 401 "Invalid API key" from this session (checked 20:08 and 21:40); v2 needed no
+  new audio.
+
+### Opening film v1 (parallel cinematic sessions, 2026-09-29) — "THE CASTLE REMEMBERS", 66 s portrait (superseded by v2, kept as backup)
+
+Authority: `docs/CINEMATIC.md` (treatment + pipeline), `docs/CINEMATIC_HANDOFF.md` (state), `tools/cinematic/timeline.json`
+(timing). Every image is built by code (Blender 5.2 EEVEE + Freestyle ink + Kuwahara; numpy/PIL post); narration is
+ElevenLabs v3 (build-time only). No generated images or video.
+
+- **Outputs (verified with ffprobe: 66.000 s, 1,584 frames, H.264 High yuv420p 24 fps, AAC 48 kHz stereo, faststart):**
+  game `public/cinematic/opening_1080.mp4` (31.6 MB) + `opening_720.mp4` (16.8 MB); share masters with burned-in
+  subtitles `build/cinematic/out/the_castle_remembers_portrait.mp4` (80 MB, 1080×1920) and `..._wide.mp4` (27 MB, 1920×1080).
+  Encode: `python tools/cinematic/post.py --encode --workers 4` (674 s; also rewrites `src/data/opening.json`).
+- **Renders:** all pass frames at 1080×1920 in `build/cinematic/frames/` (git-ignored); all verified loadable and 1080×1920.
+  The killed queue was resumed (646 frames, 26 min). Fixes this session: S06 the child's cloak poked through the shut
+  door (`shot_interiors.py`: child hidden from local frame close+5; f656–671 re-rendered); S02 the wide pull-back saw past
+  the cavern floor's edge, a black band growing from f293 (`heart.py` `cavern()`: a 15-row apron continuing the same
+  surface toward the camera, original vertices unchanged; f292–330 re-rendered, band gone).
+- **Post:** subtitles now have a brightness-adaptive feathered scrim (`post_fx.Subtitles`, only raised over bright
+  pictures: S01 rings, S03 dome, the 15.9 s dusk flash); in-game DOM subtitles got a soft radial backdrop
+  (`style.css` `#intro .intro-subs p`). All 17 shots reviewed on real frames through post (`build/cinematic/review/s8_*.png`).
+- **A/V sync (verified on the encode):** picture events at 9.72/9.80, 15.9, 25.32, 34.95–36.5, 43.92, 46.42, 56.2–57.6,
+  62.9/63.5/64.05 (`build/cinematic/review/s8_sync.png`); audio RMS: crack −11.4 dBFS at 34.95, the Sundering silence
+  35.55–35.9 = −102 dBFS (true digital silence under the frozen picture), thunder −13.2 at 44.0, bell −16.7 at 46.42.
+- **Build:** `npx vite build --outDir build/intro_dist` OK (EB Garamond bundled, both films in `cinematic/`, 159 MB
+  unpacked); `vite preview` serves the films with HTTP 206 ranges. **`npm run build` / `package:itch` currently fail
+  only on `tsc`: `Game.ts(646) 'finisher' does not exist on type 'Game'`** — gameplay work in progress in the parallel
+  session, not the film.
+- **Not verified by Claude:** the in-game intro in a real browser (gstack browse cannot start on this machine: its
+  state-dir ACL lock-down resolves user "AJ" to the computer "AJ\" and locks the tool out of its own `.gstack/`, then
+  reports "Another instance is starting the server"; `BROWSE_STATE_FILE` elsewhere hits the same lock-down). Needs a
+  human check: Enter the Keep → film with sound + subtitles → Skip/Esc → game starts; `?nointro` skips.
+- ElevenLabs: both keys in `.env` returned 401 "Invalid API key" (20:08); the film needed no new audio.
+- The user's goal for the film: Witcher-cinematic feel, dark and brutal. v1 is the ink-and-gold chronicle (no combat);
+  a darker rebuild ("the last night" told through violence: knight 24 combat clips, hero 73) was estimated at
+  ~22–34 h of work + ~14–33 h of rendering and deferred past the jam.
 
 ### Session 8 (2026-09-29) — enemy robustness, touch HUD v2, floor rewards, cinematic finishers, dev warps
 
