@@ -4,26 +4,59 @@
     {
       "name": "time-castle-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5173
     },
     {
       "name": "time-castle-dev-5174",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "5174", "--strictPort"],
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
       "port": 5174
     },
     {
       "name": "time-castle-dev-5180",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "5180", "--strictPort"],
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5180",
+        "--strictPort"
+      ],
       "port": 5180
     },
     {
       "name": "time-castle-preview",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "preview", "--port", "4174", "--strictPort"],
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--port",
+        "4174",
+        "--strictPort"
+      ],
       "port": 4174
+    },
+    {
+      "name": "itch-sim",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5190",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "build/itch-sim"
+      ],
+      "port": 5190
     }
   ]
 }

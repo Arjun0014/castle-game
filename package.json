@@ -20,7 +20,8 @@
     "assets:floor02": "\"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe\" --background --factory-startup --python tools/blender/build_floor02.py",
     "assets:manifest": "node tools/build_floor_manifest.mjs",
     "assets:ktx2": "node tools/build_ktx2.mjs",
-    "assets:sfx": "node tools/elevenlabs_sfx.mjs"
+    "assets:sfx": "node tools/elevenlabs_sfx.mjs",
+    "package:itch": "npm run build && powershell -NoProfile -Command \"Compress-Archive -Force -Path dist/* -DestinationPath build/caer-veyr-itch.zip\""
   },
   "dependencies": {
     "three": "^0.186.1",
