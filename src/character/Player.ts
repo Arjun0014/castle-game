@@ -107,6 +107,8 @@ export class Player {
   dodgeDir = new THREE.Vector3();
   dodgeChain = 0;
   dodgeCooldown = 0;
+  /** seconds left caught in a Widow's web: movement slowed, no sprint, no dodge */
+  webT = 0;
   hitStun = 0;
   invuln = 0;
   channelTime = 0;
@@ -245,6 +247,7 @@ export class Player {
     }
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
     this.invuln = Math.max(0, this.invuln - dt);
+    if (this.webT > 0) { this.webT = Math.max(0, this.webT - dt); this.dodgeCooldown = Math.max(this.dodgeCooldown, 0.05); }
     const wish = this.wishDir(input, cam);
     const moving = wish.lengthSq() > 0.01;
     const lock = this.lockTarget?.alive ? this.lockTarget.pos : null;
@@ -331,7 +334,9 @@ export class Player {
       case 'land': {
         this.sprinting = (input.analogSprint || (input.isDown('sprint') && input.heldFor('sprint') >= SPRINT_HOLD)) && moving && !this.crouching && !lock;
         if (input.autoCrouch && this.grounded) this.autoCrouch(wish, moving, world, tstate);
-        const speed = this.crouching ? CROUCH : this.sprinting ? SPRINT : RUN;
+        // caught in a Widow's web (enemies/Monsters.ts): slowed, no sprint, until it tears (webT)
+        if (this.webT > 0) this.sprinting = false;
+        const speed = (this.crouching ? CROUCH : this.sprinting ? SPRINT : RUN) * (this.webT > 0 ? 0.42 : 1);
         const target = wish.clone().multiplyScalar(speed);
         const accel = this.grounded ? 38 : 7;
         hv.lerp(target, Math.min(1, accel * dt / Math.max(0.5, hv.distanceTo(target) + 0.5)));

@@ -244,6 +244,43 @@ sound('wraith_dive', 'sfx', -5, 'Wraith swoop attack (reversed moan into air rus
       [lambda i=i: mix((V(GHOST + f'qubodup-GhostMoan0{i}.wav', dur=0.9, rev=True, fin=0.3, fout=0.02, af=HP, gain=-4), 0),
                        (V(SFX100 + 'air_02.ogg', dur=0.8, rate=1.2, fout=0.3), 0.55)) for i in (1, 3, 4)],
       ['qubodup Ghost Moans (CC0)', '100 CC0 SFX #2 air_02 (CC0)'])
+# --- session 9 monsters: voices from the same CC0 creature packs (varispeed / high-pass), sources in SOURCES.md
+sound('bat_screech', 'sfx', -9, 'Gloom bat: the shriek before a swoop.',
+      [lambda f=f, r=r: V(CRE80 + f, af=HP, rate=r, dur=0.55, fout=0.15) for f, r in (('scream_01.ogg', 2.1), ('scream_02.ogg', 2.3), ('bug_02.ogg', 1.6), ('bug_04.ogg', 1.7))],
+      ['80 CC0 creature SFX scream/bug (rubberduck, CC0)'])
+sound('bat_flap', 'sfx', -13, 'Gloom bat wings.',
+      [lambda i=i: V(K_RPG + f'cloth{i}.ogg', rate=1.5, dur=0.25, fout=0.08) for i in range(1, 5)],
+      ['Kenney RPG Audio cloth (CC0)'])
+sound('bat_death', 'sfx', -9, 'Gloom bat: a squeal, cut short.',
+      [lambda f=f: V(CRE80 + f, af=HP, rate=1.9, dur=0.45, fout=0.2) for f in ('hurt_02.ogg', 'hurt_04.ogg', 'hurt_05.ogg')],
+      ['80 CC0 creature SFX hurt (rubberduck, CC0)'])
+sound('goblin_snarl', 'sfx', -7, 'Ruin goblin chatter / attack yell.',
+      [lambda f=f: V(CRE80 + f, af=HP, rate=1.4, fout=0.12) for f in ('grunt_01.ogg', 'grunt_02.ogg', 'grunt_04.ogg', 'troll_01.ogg', 'troll_02.ogg', 'troll_03.ogg')],
+      ['80 CC0 creature SFX grunt/troll (rubberduck, CC0)'])
+sound('goblin_death', 'sfx', -6, 'Ruin goblin death squeal.',
+      [lambda f=f: V(CRE80 + f, af=HP, rate=1.35, fout=0.25) for f in ('hurt_01.ogg', 'hurt_03.ogg', 'scream_02.ogg')],
+      ['80 CC0 creature SFX hurt/scream (rubberduck, CC0)'])
+sound('goblin_cry', 'sfx', -4, "The Gutter King's war cry.",
+      [lambda: V(CRE80 + 'roar_01.ogg', af=HP, rate=1.15, fout=0.4), lambda: V(CRE80 + 'howl.ogg', af=HP, rate=1.2, fout=0.4)],
+      ['80 CC0 creature SFX roar/howl (rubberduck, CC0)'])
+sound('widow_hiss', 'sfx', -7, 'Widow: a wet hiss, a skittering shriek.',
+      [lambda f=f, r=r: V(CRE80 + f, af=HP, rate=r, fout=0.2) for f, r in (('alien_02.ogg', 0.8), ('alien_04.ogg', 0.75), ('weird_02.ogg', 0.9), ('breath.ogg', 1.3))],
+      ['80 CC0 creature SFX alien/weird/breath (rubberduck, CC0)'])
+sound('widow_spit', 'sfx', -6, 'Widow web spit.',
+      [lambda f=f: V(CRE80 + f, af=HP, rate=0.8, fout=0.15) for f in ('spit_01.ogg', 'spit_02.ogg', 'spit_03.ogg')],
+      ['80 CC0 creature SFX spit (rubberduck, CC0)'])
+sound('web_hit', 'sfx', -6, 'A web glob bursting on the hero.',
+      [lambda f=f: V(RPG80 + f, af=HP, rate=0.9, fout=0.2) for f in ('creature_slime_01.ogg', 'creature_slime_02.ogg', 'creature_slime_03.ogg')],
+      ['80 CC0 RPG SFX creature_slime (CC0)'])
+sound('widow_death', 'sfx', -5, 'Widow death screech.',
+      [lambda: V(CRE80 + 'alien_05.ogg', af=HP, rate=0.7, fout=0.4), lambda: V(CRE80 + 'scream_01.ogg', af=HP, rate=0.6, fout=0.4)],
+      ['80 CC0 creature SFX alien/scream (rubberduck, CC0)'])
+sound('serpent_hiss', 'sfx', -5, 'Crownheart lamia hiss / coil.',
+      [lambda f=f: V(MONSTER + f, af=HP, rate=0.75, fout=0.2) for f in ('Monster-2.wav', 'Monster-5.wav', 'Monster-6.wav', 'monster-11.wav')],
+      ['Monster Sound Pack Vol. 1 (Ogrebane, CC0)'])
+sound('serpent_roar', 'sfx', -3, "The Maw's bellow.",
+      [lambda f=f: V(CRE80 + f, af=HP, rate=0.62, fout=0.5) for f in ('roar_02.ogg', 'roar_03.ogg')],
+      ['80 CC0 creature SFX roar (rubberduck, CC0)'])
 sound('wraith_death', 'sfx', -5, 'Wraith dissolving.',
       [lambda i=i: mix((V(GHOST + f'qubodup-GhostMoan0{i}.wav', dur=1.4, rate=0.7, fout=0.9, af=HP), 0),
                        (V(SFX100 + 'air_01.ogg', dur=1.4, rev=True, fin=0.4, fout=0.4, gain=-6), 0.0)) for i in (2, 3, 5)],

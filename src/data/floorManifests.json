@@ -98,13 +98,18 @@
   ],
   "archetypes": [
    "archer",
+   "bat",
    "echo_archer",
+   "goblin",
+   "goblin_king",
    "guard",
    "hollow",
-   "hollow_warden",
    "kingsguard",
    "remnant",
    "royal_warden",
+   "widow",
+   "widow_mother",
+   "widowling",
    "wraith"
   ],
   "veg": [
@@ -113,7 +118,7 @@
   ],
   "markers": {
    "encounter": 12,
-   "enemy": 48,
+   "enemy": 62,
    "exit": 1,
    "fire": 2,
    "fissure": 6,

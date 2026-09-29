@@ -521,4 +521,6 @@ def main():
     print("ENEMIES OK", json.dumps({k: {"n": len(v["clips"]), "h": v["height"], "r": v["ratio"]} for k, v in rigs.items()}))
 
 
-main()
+# guarded so tools/blender/build_monsters.py can reuse the retarget helpers (Blender runs --python scripts as __main__)
+if __name__ == "__main__":
+    main()

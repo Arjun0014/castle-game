@@ -110,6 +110,8 @@ export class Game {
   loadLog: { floor: number; ms: number; assetsMs: number; buildMs: number; warmup: WarmupReport | null; released: string[] }[] = [];
 
   touch: TouchControls | null = null;
+  /** monster kinds already introduced by a bestiary card (EnemyManager.bestiary; kept across floors) */
+  bestiarySeen = new Set<string>();
   /** what the tutorials have seen the player do (kept across floors) */
   learned: Learned = { moved: 0, looked: 0, hits: 0, guarded: false, dodged: false, shifted: false, sigil: false, resonance: false, heavy: false, crownbreaker: false, whirlwind: false };
   objectives!: Objectives;

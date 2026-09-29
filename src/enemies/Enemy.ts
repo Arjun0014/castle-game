@@ -13,7 +13,7 @@ const WEAPON_BONE = /^(HandR_\d+|mixamorigRightHand_\d+|mixamorigLeftHand)$/;
 const TORSO_BONE = /^(Torso_\d+|mixamorigSpine2(_\d+)?)$/;
 const SASH = { offset: new THREE.Vector3(0, 0.3, 0.01), radius: 0.33, depth: 0.52, tilt: 0.78 };
 
-export type EState = 'dormant' | 'hidden' | 'rise' | 'idle' | 'chase' | 'circle' | 'windup' | 'attack' | 'recover' | 'block' | 'hit' | 'dead' | 'shoot' | 'dive' | 'lunge' | 'finisher';
+export type EState = 'dormant' | 'hidden' | 'rise' | 'idle' | 'chase' | 'circle' | 'windup' | 'attack' | 'recover' | 'block' | 'hit' | 'dead' | 'shoot' | 'dive' | 'lunge' | 'finisher' | 'special';
 
 const _v = new THREE.Vector3();
 const _w = new THREE.Vector3();
@@ -37,6 +37,10 @@ export interface EnemyCtx {
   navBudget(): boolean;
   /** a cinematic finisher is playing: nobody starts an attack or closes in (they wait, weapons ready) */
   hold?: boolean;
+  /** the hero's attack right now (kind + seconds into it), null when she is not attacking: skirmishers read it */
+  playerAttack?: { kind: string; t: number } | null;
+  /** the hero is off the ground (jumps clear ankle-height sweeps) */
+  playerAirborne?: boolean;
 }
 
 export class Enemy {
@@ -160,7 +164,7 @@ export class Enemy {
     public encounter: string,
     public owner: TimeState | 'BOTH',
     public wave: number,
-    public opts: { rise?: boolean; kneel?: boolean; perch?: boolean; yaw?: number; tint?: string },
+    public opts: { rise?: boolean; kneel?: boolean; perch?: boolean; yaw?: number; tint?: string; ceiling?: boolean; brood?: boolean },
   ) {
     this.id = Enemy.nextId++;
     this.root.rotation.order = 'YXZ'; // yaw, then the death tumble about the body's own right axis
@@ -358,6 +362,9 @@ export class Enemy {
           this.cooldown = Math.max(this.cooldown, 0.35);
           break;
         }
+        // the monsters (enemies/Monsters.ts) have brains of their own
+        const custom = this.brainThink(dt, dist, dirP, dy, ctx);
+        if (custom) { move = custom; break; }
         // wraiths and archers left far behind give up too (walkers: see navigate())
         if ((this.isFlying || this.isRanged) && !a.boss) {
           if (dist > (this.isRanged ? 38 : 30)) this.leashT += dt; else this.leashT = 0;
@@ -443,6 +450,10 @@ export class Enemy {
         if (this.stateTime > 0.25) { this.setState('chase'); if (this.hasSlot) { ctx.releaseSlot(this); this.hasSlot = false; } }
         break;
       }
+      case 'special': {
+        move = this.brainSpecial(dt, dist, dirP, dy, ctx);
+        break;
+      }
       case 'shoot': {
         // an archer still drawing when a finisher begins lowers the bow (a loosed arrow still flies)
         if (ctx.hold && this.shootPhase < 2) { this.shootPhase = 0; this.cooldown = Math.max(this.cooldown, 0.8); this.setState('chase'); break; }
@@ -497,7 +508,18 @@ export class Enemy {
     if (move.lengthSq() > 0.25) { this.navMoved += Math.hypot(this.pos.x - px, this.pos.z - pz); this.navExpected += move.length() * dt; }
     this.mixer.update(dt);
     this.syncRoot();
+    this.afterAnimate(dt, ctx);
   }
+
+  // ------------------------------------------------------------------ monster hooks (enemies/Monsters.ts)
+  /** Take over the chase: return the wanted move, or null for the standard melee / ranged / flying brain. */
+  protected brainThink(_dt: number, _dist: number, _dirP: THREE.Vector3, _dy: number, _ctx: EnemyCtx): THREE.Vector3 | null { return null; }
+  /** A monster's own action (state 'special'): returns the move. */
+  protected brainSpecial(_dt: number, _dist: number, _dirP: THREE.Vector3, _dy: number, _ctx: EnemyCtx): THREE.Vector3 { this.setState('chase'); return new THREE.Vector3(); }
+  /** A melee attack (state 'attack') has played out. */
+  protected onAttackEnd(_atk: EnemyAttack) { /* skirmishers hop back */ }
+  /** Procedural animation on top of the clip (tails, legs, wings, morphs), after the root is synced. */
+  protected afterAnimate(_dt: number, _ctx: EnemyCtx) { /* humanoid rigs: clips only */ }
 
   /**
    * The body takes the blow: an impulse on a lean spring (pitched back from a frontal hit, rolled from a side
@@ -537,7 +559,15 @@ export class Enemy {
     if (this.isFlying && this.alive) this.root.position.y += Math.sin(performance.now() * 0.002 + this.id) * 0.12;
   }
 
+  /** no gravity / ground snapping this frame (a Widow on its thread, mid-pounce): the brain sets pos.y itself */
+  floating = false;
   private integrate(dt: number, hv: THREE.Vector3, world: CollisionWorld, state: TimeState) {
+    if (this.floating) {
+      this.pos.x += hv.x * dt; this.pos.z += hv.z * dt;
+      world.resolveCapsule(this.pos, this.radius, this.height, state);
+      this.grounded = false;
+      return;
+    }
     this.vel.y -= 24 * dt;
     if (this.grounded && this.vel.y < 0) this.vel.y = -2;
     const d = new THREE.Vector3(hv.x * dt, this.vel.y * dt, hv.z * dt);
@@ -556,14 +586,21 @@ export class Enemy {
     }
   }
 
+  /** a monster flyer's wanted height this frame (absolute y), null = the default altitude over the floor */
+  flyWant: number | null = null;
+  /** how fast a flyer closes on its wanted height (1/s) */
+  flyRate = 3;
+  /** height of the floor under a flyer (set by integrateFlying) */
+  flyFloor = 0;
   private integrateFlying(dt: number, hv: THREE.Vector3, ctx: EnemyCtx) {
     const g = ctx.world.groundBelow(this.pos.clone().setY(this.pos.y + 1), 12, ctx.state);
     // over a pit a wraith keeps to the hero's level (it drifted down into the Ward sinkhole and "died" on its own);
     // only a knocked, reeling wraith sinks — a kick off the lip still sends it into the void
     let floor = g ?? this.baseAlt - this.arch.flying!.altitude;
+    this.flyFloor = g ?? floor;
     if (this.state !== 'hit' && this.state !== 'dead') floor = Math.max(floor, Math.min(this.baseAlt - this.arch.flying!.altitude, ctx.playerPos.y) - 0.6);
-    const want = this.state === 'dive' ? ctx.playerPos.y + 0.6 : floor + this.arch.flying!.altitude;
-    const vy = (want - this.pos.y) * 3;
+    const want = this.flyWant ?? (this.state === 'dive' ? ctx.playerPos.y + 0.6 : floor + this.arch.flying!.altitude);
+    const vy = (want - this.pos.y) * this.flyRate;
     this.pos.x += hv.x * dt;
     this.pos.z += hv.z * dt;
     this.pos.y += (this.state === 'dead' ? -3 : vy) * dt;
@@ -576,7 +613,7 @@ export class Enemy {
    */
   private backT = 0;
   private backHit = false;
-  private backBlocked(dirP: THREE.Vector3, dt: number, ctx: EnemyCtx) {
+  protected backBlocked(dirP: THREE.Vector3, dt: number, ctx: EnemyCtx) {
     this.backT -= dt;
     if (this.backT <= 0) {
       this.backT = 0.2;
@@ -766,7 +803,7 @@ export class Enemy {
   }
 
   // ------------------------------------------------------------------ melee
-  private pickAttack(dist: number): EnemyAttack | null {
+  protected pickAttack(dist: number): EnemyAttack | null {
     const list = this.arch.attacks.filter((a) => a.clip && dist >= (a.minRange ?? 0) - 0.3 && dist <= a.range + 3.5);
     if (!list.length) return this.arch.attacks.find((a) => a.clip) ?? null;
     let total = list.reduce((s, a) => s + a.weight, 0);
@@ -820,6 +857,7 @@ export class Enemy {
       this.cooldown = atk.cooldown[0] + Math.random() * (atk.cooldown[1] - atk.cooldown[0]);
       this.setState('recover');
       this.loop(this.arch.clips.idle, 1, 0.25);
+      this.onAttackEnd(atk);
     }
     return hv;
   }
@@ -930,7 +968,7 @@ export class Enemy {
   /** a blind wraith follows the ground route under it (A* on the grid) through doors, at its altitude */
   private flyRoute = false;
   private flyPlanT = 0;
-  private flyPath(dt: number, ctx: EnemyCtx): THREE.Vector3 | null {
+  protected flyPath(dt: number, ctx: EnemyCtx): THREE.Vector3 | null {
     const nav = ctx.nav;
     if (!nav || this.losOk) { this.flyRoute = false; return null; }
     this.flyPlanT -= dt;

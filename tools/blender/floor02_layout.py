@@ -184,12 +184,17 @@ def build_royal(B):
         enemy(B, "hollow", (9.5, 70, Z), "E1", "PRESENT", rise=True)
         enemy(B, "hollow", (2, 65.5, Z), "E1", "PRESENT", rise=True)
         enemy(B, "wraith", (1, 72, Z + 2.5), "E1", "PRESENT")
+        # session 9: gloom bats roost in the broken roof — the floor's first new monster, two of them to learn on
+        enemy(B, "bat", (-4, 67, Z + 3.0), "E1", "PRESENT")
+        enemy(B, "bat", (6, 75, Z + 3.2), "E1", "PRESENT")
         encounter(B, "E9", "PRESENT", (-12, -5.5, 68, 78, Z - 1, Z + 4))
         # E9 (session 7 variety): wraiths over the void + Remnants rising on the strips — air and ground at once
         enemy(B, "wraith", (-2, 73, Z + 2.2), "E9", "PRESENT")
-        enemy(B, "wraith", (4, 72, Z + 2.6), "E9", "PRESENT")
+        # session 9: a Widow lowers itself from the broken timbers onto the strip; its brood follows
+        enemy(B, "widow", (-8.6, 73.5, Z), "E9", "PRESENT", yaw=0.0, rise=True, ceiling=True)
         enemy(B, "remnant", (-9.5, 65.5, Z), "E9", "PRESENT", yaw=0.0, rise=True)
-        enemy(B, "remnant", (-3.5, 64.2, Z), "E9", "PRESENT", yaw=0.0, rise=True, wave=2)
+        enemy(B, "widowling", (-10.5, 70.2, Z), "E9", "PRESENT", yaw=0.0, rise=True, wave=2)
+        enemy(B, "widowling", (-7.2, 76.4, Z), "E9", "PRESENT", yaw=math.pi, rise=True, wave=2)
         prompt(B, "T_DROP", (-12, -9.5, 72, 78, ZL, ZL + 3), "The loft's edge has crumbled over a heap of rubble below.", state="PRESENT")
         prompt(B, "T_CROWN", (-12, -6, 68, 78, Z, Z + 4), "The crown still hangs in memory.", state="PRESENT", requires="noflag:FR1")
 
@@ -202,7 +207,7 @@ def build_royal(B):
         B.box(-19, -16, 76, 77.5, Z, Z + 0.8, "wood_fine", col=True)           # the Queen's desk
         fissure(B, "F2", (-22, 66, Z))
         trace(B, "T3", (-17.5, 76.6, Z + 1.0), "\"He means to bind every soul in Caer Veyr to that stone. The girl is not of his line — take her by the servants' stair, and let no priest mark her.\"")
-        encounter(B, "E2b", "PRESENT", (-30, -14, 63, 86, Z - 1, Z + 5), optional=True)
+        encounter(B, "E2b", "PRESENT", (-30, -14, 63, 86, Z - 1, Z + 5), optional=True, boss=True, surge=True, title="THE WEEPING MOTHER")
     with B.at(S, "PAST"):
         B.slab(-32, -12, 62, 88, 14, 14.5, "timber")
         B.bench(-24, 64, 2.0, axis="x", z=Z)
@@ -211,10 +216,15 @@ def build_royal(B):
     with B.at(S, "PRESENT"):
         B.slab(-32, -12, 62, 70, 14, 14.5, "timber")
         veg_scatter(B, (-30, -14, 70, 86), 18, z=Z, seed=231)
-        # E2b (optional; session 7 variety): a heavy with an archer behind it instead of a third Hollow group
-        enemy(B, "hollow_warden", (-22, 72, Z), "E2b", "PRESENT", yaw=math.pi / 2)
-        enemy(B, "hollow", (-18, 68, Z), "E2b", "PRESENT", rise=True)
-        enemy(B, "echo_archer", (-27.5, 75.5, Z), "E2b", "PRESENT", yaw=math.pi / 2)
+        # E2b (optional mini-boss, session 9): the Weeping Mother nests in the ruined solar. A Widow drops from the
+        # vault as she wakes; her brood hatches at 65 % and 35 % (waves 2-3 crawl out of her)
+        enemy(B, "widow_mother", (-25, 81.5, Z), "E2b", "PRESENT", yaw=math.pi)
+        enemy(B, "widow", (-17.5, 70, Z), "E2b", "PRESENT", yaw=math.pi / 2, rise=True, ceiling=True)
+        for i, (x, y) in enumerate(((-24, 78), (-26, 78), (-22, 79))):
+            enemy(B, "widowling", (x, y, Z), "E2b", "PRESENT", yaw=math.pi, rise=True, brood=True, wave=2)
+        for i, (x, y) in enumerate(((-23, 79), (-27, 79), (-25, 77.5))):
+            enemy(B, "widowling", (x, y, Z), "E2b", "PRESENT", yaw=math.pi, rise=True, brood=True, wave=3)
+        enemy(B, "widow", (-20, 66, Z), "E2b", "PRESENT", yaw=math.pi / 2, rise=True, ceiling=True, wave=3)
 
 
 def build_chancery(B):
@@ -289,7 +299,10 @@ def build_chancery(B):
         for x, y, r in ((18, 64, 0.4), (22, 69, -0.3), (19, 73, 0.9)):
             B.obox((x, y, Z + 0.35), (3.2, 0.7, 0.7), (0, 0, r), "wood_rough", col=True)
         enemy(B, "hollow", (20, 64, Z), "E3p", "PRESENT", rise=True)
-        enemy(B, "hollow", (22, 72, Z), "E3p", "PRESENT", rise=True)
+        # session 9: ruin goblins nest in the fallen chancery — a pair, then one more drops from the mezzanine
+        enemy(B, "goblin", (23, 72.5, Z), "E3p", "PRESENT", yaw=math.pi / 2)
+        enemy(B, "goblin", (25, 75.5, Z), "E3p", "PRESENT", yaw=math.pi / 2)
+        enemy(B, "goblin", (24, 67, Z), "E3p", "PRESENT", yaw=math.pi / 2, rise=True, wave=2)
         enemy(B, "echo_archer", (20, 78.5, 12), "E3p", "PRESENT", yaw=math.pi, perch=True)
 
 
@@ -317,7 +330,7 @@ def build_range(B):
         sigil(B, "CP3", (19.5, 8.2, ZR), yaw=0.0)
         fissure(B, "F4", (17, 9, ZR))
         trace(B, "T2", (31, 40, ZR + 1.0), "A wardens' roster. Eleven names are struck through, each with the same word beside it: refused.")
-        encounter(B, "E4", "PRESENT", (23, 34, 27, 44, ZR - 1, ZR + 4))
+        encounter(B, "E4", "PRESENT", (23, 34, 27, 44, ZR - 1, ZR + 4), boss=True, surge=True, title="THE GUTTER KING")
         encounter(B, "E5b", "PAST", (23, 34, 27, 44, ZR - 1, ZR + 4), optional=True)
         encounter(B, "E6", "PRESENT", (27, 29, 14, 36.5, 13, 17))
     with B.at(S, "PAST"):
@@ -351,17 +364,22 @@ def build_range(B):
             B.obox((24 + (i % 4) * 2.6, 30 + (i // 4) * 5, ZR + 0.3), (0.3, 5.5, 0.35), (0.2, 0, 0.4 * ((-1) ** i)), "wood_moss", col=True)
         veg_scatter(B, (27.4, 28.6, 15, 36), 10, z=14, seed=253)
         veg_scatter(B, (23, 34, 12, 44), 22, z=ZR, seed=254)
-        # E4 (session 7 variety): the reinforcement wave brings the first Remnants of the floor — Echoes the
-        # Crownheart pushes up through the stone (they return on Floor 3 and at the Last Crown's call)
-        enemy(B, "hollow_warden", (26, 38, ZR), "E4", "PRESENT", yaw=math.pi)
-        enemy(B, "hollow", (25, 30, ZR), "E4", "PRESENT", rise=True)
-        enemy(B, "hollow", (32, 40, ZR), "E4", "PRESENT", rise=True)
-        enemy(B, "hollow_warden", (31, 32, ZR), "E4", "PRESENT", yaw=math.pi, wave=2)
-        enemy(B, "remnant", (28.5, 35, ZR), "E4", "PRESENT", yaw=math.pi, rise=True, wave=2)
-        enemy(B, "remnant", (24.5, 36.5, ZR), "E4", "PRESENT", yaw=math.pi, rise=True, wave=2)
+        # E4 (session 9 mini-boss): THE GUTTER KING holds the wardens' range with his pack. His war cry (60 %)
+        # frenzies them; at 65 % / 35 % more goblins drop from the fallen trusses, the last wave with the Remnants
+        # the Crownheart pushes up through the stone (they return on Floor 3 and at the Last Crown's call)
+        enemy(B, "goblin_king", (31.5, 38.5, ZR), "E4", "PRESENT", yaw=math.pi)
+        enemy(B, "goblin", (25, 31, ZR), "E4", "PRESENT", yaw=math.pi)
+        enemy(B, "goblin", (32.5, 32, ZR), "E4", "PRESENT", yaw=math.pi)
+        enemy(B, "goblin", (28.5, 35, ZR), "E4", "PRESENT", yaw=math.pi, rise=True, wave=2)
+        enemy(B, "goblin", (24.5, 36.5, ZR), "E4", "PRESENT", yaw=math.pi, rise=True, wave=2)
+        enemy(B, "goblin", (32, 41, ZR), "E4", "PRESENT", yaw=math.pi, rise=True, wave=3)
+        enemy(B, "remnant", (25.5, 33, ZR), "E4", "PRESENT", yaw=math.pi, rise=True, wave=3)
+        enemy(B, "remnant", (31, 29.5, ZR), "E4", "PRESENT", yaw=math.pi, rise=True, wave=3)
+        # E6: the ridge walk — wraiths and a pair of gloom bats over the narrow beam
         enemy(B, "wraith", (26, 30, 16.5), "E6", "PRESENT")
         enemy(B, "wraith", (30, 24, 16.8), "E6", "PRESENT")
-        enemy(B, "wraith", (26.5, 20, 16.2), "E6", "PRESENT")
+        enemy(B, "bat", (27, 20, 16.6), "E6", "PRESENT")
+        enemy(B, "bat", (29.5, 27, 16.8), "E6", "PRESENT")
         prompt(B, "T_GATE2", (23, 34, 27, 30, ZR, ZR + 3), "\"Wardens only.\" The gate is rusted into its frame — but the fallen roof climbs north of it.", state="PRESENT")
 
 

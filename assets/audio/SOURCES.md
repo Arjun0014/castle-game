@@ -59,6 +59,18 @@ CC0, so the bow release is composed from CC0 parts; `Dark Ambience Loop` (qubodu
 | `wraith_moan` | 5 | Ghost Monster Voice Moaning & Growling (qubodup, CC0) | Echo Wraith presence / dive. |
 | `wraith_dive` | 3 | qubodup Ghost Moans (CC0); 100 CC0 SFX #2 air_02 (CC0) | Wraith swoop attack (reversed moan into air rush). |
 | `wraith_death` | 3 | qubodup Ghost Moans (CC0); 100 CC0 SFX #2 air_01 (CC0) | Wraith dissolving. |
+| `bat_screech` | 4 | 80 CC0 creature SFX scream_01/02, bug_02/04 (rubberduck, CC0), varispeed 1.6-2.3x | Gloom bat swoop shriek (session 9). |
+| `bat_flap` | 4 | Kenney RPG Audio cloth1-4 (CC0), 1.5x | Gloom bat wingbeats. |
+| `bat_death` | 3 | 80 CC0 creature SFX hurt_02/04/05 (CC0), 1.9x | Gloom bat death squeal. |
+| `goblin_snarl` | 6 | 80 CC0 creature SFX grunt_01/02/04, troll_01-03 (CC0), 1.4x | Ruin goblin chatter / attack yell. |
+| `goblin_death` | 3 | 80 CC0 creature SFX hurt_01/03, scream_02 (CC0), 1.35x | Ruin goblin death. |
+| `goblin_cry` | 2 | 80 CC0 creature SFX roar_01, howl (CC0) | The Gutter King's war cry. |
+| `widow_hiss` | 4 | 80 CC0 creature SFX alien_02/04, weird_02, breath (CC0) | Widow hiss / skitter shriek. |
+| `widow_spit` | 3 | 80 CC0 creature SFX spit_01-03 (CC0), 0.8x | Widow web spit. |
+| `web_hit` | 3 | 80 CC0 RPG SFX creature_slime_01-03 (CC0) | A web glob bursting. |
+| `widow_death` | 2 | 80 CC0 creature SFX alien_05, scream_01 (CC0), slowed | Widow death screech. |
+| `serpent_hiss` | 4 | Monster Sound Pack Vol. 1 Monster-2/5/6, monster-11 (Ogrebane, CC0), 0.75x | Crownheart lamia hiss / coil. |
+| `serpent_roar` | 2 | 80 CC0 creature SFX roar_02/03 (CC0), 0.62x | The Maw's bellow. |
 | `bow_draw` | 3 | Kenney RPG Audio creak/handleSmallLeather (CC0) | Archer drawing (creak + leather). |
 | `bow_release` | 4 | Kenney impactWood_light (CC0); swishes (CC0) | Arrow loosed: string snap + whip of air. |
 | `arrow_hit` | 5 | Kenney impactWood_light (CC0) | Arrow striking stone/wood. |
@@ -78,7 +90,7 @@ CC0, so the bow release is composed from CC0 parts; `Dark Ambience Loop` (qubodu
 | `thunder` | 1 | 100 CC0 SFX #2 thunder_01 (CC0) | Present: far thunder over the broken roofs. |
 | `amb_present` | 1 | Loopable Dungeon Ambience (JaggedStone, CC0) | Present bed: low wind through the ruin + drips. |
 | `amb_wind` | 1 | wind whoosh loop (SketchMan3, CC0) | Present: wind where the sky is open (Ward, collapsed roofs). |
-| `amb_drips` | 1 | 100 CC0 SFX #2 loop_water_02 (CC0) | Present undercroft/crypt water. |
+| `amb_drips` | 1 | 100 CC0 SFX #2 loop_water_02 (CC0), high-pass 110 Hz + low-pass 1.7 kHz, -21 dB (session 9: it was 11 dB louder and swamped the Floor 1 crypt mix) | Present undercroft/crypt water, fades in with depth. |
 | `amb_fire` | 1 | Fireplace Sound loop (PagDev, CC0) | Past: torches, braziers and hearths (volume follows the nearest flame). |
 | `amb_past` | 1 | Loopable Dungeon Ambience (JaggedStone, CC0), low-passed | Past bed: the inhabited keep's room tone (warm, low). |
 

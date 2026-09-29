@@ -37,6 +37,20 @@ const ENEMY_URL: Record<AssetId, string> = {
   knight: 'assets/characters/knight.glb', hollow: 'assets/characters/hollow.glb',
   archer: 'assets/characters/archer.glb', ghost: 'assets/characters/ghost.glb',
   lastcrown: 'assets/characters/lastcrown.glb',
+  // session 9 monsters: the goblin is retargeted in Blender (tools/blender/build_monsters.py); the other three are
+  // source copies normalised here at load (NORMALISE)
+  goblin: 'assets/characters/goblin.glb', bat: 'assets/characters/bat.glb',
+  widow: 'assets/characters/widow.glb', lamia: 'assets/characters/lamia.glb',
+};
+/**
+ * Sketchfab source copies: scaled to a height (m), turned to face +Z, feet on the origin — measured on the first
+ * frame of their one clip (their bind poses are far from the animated shape) — and the clip renamed.
+ */
+const NORMALISE: Partial<Record<AssetId, { height: number; clip: string; yaw: number }>> = {
+  ghost: { height: 1.6, clip: 'float', yaw: 0 },
+  bat: { height: 0.72, clip: 'flap', yaw: Math.PI },
+  widow: { height: 2.0, clip: 'crawl', yaw: 0 },
+  lamia: { height: 2.55, clip: 'sway', yaw: 0 },
 };
 const VEG_URL: Record<string, { url: string; height: number; emissive?: number }> = {
   grass: { url: 'assets/vegetation/low_poly_grass.glb', height: 0.42 },
@@ -100,7 +114,7 @@ export class GameAssets {
       const url = variant(url0);
       m.register<EnemyTemplate>({
         key: 'glb:enemy:' + id, bytes: size(url), label: 'Echoes of the keep',
-        load: async (p) => prepareEnemy(id, await this.loadGltf(url, p)),
+        load: async (p) => await prepareEnemy(id, await this.loadGltf(url, p)),
         dispose: (t) => disposeObject(t.scene, { textures: true }),
         memory: (t) => objectMemory(t.scene),
       });
@@ -245,6 +259,8 @@ export class GameAssets {
     if (man.markers.fissure) { rigs.add(ARCHETYPES.remnant.asset); rigs.add(ARCHETYPES.remnant_guard.asset); }
     if (man.markers.statue) rigs.add('knight');
     if (man.markers.imprint) rigs.add('archer');
+    // dev server only: ?monsters preloads every session-9 monster rig on any floor (dev/monsterProbe.js spawns them)
+    if (import.meta.env.DEV && typeof location !== 'undefined' && new URLSearchParams(location.search).has('monsters')) for (const r of ['goblin', 'bat', 'widow', 'lamia'] as AssetId[]) rigs.add(r);
     keys.push(...[...rigs].sort().map((r) => 'glb:enemy:' + r));
     keys.push(...man.veg.map((v) => 'veg:' + v));
     keys.push(...(FLOOR_SOUNDS[id] ?? []).map((s) => 'snd:' + s));
@@ -259,20 +275,55 @@ function disposeMaterialAndMaps(mat: THREE.Material) {
   mat.dispose();
 }
 
-/** Rig-specific preprocessing formerly done in EnemyManager.load (kept identical). */
-function prepareEnemy(id: AssetId, gl: GLTF): EnemyTemplate {
+/** Rig-specific preprocessing (the ghost's normalisation is the original session-3 path, generalised). */
+async function prepareEnemy(id: AssetId, gl: GLTF): Promise<EnemyTemplate> {
   let clips = gl.animations;
   const norm = new THREE.Matrix4();
-  if (id === 'ghost') {
-    // Sketchfab ghost: normalise its (100x) transform chain to ~1.6 m, feet at origin
-    clips = clips.map((c) => { const k = c.clone(); k.name = 'float'; return k; });
+  const nz = NORMALISE[id];
+  if (nz) {
+    // Sketchfab chains (100x transforms): measure the posed first frame, then scale / face / ground it
+    clips = clips.map((c) => { const k = c.clone(); k.name = nz.clip; return k; });
+    const mixer = new THREE.AnimationMixer(gl.scene);
+    if (clips[0]) { mixer.clipAction(clips[0]).play(); mixer.setTime(0); }
     gl.scene.updateMatrixWorld(true);
     const box = new THREE.Box3();
-    gl.scene.traverse((o) => { const m = o as THREE.SkinnedMesh; if (m.isSkinnedMesh) { m.computeBoundingBox(); box.union(m.boundingBox!.clone().applyMatrix4(m.matrixWorld)); } });
+    gl.scene.traverse((o) => {
+      const m = o as THREE.SkinnedMesh;
+      if (m.isSkinnedMesh) { m.skeleton.update(); m.computeBoundingBox(); box.union(m.boundingBox!.clone().applyMatrix4(m.matrixWorld)); }
+    });
+    mixer.stopAllAction(); mixer.uncacheRoot(gl.scene);
     const sz = box.getSize(new THREE.Vector3());
-    const s = 1.6 / Math.max(1e-6, sz.y);
+    const s = nz.height / Math.max(1e-6, sz.y);
     const c = box.getCenter(new THREE.Vector3());
-    norm.makeScale(s, s, s).multiply(new THREE.Matrix4().makeTranslation(-c.x, -box.min.y, -c.z));
+    norm.makeRotationY(nz.yaw).multiply(new THREE.Matrix4().makeScale(s, s, s)).multiply(new THREE.Matrix4().makeTranslation(-c.x, -box.min.y, -c.z));
+  }
+  if (id === 'lamia') {
+    // KHR_materials_pbrSpecularGlossiness is not read by three's GLTFLoader any more: take its diffuse texture as the
+    // base colour; the BLEND mode (sorting trouble on a skinned body) becomes an alpha cut-out
+    const mj = (gl.parser.json.materials ?? []) as { name?: string; extensions?: Record<string, { diffuseTexture?: { index: number } }> }[];
+    for (const def of mj) {
+      const sg = def.extensions?.KHR_materials_pbrSpecularGlossiness;
+      if (!sg?.diffuseTexture) continue;
+      const tex = await gl.parser.getDependency('texture', sg.diffuseTexture.index) as THREE.Texture;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      gl.scene.traverse((o) => {
+        const m = o as THREE.Mesh;
+        const mat = m.material as THREE.MeshStandardMaterial;
+        if (!m.isMesh || mat?.name !== def.name) return;
+        mat.map = tex; mat.color.set(0xffffff); mat.roughness = 0.62; mat.metalness = 0.05;
+        mat.transparent = false; mat.alphaTest = 0.4; mat.emissiveIntensity = 0.9; mat.needsUpdate = true;
+      });
+    }
+  }
+  if (id === 'goblin') {
+    // KHR_materials_unlit: lit instead, so the goblins sit in the castle's light like everything else (same maps)
+    gl.scene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || !(m.material as THREE.Material & { isMeshBasicMaterial?: boolean }).isMeshBasicMaterial) return;
+      const b = m.material as THREE.MeshBasicMaterial;
+      m.material = new THREE.MeshStandardMaterial({ name: b.name, map: b.map, color: b.color, side: b.side, roughness: 0.8, metalness: 0 });
+      b.dispose();
+    });
   }
   if (id === 'archer') {
     // eyelash + eye-specular overlays: two extra transparent draw calls (and shadow passes) per archer,

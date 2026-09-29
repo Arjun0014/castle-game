@@ -40,7 +40,11 @@ const SETS = {
   fabric_royal: ['fabric', 'quatrefoil_jacquard_fabric_1k', 'quatrefoil_jacquard_fabric'], fabric_gold: ['fabric', 'crepe_satin_1k', 'crepe_satin'], fabric_linen: ['fabric', 'rough_linen_1k', 'rough_linen'],
 };
 const GLBS = ['characters/hero.glb', 'characters/knight.glb', 'characters/hollow.glb', 'characters/archer.glb', 'characters/ghost.glb', 'characters/lastcrown.glb',
+  // session 9 monsters (goblin retargeted in Blender; bat / widow / lamia are source copies)
+  'characters/goblin.glb', 'characters/bat.glb', 'characters/widow.glb', 'characters/lamia.glb',
   'vegetation/low_poly_grass.glb', 'vegetation/low_poly_grass_pack.glb', 'vegetation/low_poly_glowing_flower.glb'];
+/** per-GLB texture cap (px): the Widow's nine 1024² maps are more than a 2 m creature needs on screen */
+const GLB_MAX = { 'characters/widow.glb': 512 };
 
 const COLOR = { isUASTC: true, needSupercompression: true, enableRDO: true, rdoQualityLevel: 2, isPerceptual: true, isSetKTX2SRGBTransferFunc: true, generateMipmap: true };
 const NORMAL = { isUASTC: true, needSupercompression: true, enableRDO: true, rdoQualityLevel: 1, isNormalMap: true, isPerceptual: false, isSetKTX2SRGBTransferFunc: false, generateMipmap: true };
@@ -79,7 +83,7 @@ async function runJob(job) {
     const normal = slots.some((s) => /normal/i.test(s));
     const color = slots.some((s) => /baseColor|emissive|diffuse/i.test(s));
     const opts = normal ? NORMAL : color ? COLOR : DATA;
-    tex.setImage(await encode(tex.getImage(), { ...opts, isYFlip: false }, 0));
+    tex.setImage(await encode(tex.getImage(), { ...opts, isYFlip: false }, job.max ?? 0));
     tex.setMimeType('image/ktx2');
     if (tex.getURI()) tex.setURI(tex.getURI().replace(/\.(png|jpe?g|webp)$/i, '.ktx2'));
     n++;
@@ -118,7 +122,7 @@ if (process.env.KTX2_WORKER) {
     for (const rel of GLBS) {
       const dst = path.join(OUT, rel);
       if (!FORCE && fs.existsSync(dst) && fs.statSync(dst).mtimeMs > fs.statSync(path.join(PUB, 'assets', rel)).mtimeMs) continue;
-      jobs.push({ type: 'glb', src: path.join(PUB, 'assets', rel), dst });
+      jobs.push({ type: 'glb', src: path.join(PUB, 'assets', rel), dst, max: GLB_MAX[rel] ?? 0 });
     }
   }
   // biggest first (the 2048² hero textures dominate)

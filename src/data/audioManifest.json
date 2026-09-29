@@ -633,6 +633,242 @@
     "100 CC0 SFX #2 air_02 (CC0)"
    ]
   },
+  "bat_screech": {
+   "bus": "sfx",
+   "gain": -9,
+   "loop": false,
+   "files": [
+    "assets/audio/bat_screech_0.ogg",
+    "assets/audio/bat_screech_1.ogg",
+    "assets/audio/bat_screech_2.ogg",
+    "assets/audio/bat_screech_3.ogg"
+   ],
+   "durations": [
+    0.262,
+    0.239,
+    0.285,
+    0.203
+   ],
+   "use": "Gloom bat: the shriek before a swoop.",
+   "sources": [
+    "80 CC0 creature SFX scream/bug (rubberduck, CC0)"
+   ]
+  },
+  "bat_flap": {
+   "bus": "sfx",
+   "gain": -13,
+   "loop": false,
+   "files": [
+    "assets/audio/bat_flap_0.ogg",
+    "assets/audio/bat_flap_1.ogg",
+    "assets/audio/bat_flap_2.ogg",
+    "assets/audio/bat_flap_3.ogg"
+   ],
+   "durations": [
+    0.167,
+    0.167,
+    0.167,
+    0.167
+   ],
+   "use": "Gloom bat wings.",
+   "sources": [
+    "Kenney RPG Audio cloth (CC0)"
+   ]
+  },
+  "bat_death": {
+   "bus": "sfx",
+   "gain": -9,
+   "loop": false,
+   "files": [
+    "assets/audio/bat_death_0.ogg",
+    "assets/audio/bat_death_1.ogg",
+    "assets/audio/bat_death_2.ogg"
+   ],
+   "durations": [
+    0.222,
+    0.152,
+    0.197
+   ],
+   "use": "Gloom bat: a squeal, cut short.",
+   "sources": [
+    "80 CC0 creature SFX hurt (rubberduck, CC0)"
+   ]
+  },
+  "goblin_snarl": {
+   "bus": "sfx",
+   "gain": -7,
+   "loop": false,
+   "files": [
+    "assets/audio/goblin_snarl_0.ogg",
+    "assets/audio/goblin_snarl_1.ogg",
+    "assets/audio/goblin_snarl_2.ogg",
+    "assets/audio/goblin_snarl_3.ogg",
+    "assets/audio/goblin_snarl_4.ogg",
+    "assets/audio/goblin_snarl_5.ogg"
+   ],
+   "durations": [
+    0.515,
+    0.372,
+    0.344,
+    0.408,
+    0.372,
+    0.272
+   ],
+   "use": "Ruin goblin chatter / attack yell.",
+   "sources": [
+    "80 CC0 creature SFX grunt/troll (rubberduck, CC0)"
+   ]
+  },
+  "goblin_death": {
+   "bus": "sfx",
+   "gain": -6,
+   "loop": false,
+   "files": [
+    "assets/audio/goblin_death_0.ogg",
+    "assets/audio/goblin_death_1.ogg",
+    "assets/audio/goblin_death_2.ogg"
+   ],
+   "durations": [
+    0.299,
+    0.274,
+    0.666
+   ],
+   "use": "Ruin goblin death squeal.",
+   "sources": [
+    "80 CC0 creature SFX hurt/scream (rubberduck, CC0)"
+   ]
+  },
+  "goblin_cry": {
+   "bus": "sfx",
+   "gain": -4,
+   "loop": false,
+   "files": [
+    "assets/audio/goblin_cry_0.ogg",
+    "assets/audio/goblin_cry_1.ogg"
+   ],
+   "durations": [
+    0.319,
+    0.459
+   ],
+   "use": "The Gutter King's war cry.",
+   "sources": [
+    "80 CC0 creature SFX roar/howl (rubberduck, CC0)"
+   ]
+  },
+  "widow_hiss": {
+   "bus": "sfx",
+   "gain": -7,
+   "loop": false,
+   "files": [
+    "assets/audio/widow_hiss_0.ogg",
+    "assets/audio/widow_hiss_1.ogg",
+    "assets/audio/widow_hiss_2.ogg",
+    "assets/audio/widow_hiss_3.ogg"
+   ],
+   "durations": [
+    0.713,
+    0.867,
+    0.381,
+    0.418
+   ],
+   "use": "Widow: a wet hiss, a skittering shriek.",
+   "sources": [
+    "80 CC0 creature SFX alien/weird/breath (rubberduck, CC0)"
+   ]
+  },
+  "widow_spit": {
+   "bus": "sfx",
+   "gain": -6,
+   "loop": false,
+   "files": [
+    "assets/audio/widow_spit_0.ogg",
+    "assets/audio/widow_spit_1.ogg",
+    "assets/audio/widow_spit_2.ogg"
+   ],
+   "durations": [
+    0.47,
+    0.707,
+    0.343
+   ],
+   "use": "Widow web spit.",
+   "sources": [
+    "80 CC0 creature SFX spit (rubberduck, CC0)"
+   ]
+  },
+  "web_hit": {
+   "bus": "sfx",
+   "gain": -6,
+   "loop": false,
+   "files": [
+    "assets/audio/web_hit_0.ogg",
+    "assets/audio/web_hit_1.ogg",
+    "assets/audio/web_hit_2.ogg"
+   ],
+   "durations": [
+    0.634,
+    0.533,
+    0.45
+   ],
+   "use": "A web glob bursting on the hero.",
+   "sources": [
+    "80 CC0 RPG SFX creature_slime (CC0)"
+   ]
+  },
+  "widow_death": {
+   "bus": "sfx",
+   "gain": -5,
+   "loop": false,
+   "files": [
+    "assets/audio/widow_death_0.ogg",
+    "assets/audio/widow_death_1.ogg"
+   ],
+   "durations": [
+    0.51,
+    1.465
+   ],
+   "use": "Widow death screech.",
+   "sources": [
+    "80 CC0 creature SFX alien/scream (rubberduck, CC0)"
+   ]
+  },
+  "serpent_hiss": {
+   "bus": "sfx",
+   "gain": -5,
+   "loop": false,
+   "files": [
+    "assets/audio/serpent_hiss_0.ogg",
+    "assets/audio/serpent_hiss_1.ogg",
+    "assets/audio/serpent_hiss_2.ogg",
+    "assets/audio/serpent_hiss_3.ogg"
+   ],
+   "durations": [
+    1.122,
+    0.579,
+    0.621,
+    0.709
+   ],
+   "use": "Crownheart lamia hiss / coil.",
+   "sources": [
+    "Monster Sound Pack Vol. 1 (Ogrebane, CC0)"
+   ]
+  },
+  "serpent_roar": {
+   "bus": "sfx",
+   "gain": -3,
+   "loop": false,
+   "files": [
+    "assets/audio/serpent_roar_0.ogg",
+    "assets/audio/serpent_roar_1.ogg"
+   ],
+   "durations": [
+    1.257,
+    0.739
+   ],
+   "use": "The Maw's bellow.",
+   "sources": [
+    "80 CC0 creature SFX roar (rubberduck, CC0)"
+   ]
+  },
   "wraith_death": {
    "bus": "sfx",
    "gain": -5,

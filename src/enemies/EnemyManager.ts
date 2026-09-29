@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { Enemy, type EnemyCtx } from './Enemy';
 import { LastCrown } from './LastCrown';
+import { makeMonster, MonsterFX } from './Monsters';
 import { ARCHETYPES, MONSTER_RIGS, PAST_COUNTERPART, type ArchetypeId, type AssetId, type EnemyAttack } from './EnemyTypes';
 import type { Game } from '../game/Game';
 import type { TimeState } from '../levels/Materials';
@@ -54,6 +55,22 @@ const ARROW_POOL = 16;
 const TRACER_POOL = 8;
 /** arrow gravity (m/s^2) — shots are aimed with the matching ballistic lift */
 const ARROW_GRAVITY = 3.5;
+const IDENTITY = new THREE.Matrix4();
+/** the second line of a titled fight's card */
+const BOSS_SUB: Record<string, string> = {
+  last_crown: "Aldren's imprint, wearing the Queen's face",
+  goblin_king: 'Scavenger lord of the fallen floors',
+  widow_mother: 'She nests where the Queen once wept',
+  lamia_maw: 'What the Crownheart grew in the dark',
+};
+/** first sight of a new monster (session 9): how to face it */
+const BESTIARY: Record<string, string> = {
+  bat: 'GLOOM BATS — they swoop two at a time. Strike as they dive, or parry one out of the air.',
+  goblin: 'RUIN GOBLINS — they leap in from range and dart away. Close the gap; they shy from a heavy swing.',
+  widow: 'THE WIDOW — its web slows you. Guard the spit, break its line of sight, punish the pounce.',
+  widowling: 'THE BROOD — small and quick. Sweeping blows clear them.',
+  lamia: 'CROWNHEART LAMIA — jump or dodge the tail sweep. Its coil turns frontal blows: circle it, or kick through.',
+};
 
 /** Free a skeleton clone that owns its materials (statues, imprints): materials + bone textures, not geometry. */
 function disposeClone(root: THREE.Object3D) {
@@ -100,6 +117,10 @@ export class EnemyManager {
   /** the floor's baked navigation grid (Game sets it at load) */
   nav: NavGrid | null = null;
   private navPlans = 0;
+  /** pooled web globs / warning rings / threads of the session-9 monsters (null on floors without them) */
+  monsterFx: MonsterFX | null = null;
+  /** gloom bats diving right now (at most two swoop at once) */
+  batDivers = 0;
   bossName = 'THE GATE WARDEN';
   boss: Enemy | null = null;
   onBossDeath?: () => void;
@@ -114,6 +135,7 @@ export class EnemyManager {
     this.assets = templates;
     this.spawnFromMarkers();
     this.spawnStaticFigures();
+    if (this.enemies.some((e) => e.arch.brain)) this.monsterFx = new MonsterFX(this.g);
     if (this.g.level.markersOf('fissure').length || this.enemies.some((e) => e instanceof LastCrown)) {
       for (let i = 0; i < REMNANT_POOL; i++) this.remnantPool.push(this.makeRemnant());
       if (this.assets.has(ARCHETYPES.remnant_guard.asset)) for (let i = 0; i < REMNANT_POOL; i++) this.pastEchoPool.push(this.makeRemnant('PAST'));
@@ -155,9 +177,9 @@ export class EnemyManager {
     const mats: THREE.Material[] = [];
     const skins: THREE.Skeleton[] = [];
     let i = 0;
-    for (const [id, t] of this.assets) {
+    for (const t of this.assets.values()) {
       const model = skeletonClone(t.scene);
-      if (id === 'ghost') model.applyMatrix4(t.norm);
+      if (!t.norm.equals(IDENTITY)) model.applyMatrix4(t.norm);
       model.traverse((o) => {
         const m = o as THREE.SkinnedMesh;
         if (!m.isMesh) return;
@@ -182,6 +204,7 @@ export class EnemyManager {
       objects.push(m);
     }
     const spellKits = this.enemies.filter((e): e is LastCrown => e instanceof LastCrown).map((e) => e.spells.warmKit(at));
+    if (this.monsterFx) { const k = this.monsterFx.warmKit(at); objects.push(...k.objects); spellKits.push(k); }
     return {
       objects,
       // the materials stay alive until the floor unloads: three frees a program when its last material is
@@ -228,6 +251,7 @@ export class EnemyManager {
     for (const m of this.keepAlive) m.dispose();
     this.keepAlive = [];
     this.arrowGeo.dispose(); this.arrowMat.dispose(); this.arrowMatEcho.dispose();
+    this.monsterFx?.dispose(); this.monsterFx = null;
     this.assets = new Map();
     this.boss = null;
   }
@@ -241,7 +265,8 @@ export class EnemyManager {
     const model = skeletonClone(a.scene);
     const wrap = new THREE.Group();
     wrap.add(model);
-    if (asset === 'ghost') model.applyMatrix4(a.norm);
+    // Sketchfab sources normalised at load (ghost, bat, widow, lamia: GameAssets NORMALISE)
+    if (!a.norm.equals(IDENTITY)) model.applyMatrix4(a.norm);
     return { model: wrap, clips: a.clips };
   }
 
@@ -269,9 +294,10 @@ export class EnemyManager {
     const { model, clips } = this.instantiate(arch.asset);
     // Blender yaw (about +Z) → three.js yaw (about +Y): character forward is -Y in Blender = +Z three
     const yaw = (p.yaw ?? 0) + Math.PI;
+    const opts = { rise: !!p.rise, kneel: !!p.kneel, perch: !!p.perch, yaw, tint: p.tint, ceiling: !!p.ceiling, brood: !!p.brood };
     const e = arch.id === 'last_crown'
       ? new LastCrown(arch, model, clips, p.encounter, p.state, p.wave ?? 1, { yaw }, this.g)
-      : new Enemy(arch, model, clips, p.encounter, p.state, p.wave ?? 1, { rise: !!p.rise, kneel: !!p.kneel, perch: !!p.perch, yaw, tint: p.tint });
+      : makeMonster(arch, model, clips, p.encounter, p.state, p.wave ?? 1, opts, this.g) ?? new Enemy(arch, model, clips, p.encounter, p.state, p.wave ?? 1, opts);
     e.place(this.walkableSpawn(m.pos, p.state, !!p.perch || arch.id === 'last_crown' || !!arch.flying, m.name, this.encounters.get(p.encounter), e.radius));
     this.g.scene.add(e.root);
     this.enemies.push(e);
@@ -412,7 +438,7 @@ export class EnemyManager {
       if (e.owner !== st && e.owner !== 'BOTH') continue;
       const d = e.pos.distanceTo(from);
       if (d > (e.isRanged ? ranged : melee)) continue;
-      const hot = e.isRanged ? e.state === 'shoot' && e.shootPhase === 1 : e.state === 'attack' || e.state === 'windup' || e.state === 'dive' || e.state === 'lunge';
+      const hot = e.isRanged ? e.state === 'shoot' && e.shootPhase === 1 : e.state === 'attack' || e.state === 'windup' || e.state === 'dive' || e.state === 'lunge' || e.state === 'special';
       out.push({ e, score: d - (hot ? 100 : 0) - (e.isRanged ? 20 : 0) });
     }
     out.sort((a, b) => a.score - b.score);
@@ -523,6 +549,8 @@ export class EnemyManager {
       nav: this.nav,
       navBudget: () => this.navPlans++ < 3,
       hold: g.finisher.holding,
+      playerAttack: p.state === 'attack' && p.attack ? { kind: p.attack.kind, t: p.stateTime } : null,
+      playerAirborne: !p.grounded || p.state === 'dodge',
       lineOfSight: (a, b) => {
         const dir = b.clone().sub(a);
         const len = dir.length();
@@ -597,6 +625,7 @@ export class EnemyManager {
     this.inCombat = combat;
     this.playerHitsEnemies();
     this.updateArrows(dt, st);
+    this.monsterFx?.update(dt);
     this.updateFissures(dt);
     // imprints dissolve once the chapel fight starts
     const e10 = this.encounters.get('E10');
@@ -624,13 +653,18 @@ export class EnemyManager {
       if (!e.root.visible) continue;
       switch (ev) {
         case 'alert':
-          if (asset === 'hollow') au.play('hollow_growl', { pos: at, rate: e.arch.scale < 1 ? 1.15 : 1 });
+          if (asset === 'goblin') au.play('goblin_snarl', { pos: at, rate: e.arch.scale > 1.2 ? 0.75 : 1.1 });
+          else if (asset === 'bat') au.play('bat_screech', { pos: at, vol: 0.7 });
+          else if (asset === 'widow') au.play('widow_hiss', { pos: at, rate: e.arch.scale < 0.8 ? 1.6 : e.arch.scale > 1.2 ? 0.75 : 1 });
+          else if (asset === 'lamia') au.play('serpent_hiss', { pos: at, rate: e.arch.scale > 1.2 ? 0.75 : 0.95 });
+          else if (asset === 'hollow') au.play('hollow_growl', { pos: at, rate: e.arch.scale < 1 ? 1.15 : 1 });
           else if (asset === 'ghost') au.play('wraith_moan', { pos: at });
           else if (asset === 'knight') au.play('armor_rattle', { pos: at });
           break;
         case 'telegraph':
         case 'windup':
-          if (asset === 'knight') au.play('armor_rattle', { pos: at, vol: e.arch.scale > 1.1 ? 1.3 : 1 });
+          if (asset === 'goblin' && Math.random() < 0.5) au.play('goblin_snarl', { pos: at, rate: e.arch.scale > 1.2 ? 0.75 : 1.2 });
+          else if (asset === 'knight') au.play('armor_rattle', { pos: at, vol: e.arch.scale > 1.1 ? 1.3 : 1 });
           else if (asset === 'hollow' && Math.random() < (ev === 'telegraph' ? 0.75 : 0.35)) au.play('hollow_growl', { pos: at });
           else if (asset === 'ghost') au.play('wraith_dive', { pos: at });
           break;
@@ -641,7 +675,9 @@ export class EnemyManager {
         }
         case 'aim': au.play('bow_draw', { pos: at }); break;
         case 'death':
-          if (asset === 'knight') au.play('armor_rattle', { pos: at, vol: 1.4 });
+          if (asset === 'goblin') au.play('goblin_death', { pos: at, rate: e.arch.scale > 1.2 ? 0.7 : 1 });
+          else if (asset === 'widow') au.play('widow_death', { pos: at, rate: e.arch.scale < 0.8 ? 1.7 : e.arch.scale > 1.2 ? 0.7 : 1 });
+          else if (asset === 'knight') au.play('armor_rattle', { pos: at, vol: 1.4 });
           else if (asset === 'hollow') au.play('hollow_death', { pos: at, rate: e.arch.scale < 1 ? 1.12 : 1 });
           else if (asset === 'ghost') au.play('wraith_death', { pos: at });
           break;
@@ -653,7 +689,7 @@ export class EnemyManager {
           break;
         case 'shatter':
           // the Echo breaks: the body comes apart into what it was made of
-          g.fx.shatter(e.root, asset === 'hollow' ? 'ash' : asset === 'ghost' ? 'smoke' : 'ember', asset === 'ghost' ? 160 : 280);
+          g.fx.shatter(e.root, asset === 'hollow' || asset === 'goblin' || asset === 'widow' || asset === 'lamia' ? 'ash' : asset === 'ghost' || asset === 'bat' ? 'smoke' : 'ember', asset === 'ghost' || asset === 'bat' ? 120 : 280);
           au.play('resonance', { pos: at, rate: 0.8, vol: 0.8 });
           au.play('echo_shatter', { pos: at, rate: asset === 'ghost' ? 1.15 : asset === 'knight' ? 0.9 : 1 });
           break;
@@ -665,9 +701,9 @@ export class EnemyManager {
     if (e.alive && !e.isFlying && e.root.visible && dp < 16 * 16 && e.grounded) {
       const moved = Math.hypot(e.pos.x - e.lastSeen.x, e.pos.z - e.lastSeen.z);
       if (moved < 1) e.stepAcc += moved * 0.62;
-      if (e.stepAcc > 1) { e.stepAcc -= 1; au.enemyStep(e.pos, asset === 'knight'); }
+      if (e.stepAcc > 1) { e.stepAcc -= 1; if (asset !== 'lamia' && asset !== 'widow') au.enemyStep(e.pos, asset === 'knight'); }
     }
-    if (e.isFlying && e.alive && e.triggered && dp < 24 * 24) {
+    if (e.isFlying && asset === 'ghost' && e.alive && e.triggered && dp < 24 * 24) {
       e.voiceT -= dt;
       if (e.voiceT <= 0) { e.voiceT = 5 + Math.random() * 6; au.play('wraith_moan', { pos: at, vol: 0.7 }); }
     }
@@ -685,12 +721,13 @@ export class EnemyManager {
     enc.triggered = true;
     enc.wave = 1;
     for (const e of enc.enemies) if (e.wave <= 1) e.activate();
+    this.bestiary(enc.enemies.filter((e) => e.wave <= 1));
     this.g.signals.emit('encounter:start', { id: enc.id, boss: enc.bossFight || enc.finale, title: enc.title,
       kinds: [...new Set(enc.enemies.map((e) => e.arch.id))], count: enc.enemies.length });
     if (enc.bossFight && !enc.finale) {
       const boss = enc.enemies.find((e) => e.arch.boss);
       if (boss) { this.boss = boss; this.bossName = enc.title ?? this.bossName; this.g.signals.emit('boss:start', { id: boss.arch.id }); }
-      this.g.hud.message(enc.title ?? 'A GUARDIAN WAKES', boss?.arch.id === 'last_crown' ? "Aldren's imprint, wearing the Queen's face" : 'Echo of the royal guard', 3.5);
+      this.g.hud.message(enc.title ?? 'A GUARDIAN WAKES', BOSS_SUB[boss?.arch.id ?? ''] ?? 'Echo of the royal guard', 3.5);
       this.g.audio.bossSting();
     }
     if (enc.finale) {
@@ -739,6 +776,19 @@ export class EnemyManager {
       enc.wave++;
       this.g.perf.mark(`wave ${enc.id}.${enc.wave}`);
       for (const e of enc.enemies) if (e.wave === enc.wave) e.activate();
+      this.bestiary(enc.enemies.filter((e) => e.wave === enc.wave));
+    }
+  }
+
+  /** The first time a new kind of monster joins a fight: one short card on how to face it (once per game). */
+  private bestiary(list: Enemy[]) {
+    const g = this.g;
+    for (const e of list) {
+      const tip = BESTIARY[e.arch.id];
+      if (!tip || g.bestiarySeen.has(e.arch.id) || (e.owner !== g.time.state && e.owner !== 'BOTH')) continue;
+      g.bestiarySeen.add(e.arch.id);
+      g.hud.prompt(tip, 6.5);
+      return;
     }
   }
 
@@ -923,15 +973,15 @@ export class EnemyManager {
     const power = res === 'dead' ? (kind && HEAVY_KINDS.has(kind) ? 1 : kind === 'whirl' ? 0.7 : damage >= 28 ? 0.75 : 0.35) : 0;
     const amount = Math.min(1.5, damage / 28) + (res === 'dead' ? 0.35 + power * 0.4 : 0);
     const asset = e.arch.asset;
-    if (e.isFlying) g.fx.ashBurst(contact, dir, Math.round(10 + amount * 16));
+    if (e.isFlying && asset === 'ghost') g.fx.ashBurst(contact, dir, Math.round(10 + amount * 16));
     else {
-      g.fx.bloodSpray(contact, dir, amount, asset === 'hollow' ? 0x3c0906 : 0x7a0909);
+      g.fx.bloodSpray(contact, dir, amount * (e.isFlying ? 0.5 : 1), e.arch.blood ?? (asset === 'hollow' ? 0x3c0906 : 0x7a0909));
       g.gore.aftermath(contact, dir, amount);
       if (asset === 'knight') g.fx.sparks(contact, 8, 0xffe0b0);
     }
     if (res !== 'dead') return;
     e.fling(away.clone().lerp(dir, 0.3).normalize(), power);
-    if (!e.isFlying) g.gore.gibs(e.center.clone(), dir, Math.round(3 + power * 10), asset === 'hollow' ? 'rotten' : asset === 'knight' ? 'armor' : 'flesh');
+    if (!e.isFlying) g.gore.gibs(e.center.clone(), dir, Math.round(3 + power * 10), asset === 'knight' ? 'armor' : asset === 'archer' ? 'flesh' : 'rotten');
     g.fx.slowmo(power > 0.7 ? 0.34 : 0.16, power > 0.7 ? 0.2 : 0.42);
     g.kickFov(power > 0.7 ? 6 : 3);
     g.audio.play('hit_slice', { pos: contact, rate: 0.75, vol: 1.2 });
@@ -1112,6 +1162,32 @@ export class EnemyManager {
       this.remnants.push(e);
       g.fx.shiftBurst(at, st);
     }
+  }
+
+  /**
+   * Dev / tests: spawn `archId` at `at` (world) into the ad-hoc encounter DEV (created round the hero, triggered at
+   * once), awake and chasing. The rig must be loaded (the floor's own, or `?monsters`).
+   */
+  devSpawn(archId: ArchetypeId, at: THREE.Vector3, opts: { ceiling?: boolean; brood?: boolean; wave?: number; enc?: string } = {}) {
+    const g = this.g, arch = ARCHETYPES[archId];
+    const id = opts.enc ?? 'DEV';
+    let enc = this.encounters.get(id);
+    if (!enc) {
+      enc = { id, state: 'BOTH', box: new THREE.Box3().setFromCenterAndSize(g.player.pos.clone(), new THREE.Vector3(60, 20, 60)), enemies: [], triggered: true, cleared: false,
+        wave: 1, optional: false, finale: false, tutorial: false, bossFight: !!arch.boss, surge: false, title: arch.miniBoss };
+      this.encounters.set(id, enc);
+    }
+    const { model, clips } = this.instantiate(arch.asset);
+    const o = { rise: !!opts.ceiling || !!opts.brood, yaw: 0, ceiling: opts.ceiling, brood: opts.brood };
+    const e = makeMonster(arch, model, clips, id, g.time.state, opts.wave ?? 1, o, g) ?? new Enemy(arch, model, clips, id, g.time.state, opts.wave ?? 1, o);
+    e.place(at.clone());
+    g.scene.add(e.root);
+    this.enemies.push(e);
+    enc.enemies.push(e);
+    if (arch.boss) { this.boss = e; this.bossName = arch.miniBoss ?? arch.id; }
+    if (!this.monsterFx && arch.brain) this.monsterFx = new MonsterFX(g);
+    if ((opts.wave ?? 1) <= enc.wave) e.activate();
+    return e;
   }
 
   /** The Last Crown's death sequence finished: the ending follows (Game.endGame). */
