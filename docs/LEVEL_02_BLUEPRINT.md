@@ -326,16 +326,16 @@ first room → G7 finale. No repeated pattern: the only "shift to open a door" g
 |---|---|---|---|---|---|---|---|
 | E1 | ANT · Present | enter ANT | strips around the void | 3 Hollow (rise), 1 Wraith | — | void: kick knock-offs | 145 |
 | E1b | ANT · Past | shift to Past in ANT | full hall + loft | 3 Royal Guard, 1 Royal Archer (loft) | — | piers as cover vs archer | 150 |
-| E2b | QS · Present (opt.) | enter QS | solar + nursery | 1 Hollow Warden, 2 Hollow | — | — | 150 |
+| E2b | QS · Present (opt.) | enter QS | solar + nursery | 1 Hollow Warden, 1 Hollow, 1 Echo Archer (s7) | — | — | 140 |
 | E3 | CHN · Past | enter CHN | desk rows, shelves | 3 Royal Guard, 2 Royal Archer (E mezz.) | archers only after 1 guard falls | shelves block arrows | 180 |
 | E3p | CHN · Present | enter CHN in Present | floor edge | 2 Hollow + 1 Echo Archer (N mezz., unreachable from the floor) | — | the archer is pressure, not a kill target | 80 |
-| E4 | WR · Present | enter WR | range floor N of gate | 2 Hollow Warden, 2 Hollow | 2nd Hollow Warden when 2 Hollows fall | trusses as cover | 220 |
+| E4 | WR · Present | enter WR | range floor N of gate | 1 Hollow Warden, 2 Hollow; wave 2: Hollow Warden + **2 Remnants** (s7: first Remnants of the floor) | wave 2 when ≤ 1 of wave 1 stands | trusses as cover | 320 |
 | E5b | WR · Past (opt.) | shift in WR N | bunks | 2 Royal Warden, 1 Royal Guard | — | narrow aisles | 240 |
 | E6 | WR ridge · Present | step onto the ridge | 1.2 m ridge | 3 Echo Wraith | — | falls → void respawn (−25 % HP) | 75 |
 | E7 | LG · Past | reach y 24 in Past | 5 m-wide gallery | 2 Royal Warden, 2 Royal Guard | — | FR2 beam drop | 280 |
 | E8 | CL · Past | shift to Past on CL | loft ring | 2 Royal Guard + 1 Royal Archer (loft) | — | parapet; FR1 winch | 110 |
-| E9 | ANT · Present | land from the drop | west strip + void | 3 Echo Wraith | — | chandelier bridge | 75 |
-| E10 | KAP · both | enter KAP | bedchamber | **Kingsguard Captain** (royal_warden scale 1.3, 520 HP, boss bar) + Past: 2 Royal Guard / Present: 2 Hollow | adds at 60 % / 30 % | Past furniture cover; Present three voids (a kicked Captain near a void is staggered 1.5 s) | 200 surge + adds |
+| E9 | ANT · Present | land from the drop | west strip + void | 2 Echo Wraith + 2 **Remnants** rising on the strips (s7: air + ground) | 2nd Remnant in wave 2 | chandelier bridge | 150 |
+| E10 | KAP · both | enter KAP | bedchamber | **Kingsguard Captain** (royal_warden scale 1.3, 520 HP, boss bar) + Past: 2 Royal Guard / Present: 2 **Remnants** rising from the glowing floor holes, then 1 Hollow (s7) | adds at 60 % / 30 % | Past furniture cover; Present three voids (a kicked Captain near a void is staggered 1.5 s) | 200 surge + adds |
 
 Mandatory kill total before each gate is listed in §H. Wraiths and archers stay a minority; every fight has at
 least one "readable" melee group for combos and parries.

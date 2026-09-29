@@ -103,6 +103,7 @@
    "hollow",
    "hollow_warden",
    "kingsguard",
+   "remnant",
    "royal_warden",
    "wraith"
   ],
@@ -112,7 +113,7 @@
   ],
   "markers": {
    "encounter": 12,
-   "enemy": 44,
+   "enemy": 48,
    "exit": 1,
    "fire": 2,
    "fissure": 6,

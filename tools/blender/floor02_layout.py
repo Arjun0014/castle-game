@@ -185,9 +185,11 @@ def build_royal(B):
         enemy(B, "hollow", (2, 65.5, Z), "E1", "PRESENT", rise=True)
         enemy(B, "wraith", (1, 72, Z + 2.5), "E1", "PRESENT")
         encounter(B, "E9", "PRESENT", (-12, -5.5, 68, 78, Z - 1, Z + 4))
+        # E9 (session 7 variety): wraiths over the void + Remnants rising on the strips — air and ground at once
         enemy(B, "wraith", (-2, 73, Z + 2.2), "E9", "PRESENT")
-        enemy(B, "wraith", (3, 70, Z + 2.8), "E9", "PRESENT")
-        enemy(B, "wraith", (5, 75, Z + 2.0), "E9", "PRESENT")
+        enemy(B, "wraith", (4, 72, Z + 2.6), "E9", "PRESENT")
+        enemy(B, "remnant", (-9.5, 65.5, Z), "E9", "PRESENT", yaw=0.0, rise=True)
+        enemy(B, "remnant", (-3.5, 64.2, Z), "E9", "PRESENT", yaw=0.0, rise=True, wave=2)
         prompt(B, "T_DROP", (-12, -9.5, 72, 78, ZL, ZL + 3), "The loft's edge has crumbled over a heap of rubble below.", state="PRESENT")
         prompt(B, "T_CROWN", (-12, -6, 68, 78, Z, Z + 4), "The crown still hangs in memory.", state="PRESENT", requires="noflag:FR1")
 
@@ -209,9 +211,10 @@ def build_royal(B):
     with B.at(S, "PRESENT"):
         B.slab(-32, -12, 62, 70, 14, 14.5, "timber")
         veg_scatter(B, (-30, -14, 70, 86), 18, z=Z, seed=231)
+        # E2b (optional; session 7 variety): a heavy with an archer behind it instead of a third Hollow group
         enemy(B, "hollow_warden", (-22, 72, Z), "E2b", "PRESENT", yaw=math.pi / 2)
-        enemy(B, "hollow", (-26, 66, Z), "E2b", "PRESENT", rise=True)
         enemy(B, "hollow", (-18, 68, Z), "E2b", "PRESENT", rise=True)
+        enemy(B, "echo_archer", (-27.5, 75.5, Z), "E2b", "PRESENT", yaw=math.pi / 2)
 
 
 def build_chancery(B):
@@ -348,10 +351,14 @@ def build_range(B):
             B.obox((24 + (i % 4) * 2.6, 30 + (i // 4) * 5, ZR + 0.3), (0.3, 5.5, 0.35), (0.2, 0, 0.4 * ((-1) ** i)), "wood_moss", col=True)
         veg_scatter(B, (27.4, 28.6, 15, 36), 10, z=14, seed=253)
         veg_scatter(B, (23, 34, 12, 44), 22, z=ZR, seed=254)
+        # E4 (session 7 variety): the reinforcement wave brings the first Remnants of the floor — Echoes the
+        # Crownheart pushes up through the stone (they return on Floor 3 and at the Last Crown's call)
         enemy(B, "hollow_warden", (26, 38, ZR), "E4", "PRESENT", yaw=math.pi)
-        enemy(B, "hollow_warden", (31, 32, ZR), "E4", "PRESENT", yaw=math.pi, wave=2)
         enemy(B, "hollow", (25, 30, ZR), "E4", "PRESENT", rise=True)
         enemy(B, "hollow", (32, 40, ZR), "E4", "PRESENT", rise=True)
+        enemy(B, "hollow_warden", (31, 32, ZR), "E4", "PRESENT", yaw=math.pi, wave=2)
+        enemy(B, "remnant", (28.5, 35, ZR), "E4", "PRESENT", yaw=math.pi, rise=True, wave=2)
+        enemy(B, "remnant", (24.5, 36.5, ZR), "E4", "PRESENT", yaw=math.pi, rise=True, wave=2)
         enemy(B, "wraith", (26, 30, 16.5), "E6", "PRESENT")
         enemy(B, "wraith", (30, 24, 16.8), "E6", "PRESENT")
         enemy(B, "wraith", (26.5, 20, 16.2), "E6", "PRESENT")
@@ -475,8 +482,10 @@ def build_apartments(B):
         B.box(6, 10, 90, 94, Z, Z + 0.5, "fabric_banner", col=True)
         B.prism(24.5, 97.8, 23.8, 25.2, 0.9, 12, "rust_plate")                  # one bell fallen
         veg_scatter(B, (-12, 12, 88, 95), 16, z=Z, seed=275)
-        enemy(B, "hollow", (-6, 84, Z), "E10", "PRESENT", rise=True, wave=2)
-        enemy(B, "hollow", (6, 84, Z), "E10", "PRESENT", rise=True, wave=3)
+        # the Captain's Present reinforcements rise as Remnants from the glowing floor holes (session 7 variety)
+        enemy(B, "remnant", (-6, 84, Z), "E10", "PRESENT", rise=True, wave=2)
+        enemy(B, "remnant", (6, 84, Z), "E10", "PRESENT", rise=True, wave=2)
+        enemy(B, "hollow", (0, 81.5, Z), "E10", "PRESENT", rise=True, wave=3)
 
 
 def build_all(B):

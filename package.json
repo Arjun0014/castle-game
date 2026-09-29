@@ -25,7 +25,9 @@
     "predev:lan": "node tools/build_floor_manifest.mjs",
     "dev:lan": "vite --host 0.0.0.0 --port 5173 --strictPort",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort",
-    "assets:boss": "node tools/build_boss.mjs"
+    "assets:boss": "node tools/build_boss.mjs",
+    "assets:nav": "node tools/build_navgrid.mjs",
+    "assets:voice": "node tools/voice/gen_voice.mjs && python tools/voice/build_voice.py"
   },
   "dependencies": {
     "three": "^0.186.1",
