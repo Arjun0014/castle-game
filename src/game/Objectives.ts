@@ -82,6 +82,12 @@ void main() {
     this.g.touch?.highlight(null);
   }
 
+  /** seconds until the current objective's next stuck hint (Infinity when none is due) */
+  nextHintIn() {
+    const h = this.current?.hints?.[this.hintIdx];
+    return h ? Math.max(0, h.after - this.activeT) : Infinity;
+  }
+
   // ------------------------------------------------------------------ conditions
   private zone(spec: string, p: THREE.Vector3) {
     const [x0, x1, y0, y1, z0, z1] = spec.split(',').map(Number);
@@ -193,7 +199,7 @@ void main() {
     const teach: TeachId | undefined = cur?.teach;
     this.teachStageT += dt;
     let title: string | null = null, text = '', btn: Parameters<NonNullable<typeof g.touch>['highlight']>[0] = null;
-    if (teach === 'move' && (L.moved < 6 || L.looked < 1) && this.activeT > 1.2) {
+    if (teach === 'move' && (L.moved < 6 || L.looked < 1) && this.activeT > 4) {
       title = 'MOVE';
       text = touch ? 'Drag your left thumb to move — push to the edge to sprint. Drag the empty right side to look around.'
         : 'WASD to move · mouse to look · hold Shift to sprint · Space to jump';

@@ -31,6 +31,7 @@ import type { Threat } from '../ui/HUD';
 import { TargetAssist } from '../combat/TargetAssist';
 import { Signals } from './Signals';
 import { Objectives, type Learned } from './Objectives';
+import { Dialogue } from '../audio/Dialogue';
 
 /** Loading-screen sink: fraction 0..1 of the whole operation + what is happening. */
 export type LoadSink = (f: number, label: string) => void;
@@ -109,6 +110,8 @@ export class Game {
   /** what the tutorials have seen the player do (kept across floors) */
   learned: Learned = { moved: 0, looked: 0, hits: 0, guarded: false, dodged: false, shifted: false, sigil: false, resonance: false, heavy: false };
   objectives!: Objectives;
+  /** the heroine's voice + subtitles */
+  dialogue: Dialogue;
   /** level prompt ids now taught by the persistent tutorials (Objectives) instead of a timed prompt */
   private static TAUGHT_PROMPTS = new Set(['T_MOVE', 'T_COMBAT', 'T_SHIFT']);
   /** gameplay announcements for objectives / dialogue / tutorials (see Signals.ts) */
@@ -154,6 +157,7 @@ export class Game {
     this.assist = new TargetAssist(() => this.enemyList(), () => this.level.collision, () => this.time.state);
     this.perf = new Perf(this.renderer);
     this.audio = new AudioFX({ muted: opts.muted });
+    this.dialogue = new Dialogue(this, !!opts.muted);
     this.assets = new GameAssets(this.renderer, Math.min(8, this.renderer.capabilities.getMaxAnisotropy()));
     this.perf.counters = () => ({ activeEnemies: this.enemies?.activeCount ?? 0, enemies: this.enemies?.enemies.length ?? 0 });
     this.scene.add(this.hemi, this.sun, this.sun.target, this.playerLight, this.fill, this.fill.target);
@@ -273,6 +277,7 @@ export class Game {
       const prev = this.floorId;
       sink(0, 'Leaving ' + (FLOORS[prev]?.subtitle ?? 'the floor'));
       m.retain('floor' + next, this.assets.floorKeys(next));
+      this.dialogue.release(prev);
       this.unloadFloor();
       const released = m.release('floor' + prev);
       for (const k of released) if (k.startsWith('snd:')) this.audio.unbind(k.slice(4));
@@ -296,7 +301,9 @@ export class Game {
     this.floorId = id;
     const m = this.assets.manager;
     const keys = this.assets.floorKeys(id);
-    await m.acquireAll([...extra, { scope: 'floor' + id, keys }], (p) => sink(p.fraction * 0.78, `${def.loadingText} — ${p.label} (${p.done}/${p.count})`));
+    const vo = this.dialogue.loadKeys(id);
+    const voice = [{ scope: 'vo-core', keys: vo.core }, { scope: 'floor' + id, keys: vo.floor }].filter((x) => x.keys.length);
+    await m.acquireAll([...extra, { scope: 'floor' + id, keys }, ...voice], (p) => sink(p.fraction * 0.78, `${def.loadingText} — ${p.label} (${p.done}/${p.count})`));
     for (const k of [...this.assets.coreKeys(), ...this.assets.ambienceKeys(), ...keys]) {
       if (k.startsWith('snd:') && m.has(k) && !this.audio.isBound(k.slice(4))) this.audio.bind(k.slice(4), m.get<AudioBuffer[]>(k));
     }
@@ -325,6 +332,7 @@ export class Game {
     this.enemies.build(rigs);
     this.checkpoints = new Checkpoints(this);
     this.objectives = new Objectives(this, this.learned);
+    this.dialogue.attach(id);
     this.fractures = new Fractures(this);
     this.wireEvents();
     const spawn = this.level.marker('spawn', 'SPAWN');
@@ -632,6 +640,7 @@ export class Game {
     this.time.update(dt);
     this.checkpoints.update(dt);
     this.objectives.update(dt);
+    this.dialogue.update(this.realDt);
     this.fractures.update(dt);
     this.updateVoidAndPrompts();
     // engage the finale lock only once the player stands on the hall floor clear of the hatch
@@ -758,6 +767,7 @@ export class Game {
       if (!this.requirementMet(m.props.requires)) continue;
       this.promptsShown.add(m.name);
       this.hud.prompt(promptText(m.props.pid ?? m.name, m.props.text), 6);
+      this.signals.emit('prompt', { pid: m.props.pid ?? m.name });
     }
     // exit
     const exit = this.level.marker('exit', 'EXIT');

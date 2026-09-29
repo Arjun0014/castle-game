@@ -64,6 +64,22 @@ export class AudioFX {
     return ctx;
   }
 
+  /**
+   * The heroine's voice: a dry, centred bus straight into the master. While she speaks, the ambience and the
+   * effects dip a little so the line reads (duck).
+   */
+  voiceOut(): AudioNode | null {
+    if (!this.ctx) return null;
+    if (!this.buses.voice) { const g = this.ctx.createGain(); g.gain.value = 1.05; g.connect(this.master); this.buses.voice = g; }
+    return this.buses.voice;
+  }
+  duck(on: boolean) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.buses.amb.gain.setTargetAtTime(on ? 0.8 * 0.5 : 0.8, t, on ? 0.08 : 0.4);
+    this.buses.sfx.gain.setTargetAtTime(on ? 0.78 : 1, t, on ? 0.08 : 0.4);
+  }
+
   /** Decoded buffers for a sound id (from the AssetManager). */
   bind(id: string, buffers: AudioBuffer[]) { this.buffers.set(id as SoundId, buffers); this.loaded = true; }
   /** Drop a sound's buffers (its asset was released); stops a bed using it. */

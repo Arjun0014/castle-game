@@ -588,7 +588,7 @@ export class EnemyManager {
     enc.wave = 1;
     for (const e of enc.enemies) if (e.wave <= 1) e.activate();
     this.g.signals.emit('encounter:start', { id: enc.id, boss: enc.bossFight || enc.finale, title: enc.title,
-      kinds: [...new Set(enc.enemies.map((e) => e.arch.id))] });
+      kinds: [...new Set(enc.enemies.map((e) => e.arch.id))], count: enc.enemies.length });
     if (enc.bossFight && !enc.finale) {
       const boss = enc.enemies.find((e) => e.arch.boss);
       if (boss) { this.boss = boss; this.bossName = enc.title ?? this.bossName; this.g.signals.emit('boss:start', { id: boss.arch.id }); }

@@ -47,6 +47,9 @@ export class LoadingScreen {
   /** Initial load of `floor` (title card + controls; ends with the start button). */
   showInitial(floor: FloorDef) {
     this.setFloor(floor);
+    // the first card carries the game's name; chapter cards between floors carry the floor's
+    this.title.textContent = 'THE CASTLE REMEMBERS';
+    this.sub.textContent = floor.subtitle;
     this.el.classList.remove('hidden', 'transition');
     this.btn.style.display = '';
     this.btn.disabled = true;
@@ -68,7 +71,7 @@ export class LoadingScreen {
     this.title.textContent = floor.title;
     this.sub.textContent = floor.subtitle;
     this.heading.textContent = 'LOADING CAER VEYR';
-    document.title = `Caer Veyr — ${floor.subtitle}`;
+    document.title = `The Castle Remembers — ${floor.subtitle}`;
   }
 
   private reset() {

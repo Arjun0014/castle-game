@@ -1,0 +1,606 @@
+{
+ "voice": {
+  "name": "Lily",
+  "id": "pFZP5JQG7iQjIQuC4Bku",
+  "model": "eleven_v3",
+  "stability": 0.5,
+  "similarity": 0.75,
+  "seed": 7
+ },
+ "lines": {
+  "boss_gw_dead": {
+   "url": "assets/voice/boss_gw_dead.ogg",
+   "bytes": 18956,
+   "dur": 3.26,
+   "source": "boss_0"
+  },
+  "boss_gw_start": {
+   "url": "assets/voice/boss_gw_start.ogg",
+   "bytes": 23577,
+   "dur": 4.16,
+   "source": "boss_0"
+  },
+  "boss_kg_dead": {
+   "url": "assets/voice/boss_kg_dead.ogg",
+   "bytes": 19661,
+   "dur": 3.5,
+   "source": "boss_0"
+  },
+  "boss_kg_start": {
+   "url": "assets/voice/boss_kg_start.ogg",
+   "bytes": 24913,
+   "dur": 4.04,
+   "source": "boss_0"
+  },
+  "boss_lc_dead": {
+   "url": "assets/voice/boss_lc_dead.ogg",
+   "bytes": 27436,
+   "dur": 4.88,
+   "source": "boss_1"
+  },
+  "boss_lc_p2": {
+   "url": "assets/voice/boss_lc_p2.ogg",
+   "bytes": 30482,
+   "dur": 5.254,
+   "source": "boss_0"
+  },
+  "boss_lc_p3": {
+   "url": "assets/voice/boss_lc_p3.ogg",
+   "bytes": 17478,
+   "dur": 2.7,
+   "source": "boss_1"
+  },
+  "boss_lc_start": {
+   "url": "assets/voice/boss_lc_start.ogg",
+   "bytes": 25564,
+   "dur": 5.04,
+   "source": "boss_0"
+  },
+  "cmb_after_1": {
+   "url": "assets/voice/cmb_after_1.ogg",
+   "bytes": 14246,
+   "dur": 2.46,
+   "source": "combat_0"
+  },
+  "cmb_after_2": {
+   "url": "assets/voice/cmb_after_2.ogg",
+   "bytes": 12376,
+   "dur": 1.78,
+   "source": "combat_0"
+  },
+  "cmb_after_3": {
+   "url": "assets/voice/cmb_after_3.ogg",
+   "bytes": 13704,
+   "dur": 2.03,
+   "source": "combat_0"
+  },
+  "cmb_archer": {
+   "url": "assets/voice/cmb_archer.ogg",
+   "bytes": 15243,
+   "dur": 2.58,
+   "source": "combat_0"
+  },
+  "cmb_enter_1": {
+   "url": "assets/voice/cmb_enter_1.ogg",
+   "bytes": 9604,
+   "dur": 1.16,
+   "source": "combat_0"
+  },
+  "cmb_enter_2": {
+   "url": "assets/voice/cmb_enter_2.ogg",
+   "bytes": 9824,
+   "dur": 1.2,
+   "source": "combat_0"
+  },
+  "cmb_enter_3": {
+   "url": "assets/voice/cmb_enter_3.ogg",
+   "bytes": 17214,
+   "dur": 3.16,
+   "source": "combat_0"
+  },
+  "cmb_exec_1": {
+   "url": "assets/voice/cmb_exec_1.ogg",
+   "bytes": 8631,
+   "dur": 0.96,
+   "source": "combat_0"
+  },
+  "cmb_exec_2": {
+   "url": "assets/voice/cmb_exec_2.ogg",
+   "bytes": 9370,
+   "dur": 1.1,
+   "source": "combat_0"
+  },
+  "cmb_heavy": {
+   "url": "assets/voice/cmb_heavy.ogg",
+   "bytes": 11951,
+   "dur": 1.58,
+   "source": "combat_0"
+  },
+  "cmb_low_1": {
+   "url": "assets/voice/cmb_low_1.ogg",
+   "bytes": 17393,
+   "dur": 3.46,
+   "source": "combat_0"
+  },
+  "cmb_low_2": {
+   "url": "assets/voice/cmb_low_2.ogg",
+   "bytes": 13511,
+   "dur": 2.16,
+   "source": "combat_0"
+  },
+  "cmb_many": {
+   "url": "assets/voice/cmb_many.ogg",
+   "bytes": 11277,
+   "dur": 1.44,
+   "source": "combat_0"
+  },
+  "cp_1": {
+   "url": "assets/voice/cp_1.ogg",
+   "bytes": 21528,
+   "dur": 3.4,
+   "source": "calm_0"
+  },
+  "cp_2": {
+   "url": "assets/voice/cp_2.ogg",
+   "bytes": 18510,
+   "dur": 2.975,
+   "source": "calm_0"
+  },
+  "cp_3": {
+   "url": "assets/voice/cp_3.ogg",
+   "bytes": 19391,
+   "dur": 3.662,
+   "source": "calm_2"
+  },
+  "cp_4": {
+   "url": "assets/voice/cp_4.ogg",
+   "bytes": 13294,
+   "dur": 2.1,
+   "source": "calm_2"
+  },
+  "cp_5": {
+   "url": "assets/voice/cp_5.ogg",
+   "bytes": 17455,
+   "dur": 2.46,
+   "source": "calm_1"
+  },
+  "cp_6": {
+   "url": "assets/voice/cp_6.ogg",
+   "bytes": 20545,
+   "dur": 3.34,
+   "source": "calm_2"
+  },
+  "f1_arrive": {
+   "url": "assets/voice/f1_arrive.ogg",
+   "bytes": 41417,
+   "dur": 7.6,
+   "source": "story_0"
+  },
+  "f1_breach": {
+   "url": "assets/voice/f1_breach.ogg",
+   "bytes": 17188,
+   "dur": 2.94,
+   "source": "calm_0"
+  },
+  "f1_first_enemy": {
+   "url": "assets/voice/f1_first_enemy.ogg",
+   "bytes": 29522,
+   "dur": 5.36,
+   "source": "story_0"
+  },
+  "f1_first_kill": {
+   "url": "assets/voice/f1_first_kill.ogg",
+   "bytes": 23905,
+   "dur": 4.16,
+   "source": "story_0"
+  },
+  "f1_gate_rusted": {
+   "url": "assets/voice/f1_gate_rusted.ogg",
+   "bytes": 26102,
+   "dur": 4.42,
+   "source": "hint_0"
+  },
+  "f1_past_hostile": {
+   "url": "assets/voice/f1_past_hostile.ogg",
+   "bytes": 15468,
+   "dur": 2.242,
+   "source": "story_1"
+  },
+  "f1_resonance_low": {
+   "url": "assets/voice/f1_resonance_low.ogg",
+   "bytes": 22198,
+   "dur": 3.763,
+   "source": "hint_4"
+  },
+  "f1_rite": {
+   "url": "assets/voice/f1_rite.ogg",
+   "bytes": 26145,
+   "dur": 4.62,
+   "source": "story_1"
+  },
+  "f1_shift_first": {
+   "url": "assets/voice/f1_shift_first.ogg",
+   "bytes": 23132,
+   "dur": 4.38,
+   "source": "story_1"
+  },
+  "f1_shift_stuck": {
+   "url": "assets/voice/f1_shift_stuck.ogg",
+   "bytes": 38224,
+   "dur": 7.198,
+   "source": "hint_0"
+  },
+  "f1_sigil_near": {
+   "url": "assets/voice/f1_sigil_near.ogg",
+   "bytes": 30315,
+   "dur": 5.36,
+   "source": "story_0"
+  },
+  "f2_arrive": {
+   "url": "assets/voice/f2_arrive.ogg",
+   "bytes": 29638,
+   "dur": 5.3,
+   "source": "story_1"
+  },
+  "f2_seal": {
+   "url": "assets/voice/f2_seal.ogg",
+   "bytes": 13386,
+   "dur": 1.84,
+   "source": "calm_1"
+  },
+  "f3_arrive": {
+   "url": "assets/voice/f3_arrive.ogg",
+   "bytes": 25442,
+   "dur": 4.38,
+   "source": "story_1"
+  },
+  "f3_heart": {
+   "url": "assets/voice/f3_heart.ogg",
+   "bytes": 22413,
+   "dur": 3.879,
+   "source": "story_1"
+  },
+  "hint_f2_bridge": {
+   "url": "assets/voice/hint_f2_bridge.ogg",
+   "bytes": 27869,
+   "dur": 4.52,
+   "source": "hint_3"
+  },
+  "hint_f2_conduit": {
+   "url": "assets/voice/hint_f2_conduit.ogg",
+   "bytes": 17491,
+   "dur": 2.515,
+   "source": "hint_3"
+  },
+  "hint_f2_crown": {
+   "url": "assets/voice/hint_f2_crown.ogg",
+   "bytes": 25253,
+   "dur": 4.38,
+   "source": "hint_3"
+  },
+  "hint_f2_g1": {
+   "url": "assets/voice/hint_f2_g1.ogg",
+   "bytes": 24129,
+   "dur": 4.06,
+   "source": "hint_2"
+  },
+  "hint_f2_g2": {
+   "url": "assets/voice/hint_f2_g2.ogg",
+   "bytes": 34104,
+   "dur": 6.12,
+   "source": "hint_2"
+  },
+  "hint_f2_gate": {
+   "url": "assets/voice/hint_f2_gate.ogg",
+   "bytes": 25675,
+   "dur": 4.01,
+   "source": "hint_2"
+  },
+  "hint_f2_lg": {
+   "url": "assets/voice/hint_f2_lg.ogg",
+   "bytes": 18533,
+   "dur": 2.57,
+   "source": "hint_2"
+  },
+  "hint_f3_doors": {
+   "url": "assets/voice/hint_f3_doors.ogg",
+   "bytes": 30061,
+   "dur": 5.52,
+   "source": "hint_4"
+  },
+  "hint_f3_gap": {
+   "url": "assets/voice/hint_f3_gap.ogg",
+   "bytes": 18053,
+   "dur": 3.02,
+   "source": "hint_3"
+  },
+  "hint_f3_gate": {
+   "url": "assets/voice/hint_f3_gate.ogg",
+   "bytes": 27137,
+   "dur": 4.457,
+   "source": "hint_3"
+  },
+  "hint_f3_ward": {
+   "url": "assets/voice/hint_f3_ward.ogg",
+   "bytes": 29666,
+   "dur": 5.58,
+   "source": "hint_4"
+  },
+  "hint_g2": {
+   "url": "assets/voice/hint_g2.ogg",
+   "bytes": 30160,
+   "dur": 5.566,
+   "source": "hint_0"
+  },
+  "hint_g3": {
+   "url": "assets/voice/hint_g3.ogg",
+   "bytes": 36278,
+   "dur": 6.72,
+   "source": "hint_0"
+  },
+  "hint_g4": {
+   "url": "assets/voice/hint_g4.ogg",
+   "bytes": 36612,
+   "dur": 6.78,
+   "source": "hint_1"
+  },
+  "hint_g5": {
+   "url": "assets/voice/hint_g5.ogg",
+   "bytes": 27288,
+   "dur": 4.553,
+   "source": "hint_1"
+  },
+  "hint_g6": {
+   "url": "assets/voice/hint_g6.ogg",
+   "bytes": 24946,
+   "dur": 4.26,
+   "source": "hint_1"
+  },
+  "hint_g7": {
+   "url": "assets/voice/hint_g7.ogg",
+   "bytes": 33791,
+   "dur": 5.445,
+   "source": "hint_1"
+  },
+  "hint_g8": {
+   "url": "assets/voice/hint_g8.ogg",
+   "bytes": 30304,
+   "dur": 5.22,
+   "source": "hint_2"
+  },
+  "idle_1": {
+   "url": "assets/voice/idle_1.ogg",
+   "bytes": 19244,
+   "dur": 3.05,
+   "source": "calm_0"
+  },
+  "idle_10": {
+   "url": "assets/voice/idle_10.ogg",
+   "bytes": 20069,
+   "dur": 3.34,
+   "source": "calm_2"
+  },
+  "idle_11": {
+   "url": "assets/voice/idle_11.ogg",
+   "bytes": 20647,
+   "dur": 3.46,
+   "source": "calm_2"
+  },
+  "idle_2": {
+   "url": "assets/voice/idle_2.ogg",
+   "bytes": 20691,
+   "dur": 3.32,
+   "source": "calm_0"
+  },
+  "idle_3": {
+   "url": "assets/voice/idle_3.ogg",
+   "bytes": 18961,
+   "dur": 2.8,
+   "source": "calm_0"
+  },
+  "idle_4": {
+   "url": "assets/voice/idle_4.ogg",
+   "bytes": 21759,
+   "dur": 3.731,
+   "source": "calm_0"
+  },
+  "idle_5": {
+   "url": "assets/voice/idle_5.ogg",
+   "bytes": 35902,
+   "dur": 6.8,
+   "source": "calm_1"
+  },
+  "idle_6": {
+   "url": "assets/voice/idle_6.ogg",
+   "bytes": 18228,
+   "dur": 2.697,
+   "source": "calm_1"
+  },
+  "idle_7": {
+   "url": "assets/voice/idle_7.ogg",
+   "bytes": 24923,
+   "dur": 3.947,
+   "source": "calm_1"
+  },
+  "idle_8": {
+   "url": "assets/voice/idle_8.ogg",
+   "bytes": 22303,
+   "dur": 3.607,
+   "source": "calm_3"
+  },
+  "idle_9": {
+   "url": "assets/voice/idle_9.ogg",
+   "bytes": 20603,
+   "dur": 3.147,
+   "source": "calm_3"
+  },
+  "shift_danger": {
+   "url": "assets/voice/shift_danger.ogg",
+   "bytes": 12954,
+   "dur": 1.671,
+   "source": "calm_2"
+  },
+  "shift_denied_void": {
+   "url": "assets/voice/shift_denied_void.ogg",
+   "bytes": 17837,
+   "dur": 2.87,
+   "source": "hint_4"
+  },
+  "shift_denied_wall": {
+   "url": "assets/voice/shift_denied_wall.ogg",
+   "bytes": 22044,
+   "dur": 3.764,
+   "source": "hint_4"
+  },
+  "shift_r1": {
+   "url": "assets/voice/shift_r1.ogg",
+   "bytes": 13219,
+   "dur": 1.9,
+   "source": "calm_0"
+  },
+  "shift_r2": {
+   "url": "assets/voice/shift_r2.ogg",
+   "bytes": 11611,
+   "dur": 1.56,
+   "source": "calm_2"
+  },
+  "shift_r3": {
+   "url": "assets/voice/shift_r3.ogg",
+   "bytes": 16734,
+   "dur": 2.58,
+   "source": "calm_2"
+  },
+  "shift_r4": {
+   "url": "assets/voice/shift_r4.ogg",
+   "bytes": 16485,
+   "dur": 2.52,
+   "source": "calm_1"
+  },
+  "shift_r5": {
+   "url": "assets/voice/shift_r5.ogg",
+   "bytes": 30491,
+   "dur": 5.34,
+   "source": "calm_1"
+  },
+  "shift_r6": {
+   "url": "assets/voice/shift_r6.ogg",
+   "bytes": 16245,
+   "dur": 2.34,
+   "source": "calm_2"
+  },
+  "tr2_t1": {
+   "url": "assets/voice/tr2_t1.ogg",
+   "bytes": 27898,
+   "dur": 4.876,
+   "source": "discovery_2"
+  },
+  "tr2_t2": {
+   "url": "assets/voice/tr2_t2.ogg",
+   "bytes": 28100,
+   "dur": 5.02,
+   "source": "discovery_2"
+  },
+  "tr2_t3": {
+   "url": "assets/voice/tr2_t3.ogg",
+   "bytes": 41475,
+   "dur": 8.014,
+   "source": "discovery_2"
+  },
+  "tr2_t4": {
+   "url": "assets/voice/tr2_t4.ogg",
+   "bytes": 41222,
+   "dur": 8.0,
+   "source": "discovery_3"
+  },
+  "tr2_t5": {
+   "url": "assets/voice/tr2_t5.ogg",
+   "bytes": 31084,
+   "dur": 5.42,
+   "source": "discovery_3"
+  },
+  "tr3_t1": {
+   "url": "assets/voice/tr3_t1.ogg",
+   "bytes": 22815,
+   "dur": 3.7,
+   "source": "discovery_3"
+  },
+  "tr3_t2": {
+   "url": "assets/voice/tr3_t2.ogg",
+   "bytes": 37347,
+   "dur": 6.663,
+   "source": "discovery_3"
+  },
+  "tr_armory": {
+   "url": "assets/voice/tr_armory.ogg",
+   "bytes": 21595,
+   "dur": 3.759,
+   "source": "discovery_0"
+  },
+  "tr_barricade": {
+   "url": "assets/voice/tr_barricade.ogg",
+   "bytes": 27810,
+   "dur": 4.699,
+   "source": "redo_tr_barricade_0"
+  },
+  "tr_bones": {
+   "url": "assets/voice/tr_bones.ogg",
+   "bytes": 23675,
+   "dur": 3.92,
+   "source": "discovery_0"
+  },
+  "tr_carts": {
+   "url": "assets/voice/tr_carts.ogg",
+   "bytes": 22401,
+   "dur": 3.66,
+   "source": "discovery_0"
+  },
+  "tr_crypt_door": {
+   "url": "assets/voice/tr_crypt_door.ogg",
+   "bytes": 20912,
+   "dur": 3.44,
+   "source": "discovery_1"
+  },
+  "tr_font": {
+   "url": "assets/voice/tr_font.ogg",
+   "bytes": 23838,
+   "dur": 4.06,
+   "source": "discovery_1"
+  },
+  "tr_orders": {
+   "url": "assets/voice/tr_orders.ogg",
+   "bytes": 23854,
+   "dur": 4.42,
+   "source": "redo_tr_orders_0"
+  },
+  "tr_royal_door": {
+   "url": "assets/voice/tr_royal_door.ogg",
+   "bytes": 23808,
+   "dur": 3.98,
+   "source": "discovery_1"
+  },
+  "tr_royal_order": {
+   "url": "assets/voice/tr_royal_order.ogg",
+   "bytes": 23786,
+   "dur": 4.16,
+   "source": "discovery_0"
+  },
+  "tr_screen": {
+   "url": "assets/voice/tr_screen.ogg",
+   "bytes": 19602,
+   "dur": 3.48,
+   "source": "discovery_1"
+  },
+  "tr_tomb": {
+   "url": "assets/voice/tr_tomb.ogg",
+   "bytes": 29070,
+   "dur": 5.36,
+   "source": "discovery_1"
+  },
+  "tr_winch": {
+   "url": "assets/voice/tr_winch.ogg",
+   "bytes": 48177,
+   "dur": 8.64,
+   "source": "discovery_2"
+  }
+ }
+}

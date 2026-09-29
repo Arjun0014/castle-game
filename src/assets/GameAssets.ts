@@ -4,6 +4,7 @@ import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { AssetManager, disposeObject, disposeTexture, fetchBytes, objectMemory, textureGpuBytes } from './AssetManager';
 import textureLibrary from '../data/textureLibrary.json';
 import floorManifests from '../data/floorManifests.json';
+import voiceManifest from '../data/voiceManifest.json';
 import assetSizes from '../data/assetSizes.json';
 import audioManifest from '../data/audioManifest.json';
 import { ARCHETYPES, type ArchetypeId, type AssetId } from '../enemies/EnemyTypes';
@@ -62,9 +63,12 @@ export class GameAssets {
   private gltf = new GLTFLoader();
   private ktx2: KTX2Loader | null = null;
   audioCtx: AudioContext | null = null;
+  /** Voice lines decode here: an offline context at 22.05 kHz resamples them (a third of 44.1 kHz stereo). */
+  private voiceCtx: BaseAudioContext | null = null;
 
   constructor(private renderer: THREE.WebGLRenderer, private anisotropy: number) {
     this.registerAll();
+    this.registerVoice();
   }
 
   /** KTX2 (Basis) transcoder, created only if a KTX2 asset is requested. */
@@ -155,6 +159,27 @@ export class GameAssets {
         },
         dispose: () => { /* AudioBuffers are GC'd once AudioFX drops them (AudioFX.unbind) */ },
         memory: (list) => ({ gpu: 0, cpu: list.reduce((n, b) => n + b.length * b.numberOfChannels * 4, 0) }),
+      });
+    }
+  }
+
+  private voiceDecoder(): BaseAudioContext {
+    if (!this.voiceCtx) {
+      try { this.voiceCtx = new OfflineAudioContext(1, 22050, 22050); } catch { this.voiceCtx = this.audioCtx; }
+      if (!this.voiceCtx) throw new Error('no audio context for voice decoding');
+    }
+    return this.voiceCtx;
+  }
+
+  /** The heroine's lines (keys vo:<line id>, see audio/Dialogue.ts). */
+  private registerVoice() {
+    const lines = (voiceManifest as { lines: Record<string, { url: string; bytes: number }> }).lines;
+    for (const [id, v] of Object.entries(lines)) {
+      this.manager.register<AudioBuffer>({
+        key: 'vo:' + id, bytes: v.bytes, label: 'Her voice',
+        load: async (p) => this.voiceDecoder().decodeAudioData(await fetchBytes(v.url, v.bytes, p)),
+        dispose: () => { /* garbage-collected once Dialogue drops it */ },
+        memory: (b) => ({ gpu: 0, cpu: b.length * b.numberOfChannels * 4 }),
       });
     }
   }

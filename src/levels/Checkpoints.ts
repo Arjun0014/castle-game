@@ -62,7 +62,7 @@ export class Checkpoints {
     for (const m of this.sigils) {
       const dx = m.pos.x - p.x, dz = m.pos.z - p.z, dy = Math.abs(m.pos.y - p.y);
       const d = Math.hypot(dx, dz);
-      if (d < NOTICE && dy < 2 && !this.activated.has(m.name) && !this.noticed.has(m.name)) {
+      if (d < NOTICE && dy < 2 && !g.enemies.inCombat && !this.activated.has(m.name) && !this.noticed.has(m.name)) {
         this.noticed.add(m.name);
         g.signals.emit('sigil:near', { cid: m.name });
       }
