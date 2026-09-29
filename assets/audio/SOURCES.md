@@ -1,0 +1,83 @@
+# Audio sources (all CC0 / public domain)
+
+Downloaded 2026-09-29 into `assets/audio/_downloads/` (immutable source input; zips kept next to their
+extracted folders). Runtime files are **derived** by `python tools/build_audio.py` into `public/assets/audio/`
+and listed in `src/data/audioManifest.json` (which also records, per sound, its use and its sources).
+
+CC0 needs no attribution, but credit is recorded here: Kenney, StarNinjas, artisticdude, rubberduck, Ogrebane,
+qubodup, JaggedStone, SketchMan3, PagDev.
+
+## Packs
+
+| Pack | Author | License | Page | Downloaded file(s) |
+|---|---|---|---|---|
+| Impact Sounds | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/impact-sounds | kenney_impact-sounds.zip |
+| RPG Audio | Kenney (kenney.nl) | CC0 1.0 | https://kenney.nl/assets/rpg-audio | kenney_rpg-audio.zip |
+| 20 Sword Sound Effects (Attacks and Clashes) | StarNinjas | CC0 | https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes | sword_-_starninjas_1.zip, sword_clash_-_starninjas_0.zip |
+| Swishes Sound Pack | artisticdude | CC0 | https://opengameart.org/content/swishes-sound-pack | swishes.zip |
+| 80 CC0 RPG SFX | rubberduck | CC0 | https://opengameart.org/content/80-cc0-rpg-sfx | 80-CC0-RPG-SFX_0.zip |
+| 80 CC0 creature SFX | rubberduck | CC0 | https://opengameart.org/content/80-cc0-creature-sfx | 80-CC0-creature-SFX_0.zip |
+| 100 CC0 SFX #2 | rubberduck | CC0 | https://opengameart.org/content/100-cc0-sfx-2 | sfx_100_v2.zip |
+| Monster Sound Pack, Volume 1 | Ogrebane | CC0 | https://opengameart.org/content/monster-sound-pack-volume-1 | monster-sounds-volume-2.zip |
+| Ghost Monster Voice Moaning & Growling | qubodup (Iwan Gabovitch) | CC0 | https://opengameart.org/content/ghost-monster-voice-moaning-growling | qubodup-GhostMoans.zip |
+| Loopable Dungeon Ambience | JaggedStone | CC0 | https://opengameart.org/content/loopable-dungeon-ambience | dungeon_ambient_1_0.ogg |
+| wind whoosh loop | SketchMan3 | CC0 | https://opengameart.org/content/wind-whoosh-loop | wind_woosh_loop.ogg |
+| Fireplace Sound loop | PagDev | CC0 | https://opengameart.org/content/fireplace-sound-loop | fireplace_loop.wav |
+| Fire Crackling | AntumDeluge | CC0 | https://opengameart.org/content/fire-crackling | fire-1_0.ogg (downloaded, not used yet) |
+| Hit sounds | pauliuw | CC0 | https://opengameart.org/content/hit-sounds | hits.7z (downloaded, REJECTED: 8 kHz mono, -30 dB noise floor) |
+
+Rejected: `Bow & Arrow Shot` (dorkster, CC-BY-SA 3.0) and `Arrow hit twang` (qubodup, CC-BY-SA/GPL) are not
+CC0, so the bow release is composed from CC0 parts; `Dark Ambience Loop` (qubodup, CC-BY/GPL) not used.
+
+## Runtime sounds, their sources and where they are used
+
+| Sound id | Files | Sources | Used for |
+|---|---|---|---|
+| `swing` | 13 | swishes (artisticdude, CC0) | Every player/enemy sword swing (pitch/rate varied per attack weight). |
+| `blade_ring` | 7 | 80 CC0 RPG SFX blade_01-03 (rubberduck, CC0); 20 Sword Sound Effects: sword.N (StarNinjas, CC0) | Quiet metallic "shing" layered on sword swings and finishers. |
+| `hit_flesh` | 5 | Kenney Impact Sounds impactPunch_heavy (CC0) | Sword landing on Hollows/unarmoured targets (thump layer). |
+| `hit_slice` | 4 | Kenney RPG Audio knifeSlice/chop (CC0); 80 CC0 RPG SFX blade_02 (CC0) | Cut layer on sword hits (flesh). |
+| `hit_armor` | 8 | Kenney Impact Sounds impactPlate_medium/heavy (CC0) | Sword landing on armoured knights / guards. |
+| `clash` | 10 | 20 Sword Sound Effects: sword_clash.N (StarNinjas, CC0) | Blade on blade: enemy blocks, player parries (bright ring). |
+| `shield_block` | 5 | Kenney impactPlate_heavy (CC0); StarNinjas sword_clash (CC0) | Hits absorbed by the player's shield (heavy plate crash + clash tail). |
+| `parry` | 4 | StarNinjas sword_clash (CC0); Kenney impactBell_heavy (CC0) | Perfect parry: bright clash + bell shimmer. |
+| `kick_hit` | 4 | Kenney impactPunch_heavy + impactSoft_heavy (CC0) | Kick / shield bash connecting. |
+| `body_fall` | 5 | Kenney impactSoft_heavy (CC0) | Enemy/player hits the floor (deaths, knockdowns). |
+| `armor_crash` | 4 | Kenney impactPlate/impactSoft (CC0); 80 CC0 RPG SFX chain (CC0) | Armoured Echo collapsing. |
+| `armor_rattle` | 6 | 80 CC0 RPG SFX chain (CC0); Kenney RPG Audio beltHandle/clothBelt (CC0) | Knights shifting their armour when winding up / running. |
+| `step_stone` | 5 | Kenney Impact Sounds footstep_concrete (CC0) | Hero footsteps in the Past (dressed stone). |
+| `step_ruin` | 10 | Kenney RPG Audio footstep00-09 (CC0) | Hero footsteps in the Present (grit and rubble). |
+| `step_grit` | 5 | 80 CC0 RPG SFX stones (CC0); 100 CC0 SFX #2 stones (CC0) | Loose-stone layer under Present footsteps. |
+| `enemy_step` | 5 | Kenney footstep_concrete (CC0) | Enemy footfalls (armoured knights, hollows). |
+| `jump` | 4 | Kenney RPG cloth (CC0); Kenney footstep_concrete (CC0) | Take-off (cloth + scuff). |
+| `land` | 5 | Kenney impactSoft_medium + footstep_concrete (CC0) | Landing thud. |
+| `land_heavy` | 4 | Kenney impactSoft_heavy + footstep_concrete (CC0) | Landing from a long fall. |
+| `dodge` | 4 | Kenney RPG cloth (CC0); swishes (CC0) | Dodge dash: cloth + air. |
+| `hollow_growl` | 12 | Monster Sound Pack Vol. 1 (Ogrebane, CC0); 80 CC0 creature SFX (rubberduck, CC0) | Hollow aggro / attack wind-up. |
+| `hollow_hurt` | 6 | 80 CC0 creature SFX hurt (CC0); 80 CC0 RPG SFX creature_hurt (CC0) | Hollow flinch. |
+| `hollow_death` | 4 | 80 CC0 RPG SFX creature_die_01 (CC0); 80 CC0 creature SFX scream/roar/monster (CC0) | Hollow death cry. |
+| `wraith_moan` | 5 | Ghost Monster Voice Moaning & Growling (qubodup, CC0) | Echo Wraith presence / dive. |
+| `wraith_dive` | 3 | qubodup Ghost Moans (CC0); 100 CC0 SFX #2 air_02 (CC0) | Wraith swoop attack (reversed moan into air rush). |
+| `wraith_death` | 3 | qubodup Ghost Moans (CC0); 100 CC0 SFX #2 air_01 (CC0) | Wraith dissolving. |
+| `bow_draw` | 3 | Kenney RPG Audio creak/handleSmallLeather (CC0) | Archer drawing (creak + leather). |
+| `bow_release` | 4 | Kenney impactWood_light (CC0); swishes (CC0) | Arrow loosed: string snap + whip of air. |
+| `arrow_hit` | 5 | Kenney impactWood_light (CC0) | Arrow striking stone/wood. |
+| `player_hurt` | 5 | Kenney impactPunch_medium + RPG cloth (CC0) | Hero takes a hit. |
+| `player_death` | 1 | Kenney impactSoft/impactPlate (CC0) | Hero falls. |
+| `shift_charge` | 1 | 100 CC0 SFX #2 thunder_01, air_01 (CC0); 80 CC0 RPG SFX spell_01 (CC0) | 2.4 s channel: reversed thunder and air rising into the shift. |
+| `shift_boom` | 1 | 100 CC0 SFX #2 thunder_01 (CC0); Kenney impactMining/impactSoft/impactBell (CC0) | Shift completes: the castle snaps into the other memory. |
+| `shift_deny` | 3 | 80 CC0 RPG SFX lock (CC0); Kenney impactWood_heavy (CC0) | Shift refused / seal does not know you. |
+| `resonance` | 4 | 80 CC0 RPG SFX item_gem, spell_02 (CC0) | Resonance released by a defeated Echo flowing into the hero. |
+| `sigil` | 1 | Kenney impactBell_heavy (CC0); 80 CC0 RPG SFX spell_02 (CC0); 100 CC0 SFX #2 thunder_01 (CC0) | Blood Sigil (checkpoint) awakened. |
+| `memory` | 1 | 80 CC0 RPG SFX item_gem_02 (CC0); Kenney bookFlip2 (CC0) | Memory Trace read. |
+| `boss_sting` | 1 | 80 CC0 RPG SFX creature_roar_03 (CC0); 100 CC0 SFX #2 thunder_01 (CC0); Kenney impactBell_heavy (CC0) | The Gate Warden wakes. |
+| `hatch_slam` | 1 | Kenney impactWood_heavy/impactSoft_heavy (CC0); 80 CC0 RPG SFX chain_03 (CC0) | The diggers' hatch slams shut. |
+| `rubble` | 4 | 80 CC0 RPG SFX stones (CC0); 100 CC0 SFX #2 stones (CC0) | Present: masonry settling somewhere nearby. |
+| `creak` | 3 | Kenney RPG Audio creak (CC0) | Present: old timber creaking in the wind. |
+| `distant_moan` | 3 | qubodup Ghost Moans (CC0) | Present: an Echo somewhere in the dark. |
+| `thunder` | 1 | 100 CC0 SFX #2 thunder_01 (CC0) | Present: far thunder over the broken roofs. |
+| `amb_present` | 1 | Loopable Dungeon Ambience (JaggedStone, CC0) | Present bed: low wind through the ruin + drips. |
+| `amb_wind` | 1 | wind whoosh loop (SketchMan3, CC0) | Present: wind where the sky is open (Ward, collapsed roofs). |
+| `amb_drips` | 1 | 100 CC0 SFX #2 loop_water_02 (CC0) | Present undercroft/crypt water. |
+| `amb_fire` | 1 | Fireplace Sound loop (PagDev, CC0) | Past: torches, braziers and hearths (volume follows the nearest flame). |
+| `amb_past` | 1 | Loopable Dungeon Ambience (JaggedStone, CC0), low-passed | Past bed: the inhabited keep's room tone (warm, low). |

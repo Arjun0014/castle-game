@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Caer Veyr — The Lower Keep</title>
+    <link rel="stylesheet" href="/src/ui/style.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud"></div>
+    <div id="overlay">
+      <div id="title-card">
+        <h1>CAER VEYR</h1>
+        <h2>Floor I — Inheritance</h2>
+        <div id="loader">
+          <div id="load-heading">LOADING CAER VEYR</div>
+          <div id="load-row"><span id="load-blocks"></span><span id="load-pct">0%</span></div>
+          <div id="load-bar"><div id="load-fill"></div></div>
+          <p id="load-status">Preparing…</p>
+        </div>
+        <button id="start-btn" disabled>Enter the Keep</button>
+        <div id="controls-help">
+          <div><b>WASD</b> move · <b>Mouse</b> look · <b>Shift</b> hold sprint / tap dodge · <b>Space</b> jump · <b>C</b> crouch</div>
+          <div><b>LMB</b> light · <b>RMB</b> heavy · <b>Q</b> hold guard, tap to parry · <b>Q+LMB</b> shield bash · <b>F</b> kick</div>
+          <div><b>R</b> hold to shift Past / Present (costs one resonance) · <b>E</b> interact · <b>Tab</b> lock on · <b>Esc</b> pause</div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

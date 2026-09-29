@@ -1,0 +1,26 @@
+# dependencies / generated output
+node_modules/
+dist/
+build/
+assets/extracted/
+*.blend1
+.gstack/
+*.log
+
+# secrets — ElevenLabs is build-time only (tools/elevenlabs_sfx.mjs); never commit keys
+.env
+.env.*
+!.env.example
+
+# Third-party SOURCE packs stay local: this repository is public and the raw Mixamo FBX pack,
+# Sketchfab GLBs and the .blend files that embed them must not be redistributed standalone.
+# The game's runtime assets (public/assets/**) are committed — they are what the game ships.
+# See docs/ASSET_PIPELINE.md and docs/CONTEXT.md §4 for where each source file must be placed.
+assets/characters/
+assets/materials/
+assets/vegetation/
+assets/blender/
+
+# local tooling
+.claude/settings.local.json
+.wolf/

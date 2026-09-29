@@ -1,0 +1,146 @@
+{
+ "gore_splat_0.mp3": {
+  "id": "gore_splat",
+  "prompt": "Wet visceral gore splat, a blade cutting through flesh with a thick blood spray, close, dry studio, no music, no voice",
+  "duration": 0.8,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:08.225Z",
+  "bytes": 13836,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "gore_splat_1.mp3": {
+  "id": "gore_splat",
+  "prompt": "Wet visceral gore splat, a blade cutting through flesh with a thick blood spray, close, dry studio, no music, no voice",
+  "duration": 0.8,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:10.052Z",
+  "bytes": 13836,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "gore_splat_2.mp3": {
+  "id": "gore_splat",
+  "prompt": "Wet visceral gore splat, a blade cutting through flesh with a thick blood spray, close, dry studio, no music, no voice",
+  "duration": 0.8,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:11.590Z",
+  "bytes": 13836,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "gore_splat_3.mp3": {
+  "id": "gore_splat",
+  "prompt": "Wet visceral gore splat, a blade cutting through flesh with a thick blood spray, close, dry studio, no music, no voice",
+  "duration": 0.8,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:13.024Z",
+  "bytes": 13836,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "kill_impact_0.mp3": {
+  "id": "kill_impact",
+  "prompt": "Heavy killing sword blow landing on an armoured body: deep meaty thud with a crunch of chainmail and bone, short tail, no music",
+  "duration": 1,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:14.662Z",
+  "bytes": 17180,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "kill_impact_1.mp3": {
+  "id": "kill_impact",
+  "prompt": "Heavy killing sword blow landing on an armoured body: deep meaty thud with a crunch of chainmail and bone, short tail, no music",
+  "duration": 1,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:16.505Z",
+  "bytes": 17180,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "kill_impact_2.mp3": {
+  "id": "kill_impact",
+  "prompt": "Heavy killing sword blow landing on an armoured body: deep meaty thud with a crunch of chainmail and bone, short tail, no music",
+  "duration": 1,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:17.937Z",
+  "bytes": 17180,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "bone_crunch_0.mp3": {
+  "id": "bone_crunch",
+  "prompt": "Brutal bone crunch and snap, close and punchy, for a finishing blow in a dark fantasy fight, no music, no voice",
+  "duration": 0.7,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:20.291Z",
+  "bytes": 12164,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "bone_crunch_1.mp3": {
+  "id": "bone_crunch",
+  "prompt": "Brutal bone crunch and snap, close and punchy, for a finishing blow in a dark fantasy fight, no music, no voice",
+  "duration": 0.7,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:22.133Z",
+  "bytes": 12164,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "bone_crunch_2.mp3": {
+  "id": "bone_crunch",
+  "prompt": "Brutal bone crunch and snap, close and punchy, for a finishing blow in a dark fantasy fight, no music, no voice",
+  "duration": 0.7,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:24.288Z",
+  "bytes": 12164,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "echo_shatter_0.mp3": {
+  "id": "echo_shatter",
+  "prompt": "A ghostly spectral body shattering: a cold glassy breath that breaks apart into crackling embers and drifting ash, eerie, no music",
+  "duration": 1.6,
+  "influence": 0.5,
+  "generated": "2026-09-29T00:37:26.131Z",
+  "bytes": 26793,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "echo_shatter_1.mp3": {
+  "id": "echo_shatter",
+  "prompt": "A ghostly spectral body shattering: a cold glassy breath that breaks apart into crackling embers and drifting ash, eerie, no music",
+  "duration": 1.6,
+  "influence": 0.5,
+  "generated": "2026-09-29T00:37:27.565Z",
+  "bytes": 26793,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "echo_shatter_2.mp3": {
+  "id": "echo_shatter",
+  "prompt": "A ghostly spectral body shattering: a cold glassy breath that breaks apart into crackling embers and drifting ash, eerie, no music",
+  "duration": 1.6,
+  "influence": 0.5,
+  "generated": "2026-09-29T00:37:29.185Z",
+  "bytes": 26793,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "blood_splash_0.mp3": {
+  "id": "blood_splash",
+  "prompt": "Blood splashing onto a stone floor, short wet slap and patter of droplets, close, no music",
+  "duration": 0.6,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:30.734Z",
+  "bytes": 10493,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "blood_splash_1.mp3": {
+  "id": "blood_splash",
+  "prompt": "Blood splashing onto a stone floor, short wet slap and patter of droplets, close, no music",
+  "duration": 0.6,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:32.173Z",
+  "bytes": 10493,
+  "source": "ElevenLabs sound-generation API"
+ },
+ "blood_splash_2.mp3": {
+  "id": "blood_splash",
+  "prompt": "Blood splashing onto a stone floor, short wet slap and patter of droplets, close, no music",
+  "duration": 0.6,
+  "influence": 0.6,
+  "generated": "2026-09-29T00:37:33.606Z",
+  "bytes": 10493,
+  "source": "ElevenLabs sound-generation API"
+ }
+}

@@ -1,0 +1,12 @@
+[
+ { "id": "gore_splat", "variants": 4, "duration": 0.8, "influence": 0.6,
+   "prompt": "Wet visceral gore splat, a blade cutting through flesh with a thick blood spray, close, dry studio, no music, no voice" },
+ { "id": "kill_impact", "variants": 3, "duration": 1.0, "influence": 0.6,
+   "prompt": "Heavy killing sword blow landing on an armoured body: deep meaty thud with a crunch of chainmail and bone, short tail, no music" },
+ { "id": "bone_crunch", "variants": 3, "duration": 0.7, "influence": 0.6,
+   "prompt": "Brutal bone crunch and snap, close and punchy, for a finishing blow in a dark fantasy fight, no music, no voice" },
+ { "id": "echo_shatter", "variants": 3, "duration": 1.6, "influence": 0.5,
+   "prompt": "A ghostly spectral body shattering: a cold glassy breath that breaks apart into crackling embers and drifting ash, eerie, no music" },
+ { "id": "blood_splash", "variants": 3, "duration": 0.6, "influence": 0.6,
+   "prompt": "Blood splashing onto a stone floor, short wet slap and patter of droplets, close, no music" }
+]

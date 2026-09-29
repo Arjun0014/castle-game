@@ -1,0 +1,178 @@
+{
+ "stone_wall": {
+  "source": "assets/materials/stone/stone_wall_04_1k.zip",
+  "diff": "assets/textures/stone_wall_diff.jpg",
+  "nor": "assets/textures/stone_wall_nor.jpg",
+  "arm": "assets/textures/stone_wall_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/stone_wall_diff.ktx2",
+   "nor": "assets/ktx2/textures/stone_wall_nor.ktx2",
+   "arm": "assets/ktx2/textures/stone_wall_arm.ktx2"
+  }
+ },
+ "stone_block": {
+  "source": "assets/materials/stone/japanese_stone_wall_1k.zip",
+  "diff": "assets/textures/stone_block_diff.jpg",
+  "nor": "assets/textures/stone_block_nor.jpg",
+  "arm": "assets/textures/stone_block_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/stone_block_diff.ktx2",
+   "nor": "assets/ktx2/textures/stone_block_nor.ktx2",
+   "arm": "assets/ktx2/textures/stone_block_arm.ktx2"
+  }
+ },
+ "marble": {
+  "source": "assets/materials/stone/marble_01_1k.zip",
+  "diff": "assets/textures/marble_diff.jpg",
+  "nor": "assets/textures/marble_nor.jpg",
+  "arm": "assets/textures/marble_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/marble_diff.ktx2",
+   "nor": "assets/ktx2/textures/marble_nor.ktx2",
+   "arm": "assets/ktx2/textures/marble_arm.ktx2"
+  }
+ },
+ "rock": {
+  "source": "assets/materials/stone/dark_rock_02_1k.zip",
+  "diff": "assets/textures/rock_diff.jpg",
+  "nor": "assets/textures/rock_nor.jpg",
+  "arm": "assets/textures/rock_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/rock_diff.ktx2",
+   "nor": "assets/ktx2/textures/rock_nor.ktx2",
+   "arm": "assets/ktx2/textures/rock_arm.ktx2"
+  }
+ },
+ "terrain": {
+  "source": "assets/materials/stone/rocky_terrain_03_1k.zip",
+  "diff": "assets/textures/terrain_diff.jpg",
+  "nor": "assets/textures/terrain_nor.jpg",
+  "arm": "assets/textures/terrain_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/terrain_diff.ktx2",
+   "nor": "assets/ktx2/textures/terrain_nor.ktx2",
+   "arm": "assets/ktx2/textures/terrain_arm.ktx2"
+  }
+ },
+ "wood_fine": {
+  "source": "assets/materials/wood/coated_pine_02_1k.zip",
+  "diff": "assets/textures/wood_fine_diff.jpg",
+  "nor": "assets/textures/wood_fine_nor.jpg",
+  "arm": "assets/textures/wood_fine_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/wood_fine_diff.ktx2",
+   "nor": "assets/ktx2/textures/wood_fine_nor.ktx2",
+   "arm": "assets/ktx2/textures/wood_fine_arm.ktx2"
+  }
+ },
+ "wood_rough": {
+  "source": "assets/materials/wood/rough_wood_1k.zip",
+  "diff": "assets/textures/wood_rough_diff.jpg",
+  "nor": "assets/textures/wood_rough_nor.jpg",
+  "arm": "assets/textures/wood_rough_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/wood_rough_diff.ktx2",
+   "nor": "assets/ktx2/textures/wood_rough_nor.ktx2",
+   "arm": "assets/ktx2/textures/wood_rough_arm.ktx2"
+  }
+ },
+ "wood_planks": {
+  "source": "assets/materials/wood/wood_planks_dirt_1k.zip",
+  "diff": "assets/textures/wood_planks_diff.jpg",
+  "nor": "assets/textures/wood_planks_nor.jpg",
+  "arm": "assets/textures/wood_planks_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/wood_planks_diff.ktx2",
+   "nor": "assets/ktx2/textures/wood_planks_nor.ktx2",
+   "arm": "assets/ktx2/textures/wood_planks_arm.ktx2"
+  }
+ },
+ "wood_moss": {
+  "source": "assets/materials/wood/moss_wood_1k.zip",
+  "diff": "assets/textures/wood_moss_diff.jpg",
+  "nor": "assets/textures/wood_moss_nor.jpg",
+  "arm": "assets/textures/wood_moss_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/wood_moss_diff.ktx2",
+   "nor": "assets/ktx2/textures/wood_moss_nor.ktx2",
+   "arm": "assets/ktx2/textures/wood_moss_arm.ktx2"
+  }
+ },
+ "wood_door": {
+  "source": "assets/materials/wood/wood_shutter_1k.zip",
+  "diff": "assets/textures/wood_door_diff.jpg",
+  "nor": "assets/textures/wood_door_nor.jpg",
+  "arm": "assets/textures/wood_door_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/wood_door_diff.ktx2",
+   "nor": "assets/ktx2/textures/wood_door_nor.ktx2",
+   "arm": "assets/ktx2/textures/wood_door_arm.ktx2"
+  }
+ },
+ "iron": {
+  "source": "assets/materials/metal/metal_plate_02_1k.zip",
+  "diff": "assets/textures/iron_diff.jpg",
+  "nor": "assets/textures/iron_nor.jpg",
+  "arm": "assets/textures/iron_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/iron_diff.ktx2",
+   "nor": "assets/ktx2/textures/iron_nor.ktx2",
+   "arm": "assets/ktx2/textures/iron_arm.ktx2"
+  }
+ },
+ "rust": {
+  "source": "assets/materials/metal/rust_coarse_01_1k.zip",
+  "diff": "assets/textures/rust_diff.jpg",
+  "nor": "assets/textures/rust_nor.jpg",
+  "arm": "assets/textures/rust_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/rust_diff.ktx2",
+   "nor": "assets/ktx2/textures/rust_nor.ktx2",
+   "arm": "assets/ktx2/textures/rust_arm.ktx2"
+  }
+ },
+ "rust_plate": {
+  "source": "assets/materials/metal/rusty_metal_04_1k.zip",
+  "diff": "assets/textures/rust_plate_diff.jpg",
+  "nor": "assets/textures/rust_plate_nor.jpg",
+  "arm": "assets/textures/rust_plate_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/rust_plate_diff.ktx2",
+   "nor": "assets/ktx2/textures/rust_plate_nor.ktx2",
+   "arm": "assets/ktx2/textures/rust_plate_arm.ktx2"
+  }
+ },
+ "fabric_royal": {
+  "source": "assets/materials/fabric/quatrefoil_jacquard_fabric_1k.zip",
+  "diff": "assets/textures/fabric_royal_diff.jpg",
+  "nor": "assets/textures/fabric_royal_nor.jpg",
+  "arm": "assets/textures/fabric_royal_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/fabric_royal_diff.ktx2",
+   "nor": "assets/ktx2/textures/fabric_royal_nor.ktx2",
+   "arm": "assets/ktx2/textures/fabric_royal_arm.ktx2"
+  }
+ },
+ "fabric_gold": {
+  "source": "assets/materials/fabric/crepe_satin_1k.zip",
+  "diff": "assets/textures/fabric_gold_diff.jpg",
+  "nor": "assets/textures/fabric_gold_nor.jpg",
+  "arm": "assets/textures/fabric_gold_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/fabric_gold_diff.ktx2",
+   "nor": "assets/ktx2/textures/fabric_gold_nor.ktx2",
+   "arm": "assets/ktx2/textures/fabric_gold_arm.ktx2"
+  }
+ },
+ "fabric_linen": {
+  "source": "assets/materials/fabric/rough_linen_1k.zip",
+  "diff": "assets/textures/fabric_linen_diff.jpg",
+  "nor": "assets/textures/fabric_linen_nor.jpg",
+  "arm": "assets/textures/fabric_linen_arm.jpg",
+  "ktx2": {
+   "diff": "assets/ktx2/textures/fabric_linen_diff.ktx2",
+   "nor": "assets/ktx2/textures/fabric_linen_nor.ktx2",
+   "arm": "assets/ktx2/textures/fabric_linen_arm.ktx2"
+  }
+ }
+}

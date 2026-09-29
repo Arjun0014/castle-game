@@ -1,0 +1,1145 @@
+{
+ "_generatedBy": "tools/build_audio.py",
+ "sounds": {
+  "swing": {
+   "bus": "sfx",
+   "gain": -3,
+   "loop": false,
+   "files": [
+    "assets/audio/swing_0.ogg",
+    "assets/audio/swing_1.ogg",
+    "assets/audio/swing_2.ogg",
+    "assets/audio/swing_3.ogg",
+    "assets/audio/swing_4.ogg",
+    "assets/audio/swing_5.ogg",
+    "assets/audio/swing_6.ogg",
+    "assets/audio/swing_7.ogg",
+    "assets/audio/swing_8.ogg",
+    "assets/audio/swing_9.ogg",
+    "assets/audio/swing_10.ogg",
+    "assets/audio/swing_11.ogg",
+    "assets/audio/swing_12.ogg"
+   ],
+   "durations": [
+    0.108,
+    0.082,
+    0.124,
+    0.128,
+    0.116,
+    0.125,
+    0.149,
+    0.13,
+    0.159,
+    0.115,
+    0.1,
+    0.071,
+    0.067
+   ],
+   "use": "Every player/enemy sword swing (pitch/rate varied per attack weight).",
+   "sources": [
+    "swishes (artisticdude, CC0)"
+   ]
+  },
+  "blade_ring": {
+   "bus": "sfx",
+   "gain": -12,
+   "loop": false,
+   "files": [
+    "assets/audio/blade_ring_0.ogg",
+    "assets/audio/blade_ring_1.ogg",
+    "assets/audio/blade_ring_2.ogg",
+    "assets/audio/blade_ring_3.ogg",
+    "assets/audio/blade_ring_4.ogg",
+    "assets/audio/blade_ring_5.ogg",
+    "assets/audio/blade_ring_6.ogg"
+   ],
+   "durations": [
+    0.252,
+    0.308,
+    0.291,
+    0.4,
+    0.4,
+    0.4,
+    0.4
+   ],
+   "use": "Quiet metallic \"shing\" layered on sword swings and finishers.",
+   "sources": [
+    "80 CC0 RPG SFX blade_01-03 (rubberduck, CC0)",
+    "20 Sword Sound Effects: sword.N (StarNinjas, CC0)"
+   ]
+  },
+  "hit_flesh": {
+   "bus": "sfx",
+   "gain": -2,
+   "loop": false,
+   "files": [
+    "assets/audio/hit_flesh_0.ogg",
+    "assets/audio/hit_flesh_1.ogg",
+    "assets/audio/hit_flesh_2.ogg",
+    "assets/audio/hit_flesh_3.ogg",
+    "assets/audio/hit_flesh_4.ogg"
+   ],
+   "durations": [
+    0.514,
+    0.434,
+    0.384,
+    0.386,
+    0.434
+   ],
+   "use": "Sword landing on Hollows/unarmoured targets (thump layer).",
+   "sources": [
+    "Kenney Impact Sounds impactPunch_heavy (CC0)"
+   ]
+  },
+  "hit_slice": {
+   "bus": "sfx",
+   "gain": -7,
+   "loop": false,
+   "files": [
+    "assets/audio/hit_slice_0.ogg",
+    "assets/audio/hit_slice_1.ogg",
+    "assets/audio/hit_slice_2.ogg",
+    "assets/audio/hit_slice_3.ogg"
+   ],
+   "durations": [
+    0.3,
+    0.3,
+    0.24,
+    0.235
+   ],
+   "use": "Cut layer on sword hits (flesh).",
+   "sources": [
+    "Kenney RPG Audio knifeSlice/chop (CC0)",
+    "80 CC0 RPG SFX blade_02 (CC0)"
+   ]
+  },
+  "hit_armor": {
+   "bus": "sfx",
+   "gain": -3,
+   "loop": false,
+   "files": [
+    "assets/audio/hit_armor_0.ogg",
+    "assets/audio/hit_armor_1.ogg",
+    "assets/audio/hit_armor_2.ogg",
+    "assets/audio/hit_armor_3.ogg",
+    "assets/audio/hit_armor_4.ogg",
+    "assets/audio/hit_armor_5.ogg",
+    "assets/audio/hit_armor_6.ogg",
+    "assets/audio/hit_armor_7.ogg"
+   ],
+   "durations": [
+    0.525,
+    0.616,
+    0.515,
+    0.591,
+    0.534,
+    0.35,
+    0.349,
+    0.35
+   ],
+   "use": "Sword landing on armoured knights / guards.",
+   "sources": [
+    "Kenney Impact Sounds impactPlate_medium/heavy (CC0)"
+   ]
+  },
+  "clash": {
+   "bus": "sfx",
+   "gain": -3,
+   "loop": false,
+   "files": [
+    "assets/audio/clash_0.ogg",
+    "assets/audio/clash_1.ogg",
+    "assets/audio/clash_2.ogg",
+    "assets/audio/clash_3.ogg",
+    "assets/audio/clash_4.ogg",
+    "assets/audio/clash_5.ogg",
+    "assets/audio/clash_6.ogg",
+    "assets/audio/clash_7.ogg",
+    "assets/audio/clash_8.ogg",
+    "assets/audio/clash_9.ogg"
+   ],
+   "durations": [
+    0.75,
+    0.48,
+    0.696,
+    0.576,
+    0.416,
+    0.75,
+    0.75,
+    0.358,
+    0.75,
+    0.599
+   ],
+   "use": "Blade on blade: enemy blocks, player parries (bright ring).",
+   "sources": [
+    "20 Sword Sound Effects: sword_clash.N (StarNinjas, CC0)"
+   ]
+  },
+  "shield_block": {
+   "bus": "sfx",
+   "gain": -2,
+   "loop": false,
+   "files": [
+    "assets/audio/shield_block_0.ogg",
+    "assets/audio/shield_block_1.ogg",
+    "assets/audio/shield_block_2.ogg",
+    "assets/audio/shield_block_3.ogg",
+    "assets/audio/shield_block_4.ogg"
+   ],
+   "durations": [
+    0.484,
+    0.504,
+    0.504,
+    0.42,
+    0.559
+   ],
+   "use": "Hits absorbed by the player's shield (heavy plate crash + clash tail).",
+   "sources": [
+    "Kenney impactPlate_heavy (CC0)",
+    "StarNinjas sword_clash (CC0)"
+   ]
+  },
+  "parry": {
+   "bus": "sfx",
+   "gain": -1,
+   "loop": false,
+   "files": [
+    "assets/audio/parry_0.ogg",
+    "assets/audio/parry_1.ogg",
+    "assets/audio/parry_2.ogg",
+    "assets/audio/parry_3.ogg"
+   ],
+   "durations": [
+    1.039,
+    1.039,
+    1.039,
+    1.039
+   ],
+   "use": "Perfect parry: bright clash + bell shimmer.",
+   "sources": [
+    "StarNinjas sword_clash (CC0)",
+    "Kenney impactBell_heavy (CC0)"
+   ]
+  },
+  "kick_hit": {
+   "bus": "sfx",
+   "gain": -2,
+   "loop": false,
+   "files": [
+    "assets/audio/kick_hit_0.ogg",
+    "assets/audio/kick_hit_1.ogg",
+    "assets/audio/kick_hit_2.ogg",
+    "assets/audio/kick_hit_3.ogg"
+   ],
+   "durations": [
+    0.604,
+    0.569,
+    0.569,
+    0.541
+   ],
+   "use": "Kick / shield bash connecting.",
+   "sources": [
+    "Kenney impactPunch_heavy + impactSoft_heavy (CC0)"
+   ]
+  },
+  "body_fall": {
+   "bus": "sfx",
+   "gain": -4,
+   "loop": false,
+   "files": [
+    "assets/audio/body_fall_0.ogg",
+    "assets/audio/body_fall_1.ogg",
+    "assets/audio/body_fall_2.ogg",
+    "assets/audio/body_fall_3.ogg",
+    "assets/audio/body_fall_4.ogg"
+   ],
+   "durations": [
+    0.658,
+    0.711,
+    0.712,
+    0.677,
+    0.623
+   ],
+   "use": "Enemy/player hits the floor (deaths, knockdowns).",
+   "sources": [
+    "Kenney impactSoft_heavy (CC0)"
+   ]
+  },
+  "armor_crash": {
+   "bus": "sfx",
+   "gain": -4,
+   "loop": false,
+   "files": [
+    "assets/audio/armor_crash_0.ogg",
+    "assets/audio/armor_crash_1.ogg",
+    "assets/audio/armor_crash_2.ogg",
+    "assets/audio/armor_crash_3.ogg"
+   ],
+   "durations": [
+    0.647,
+    0.689,
+    0.817,
+    0.661
+   ],
+   "use": "Armoured Echo collapsing.",
+   "sources": [
+    "Kenney impactPlate/impactSoft (CC0)",
+    "80 CC0 RPG SFX chain (CC0)"
+   ]
+  },
+  "armor_rattle": {
+   "bus": "sfx",
+   "gain": -13,
+   "loop": false,
+   "files": [
+    "assets/audio/armor_rattle_0.ogg",
+    "assets/audio/armor_rattle_1.ogg",
+    "assets/audio/armor_rattle_2.ogg",
+    "assets/audio/armor_rattle_3.ogg",
+    "assets/audio/armor_rattle_4.ogg",
+    "assets/audio/armor_rattle_5.ogg"
+   ],
+   "durations": [
+    0.426,
+    0.381,
+    0.767,
+    0.252,
+    0.418,
+    0.583
+   ],
+   "use": "Knights shifting their armour when winding up / running.",
+   "sources": [
+    "80 CC0 RPG SFX chain (CC0)",
+    "Kenney RPG Audio beltHandle/clothBelt (CC0)"
+   ]
+  },
+  "step_stone": {
+   "bus": "sfx",
+   "gain": -14,
+   "loop": false,
+   "files": [
+    "assets/audio/step_stone_0.ogg",
+    "assets/audio/step_stone_1.ogg",
+    "assets/audio/step_stone_2.ogg",
+    "assets/audio/step_stone_3.ogg",
+    "assets/audio/step_stone_4.ogg"
+   ],
+   "durations": [
+    0.103,
+    0.105,
+    0.11,
+    0.108,
+    0.111
+   ],
+   "use": "Hero footsteps in the Past (dressed stone).",
+   "sources": [
+    "Kenney Impact Sounds footstep_concrete (CC0)"
+   ]
+  },
+  "step_ruin": {
+   "bus": "sfx",
+   "gain": -13,
+   "loop": false,
+   "files": [
+    "assets/audio/step_ruin_0.ogg",
+    "assets/audio/step_ruin_1.ogg",
+    "assets/audio/step_ruin_2.ogg",
+    "assets/audio/step_ruin_3.ogg",
+    "assets/audio/step_ruin_4.ogg",
+    "assets/audio/step_ruin_5.ogg",
+    "assets/audio/step_ruin_6.ogg",
+    "assets/audio/step_ruin_7.ogg",
+    "assets/audio/step_ruin_8.ogg",
+    "assets/audio/step_ruin_9.ogg"
+   ],
+   "durations": [
+    0.236,
+    0.279,
+    0.242,
+    0.266,
+    0.285,
+    0.276,
+    0.233,
+    0.239,
+    0.239,
+    0.215
+   ],
+   "use": "Hero footsteps in the Present (grit and rubble).",
+   "sources": [
+    "Kenney RPG Audio footstep00-09 (CC0)"
+   ]
+  },
+  "step_grit": {
+   "bus": "sfx",
+   "gain": -19,
+   "loop": false,
+   "files": [
+    "assets/audio/step_grit_0.ogg",
+    "assets/audio/step_grit_1.ogg",
+    "assets/audio/step_grit_2.ogg",
+    "assets/audio/step_grit_3.ogg",
+    "assets/audio/step_grit_4.ogg"
+   ],
+   "durations": [
+    0.18,
+    0.18,
+    0.18,
+    0.18,
+    0.18
+   ],
+   "use": "Loose-stone layer under Present footsteps.",
+   "sources": [
+    "80 CC0 RPG SFX stones (CC0)",
+    "100 CC0 SFX #2 stones (CC0)"
+   ]
+  },
+  "enemy_step": {
+   "bus": "sfx",
+   "gain": -17,
+   "loop": false,
+   "files": [
+    "assets/audio/enemy_step_0.ogg",
+    "assets/audio/enemy_step_1.ogg",
+    "assets/audio/enemy_step_2.ogg",
+    "assets/audio/enemy_step_3.ogg",
+    "assets/audio/enemy_step_4.ogg"
+   ],
+   "durations": [
+    0.129,
+    0.131,
+    0.137,
+    0.135,
+    0.139
+   ],
+   "use": "Enemy footfalls (armoured knights, hollows).",
+   "sources": [
+    "Kenney footstep_concrete (CC0)"
+   ]
+  },
+  "jump": {
+   "bus": "sfx",
+   "gain": -10,
+   "loop": false,
+   "files": [
+    "assets/audio/jump_0.ogg",
+    "assets/audio/jump_1.ogg",
+    "assets/audio/jump_2.ogg",
+    "assets/audio/jump_3.ogg"
+   ],
+   "durations": [
+    0.3,
+    0.3,
+    0.3,
+    0.3
+   ],
+   "use": "Take-off (cloth + scuff).",
+   "sources": [
+    "Kenney RPG cloth (CC0)",
+    "Kenney footstep_concrete (CC0)"
+   ]
+  },
+  "land": {
+   "bus": "sfx",
+   "gain": -7,
+   "loop": false,
+   "files": [
+    "assets/audio/land_0.ogg",
+    "assets/audio/land_1.ogg",
+    "assets/audio/land_2.ogg",
+    "assets/audio/land_3.ogg",
+    "assets/audio/land_4.ogg"
+   ],
+   "durations": [
+    0.115,
+    0.18,
+    0.132,
+    0.137,
+    0.144
+   ],
+   "use": "Landing thud.",
+   "sources": [
+    "Kenney impactSoft_medium + footstep_concrete (CC0)"
+   ]
+  },
+  "land_heavy": {
+   "bus": "sfx",
+   "gain": -4,
+   "loop": false,
+   "files": [
+    "assets/audio/land_heavy_0.ogg",
+    "assets/audio/land_heavy_1.ogg",
+    "assets/audio/land_heavy_2.ogg",
+    "assets/audio/land_heavy_3.ogg"
+   ],
+   "durations": [
+    0.527,
+    0.569,
+    0.569,
+    0.541
+   ],
+   "use": "Landing from a long fall.",
+   "sources": [
+    "Kenney impactSoft_heavy + footstep_concrete (CC0)"
+   ]
+  },
+  "dodge": {
+   "bus": "sfx",
+   "gain": -6,
+   "loop": false,
+   "files": [
+    "assets/audio/dodge_0.ogg",
+    "assets/audio/dodge_1.ogg",
+    "assets/audio/dodge_2.ogg",
+    "assets/audio/dodge_3.ogg"
+   ],
+   "durations": [
+    0.35,
+    0.35,
+    0.35,
+    0.35
+   ],
+   "use": "Dodge dash: cloth + air.",
+   "sources": [
+    "Kenney RPG cloth (CC0)",
+    "swishes (CC0)"
+   ]
+  },
+  "hollow_growl": {
+   "bus": "sfx",
+   "gain": -6,
+   "loop": false,
+   "files": [
+    "assets/audio/hollow_growl_0.ogg",
+    "assets/audio/hollow_growl_1.ogg",
+    "assets/audio/hollow_growl_2.ogg",
+    "assets/audio/hollow_growl_3.ogg",
+    "assets/audio/hollow_growl_4.ogg",
+    "assets/audio/hollow_growl_5.ogg",
+    "assets/audio/hollow_growl_6.ogg",
+    "assets/audio/hollow_growl_7.ogg",
+    "assets/audio/hollow_growl_8.ogg",
+    "assets/audio/hollow_growl_9.ogg",
+    "assets/audio/hollow_growl_10.ogg",
+    "assets/audio/hollow_growl_11.ogg"
+   ],
+   "durations": [
+    0.649,
+    0.625,
+    0.309,
+    0.274,
+    0.519,
+    0.49,
+    0.457,
+    0.762,
+    0.415,
+    0.653,
+    0.511,
+    0.53
+   ],
+   "use": "Hollow aggro / attack wind-up.",
+   "sources": [
+    "Monster Sound Pack Vol. 1 (Ogrebane, CC0)",
+    "80 CC0 creature SFX (rubberduck, CC0)"
+   ]
+  },
+  "hollow_hurt": {
+   "bus": "sfx",
+   "gain": -6,
+   "loop": false,
+   "files": [
+    "assets/audio/hollow_hurt_0.ogg",
+    "assets/audio/hollow_hurt_1.ogg",
+    "assets/audio/hollow_hurt_2.ogg",
+    "assets/audio/hollow_hurt_3.ogg",
+    "assets/audio/hollow_hurt_4.ogg",
+    "assets/audio/hollow_hurt_5.ogg"
+   ],
+   "durations": [
+    0.475,
+    0.496,
+    0.436,
+    0.44,
+    0.477,
+    0.485
+   ],
+   "use": "Hollow flinch.",
+   "sources": [
+    "80 CC0 creature SFX hurt (CC0)",
+    "80 CC0 RPG SFX creature_hurt (CC0)"
+   ]
+  },
+  "hollow_death": {
+   "bus": "sfx",
+   "gain": -4,
+   "loop": false,
+   "files": [
+    "assets/audio/hollow_death_0.ogg",
+    "assets/audio/hollow_death_1.ogg",
+    "assets/audio/hollow_death_2.ogg",
+    "assets/audio/hollow_death_3.ogg"
+   ],
+   "durations": [
+    0.724,
+    1.221,
+    0.975,
+    0.951
+   ],
+   "use": "Hollow death cry.",
+   "sources": [
+    "80 CC0 RPG SFX creature_die_01 (CC0)",
+    "80 CC0 creature SFX scream/roar/monster (CC0)"
+   ]
+  },
+  "wraith_moan": {
+   "bus": "sfx",
+   "gain": -9,
+   "loop": false,
+   "files": [
+    "assets/audio/wraith_moan_0.ogg",
+    "assets/audio/wraith_moan_1.ogg",
+    "assets/audio/wraith_moan_2.ogg",
+    "assets/audio/wraith_moan_3.ogg",
+    "assets/audio/wraith_moan_4.ogg"
+   ],
+   "durations": [
+    2.045,
+    2.045,
+    2.045,
+    2.045,
+    1.97
+   ],
+   "use": "Echo Wraith presence / dive.",
+   "sources": [
+    "Ghost Monster Voice Moaning & Growling (qubodup, CC0)"
+   ]
+  },
+  "wraith_dive": {
+   "bus": "sfx",
+   "gain": -5,
+   "loop": false,
+   "files": [
+    "assets/audio/wraith_dive_0.ogg",
+    "assets/audio/wraith_dive_1.ogg",
+    "assets/audio/wraith_dive_2.ogg"
+   ],
+   "durations": [
+    1.217,
+    1.217,
+    1.217
+   ],
+   "use": "Wraith swoop attack (reversed moan into air rush).",
+   "sources": [
+    "qubodup Ghost Moans (CC0)",
+    "100 CC0 SFX #2 air_02 (CC0)"
+   ]
+  },
+  "wraith_death": {
+   "bus": "sfx",
+   "gain": -5,
+   "loop": false,
+   "files": [
+    "assets/audio/wraith_death_0.ogg",
+    "assets/audio/wraith_death_1.ogg",
+    "assets/audio/wraith_death_2.ogg"
+   ],
+   "durations": [
+    2.0,
+    2.0,
+    2.0
+   ],
+   "use": "Wraith dissolving.",
+   "sources": [
+    "qubodup Ghost Moans (CC0)",
+    "100 CC0 SFX #2 air_01 (CC0)"
+   ]
+  },
+  "bow_draw": {
+   "bus": "sfx",
+   "gain": -10,
+   "loop": false,
+   "files": [
+    "assets/audio/bow_draw_0.ogg",
+    "assets/audio/bow_draw_1.ogg",
+    "assets/audio/bow_draw_2.ogg"
+   ],
+   "durations": [
+    0.565,
+    0.707,
+    0.304
+   ],
+   "use": "Archer drawing (creak + leather).",
+   "sources": [
+    "Kenney RPG Audio creak/handleSmallLeather (CC0)"
+   ]
+  },
+  "bow_release": {
+   "bus": "sfx",
+   "gain": -4,
+   "loop": false,
+   "files": [
+    "assets/audio/bow_release_0.ogg",
+    "assets/audio/bow_release_1.ogg",
+    "assets/audio/bow_release_2.ogg",
+    "assets/audio/bow_release_3.ogg"
+   ],
+   "durations": [
+    0.097,
+    0.099,
+    0.091,
+    0.098
+   ],
+   "use": "Arrow loosed: string snap + whip of air.",
+   "sources": [
+    "Kenney impactWood_light (CC0)",
+    "swishes (CC0)"
+   ]
+  },
+  "arrow_hit": {
+   "bus": "sfx",
+   "gain": -5,
+   "loop": false,
+   "files": [
+    "assets/audio/arrow_hit_0.ogg",
+    "assets/audio/arrow_hit_1.ogg",
+    "assets/audio/arrow_hit_2.ogg",
+    "assets/audio/arrow_hit_3.ogg",
+    "assets/audio/arrow_hit_4.ogg"
+   ],
+   "durations": [
+    0.143,
+    0.263,
+    0.147,
+    0.263,
+    0.263
+   ],
+   "use": "Arrow striking stone/wood.",
+   "sources": [
+    "Kenney impactWood_light (CC0)"
+   ]
+  },
+  "player_hurt": {
+   "bus": "sfx",
+   "gain": -3,
+   "loop": false,
+   "files": [
+    "assets/audio/player_hurt_0.ogg",
+    "assets/audio/player_hurt_1.ogg",
+    "assets/audio/player_hurt_2.ogg",
+    "assets/audio/player_hurt_3.ogg",
+    "assets/audio/player_hurt_4.ogg"
+   ],
+   "durations": [
+    0.304,
+    0.288,
+    0.375,
+    0.319,
+    0.376
+   ],
+   "use": "Hero takes a hit.",
+   "sources": [
+    "Kenney impactPunch_medium + RPG cloth (CC0)"
+   ]
+  },
+  "player_death": {
+   "bus": "sfx",
+   "gain": -2,
+   "loop": false,
+   "files": [
+    "assets/audio/player_death.ogg"
+   ],
+   "durations": [
+    1.161
+   ],
+   "use": "Hero falls.",
+   "sources": [
+    "Kenney impactSoft/impactPlate (CC0)"
+   ]
+  },
+  "shift_charge": {
+   "bus": "sfx",
+   "gain": -3,
+   "loop": false,
+   "files": [
+    "assets/audio/shift_charge.ogg"
+   ],
+   "durations": [
+    2.612
+   ],
+   "use": "2.4 s channel: reversed thunder and air rising into the shift.",
+   "sources": [
+    "100 CC0 SFX #2 thunder_01, air_01 (CC0)",
+    "80 CC0 RPG SFX spell_01 (CC0)"
+   ]
+  },
+  "shift_boom": {
+   "bus": "sfx",
+   "gain": 0,
+   "loop": false,
+   "files": [
+    "assets/audio/shift_boom.ogg"
+   ],
+   "durations": [
+    3.4
+   ],
+   "use": "Shift completes: the castle snaps into the other memory.",
+   "sources": [
+    "100 CC0 SFX #2 thunder_01 (CC0)",
+    "Kenney impactMining/impactSoft/impactBell (CC0)"
+   ]
+  },
+  "shift_deny": {
+   "bus": "sfx",
+   "gain": -5,
+   "loop": false,
+   "files": [
+    "assets/audio/shift_deny_0.ogg",
+    "assets/audio/shift_deny_1.ogg",
+    "assets/audio/shift_deny_2.ogg"
+   ],
+   "durations": [
+    0.443,
+    0.443,
+    0.443
+   ],
+   "use": "Shift refused / seal does not know you.",
+   "sources": [
+    "80 CC0 RPG SFX lock (CC0)",
+    "Kenney impactWood_heavy (CC0)"
+   ]
+  },
+  "gore_splat": {
+   "bus": "sfx",
+   "gain": -8,
+   "loop": false,
+   "files": [
+    "assets/audio/gore_splat_0.ogg",
+    "assets/audio/gore_splat_1.ogg",
+    "assets/audio/gore_splat_2.ogg",
+    "assets/audio/gore_splat_3.ogg"
+   ],
+   "durations": [
+    0.656,
+    0.751,
+    0.76,
+    0.576
+   ],
+   "use": "Wet flesh/blood layer on killing blows against flesh (Hollows, guards, hero hits).",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "kill_impact": {
+   "bus": "sfx",
+   "gain": -7,
+   "loop": false,
+   "files": [
+    "assets/audio/kill_impact_0.ogg",
+    "assets/audio/kill_impact_1.ogg",
+    "assets/audio/kill_impact_2.ogg"
+   ],
+   "durations": [
+    1.0,
+    0.778,
+    1.0
+   ],
+   "use": "Body-blow layer on heavy / finisher kills.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "bone_crunch": {
+   "bus": "sfx",
+   "gain": -9,
+   "loop": false,
+   "files": [
+    "assets/audio/bone_crunch_0.ogg",
+    "assets/audio/bone_crunch_1.ogg",
+    "assets/audio/bone_crunch_2.ogg"
+   ],
+   "durations": [
+    0.6,
+    0.617,
+    0.528
+   ],
+   "use": "Bone crunch on finisher kills (power > 0.7).",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "echo_shatter": {
+   "bus": "sfx",
+   "gain": -9,
+   "loop": false,
+   "files": [
+    "assets/audio/echo_shatter_0.ogg",
+    "assets/audio/echo_shatter_1.ogg",
+    "assets/audio/echo_shatter_2.ogg"
+   ],
+   "durations": [
+    1.6,
+    1.6,
+    1.6
+   ],
+   "use": "An Echo breaking apart into embers/ash (enemy shatter).",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "blood_splash": {
+   "bus": "sfx",
+   "gain": -12,
+   "loop": false,
+   "files": [
+    "assets/audio/blood_splash_0.ogg",
+    "assets/audio/blood_splash_1.ogg",
+    "assets/audio/blood_splash_2.ogg"
+   ],
+   "durations": [
+    0.6,
+    0.6,
+    0.6
+   ],
+   "use": "Blood hitting stone when a body lands.",
+   "sources": [
+    "ElevenLabs sound generation (generated 2026-09-29, prompt in MANIFEST.json)"
+   ]
+  },
+  "resonance": {
+   "bus": "sfx",
+   "gain": -9,
+   "loop": false,
+   "files": [
+    "assets/audio/resonance_0.ogg",
+    "assets/audio/resonance_1.ogg",
+    "assets/audio/resonance_2.ogg",
+    "assets/audio/resonance_3.ogg"
+   ],
+   "durations": [
+    0.616,
+    0.616,
+    0.616,
+    1.107
+   ],
+   "use": "Resonance released by a defeated Echo flowing into the hero.",
+   "sources": [
+    "80 CC0 RPG SFX item_gem, spell_02 (CC0)"
+   ]
+  },
+  "sigil": {
+   "bus": "sfx",
+   "gain": -2,
+   "loop": false,
+   "files": [
+    "assets/audio/sigil.ogg"
+   ],
+   "durations": [
+    2.892
+   ],
+   "use": "Blood Sigil (checkpoint) awakened.",
+   "sources": [
+    "Kenney impactBell_heavy (CC0)",
+    "80 CC0 RPG SFX spell_02 (CC0)",
+    "100 CC0 SFX #2 thunder_01 (CC0)"
+   ]
+  },
+  "memory": {
+   "bus": "sfx",
+   "gain": -6,
+   "loop": false,
+   "files": [
+    "assets/audio/memory.ogg"
+   ],
+   "durations": [
+    0.735
+   ],
+   "use": "Memory Trace read.",
+   "sources": [
+    "80 CC0 RPG SFX item_gem_02 (CC0)",
+    "Kenney bookFlip2 (CC0)"
+   ]
+  },
+  "boss_sting": {
+   "bus": "sfx",
+   "gain": 0,
+   "loop": false,
+   "files": [
+    "assets/audio/boss_sting.ogg"
+   ],
+   "durations": [
+    3.5
+   ],
+   "use": "The Gate Warden wakes.",
+   "sources": [
+    "80 CC0 RPG SFX creature_roar_03 (CC0)",
+    "100 CC0 SFX #2 thunder_01 (CC0)",
+    "Kenney impactBell_heavy (CC0)"
+   ]
+  },
+  "hatch_slam": {
+   "bus": "sfx",
+   "gain": -2,
+   "loop": false,
+   "files": [
+    "assets/audio/hatch_slam.ogg"
+   ],
+   "durations": [
+    0.902
+   ],
+   "use": "The diggers' hatch slams shut.",
+   "sources": [
+    "Kenney impactWood_heavy/impactSoft_heavy (CC0)",
+    "80 CC0 RPG SFX chain_03 (CC0)"
+   ]
+  },
+  "rubble": {
+   "bus": "amb",
+   "gain": -10,
+   "loop": false,
+   "files": [
+    "assets/audio/rubble_0.ogg",
+    "assets/audio/rubble_1.ogg",
+    "assets/audio/rubble_2.ogg",
+    "assets/audio/rubble_3.ogg"
+   ],
+   "durations": [
+    0.488,
+    0.642,
+    0.71,
+    0.377
+   ],
+   "use": "Present: masonry settling somewhere nearby.",
+   "sources": [
+    "80 CC0 RPG SFX stones (CC0)",
+    "100 CC0 SFX #2 stones (CC0)"
+   ]
+  },
+  "creak": {
+   "bus": "amb",
+   "gain": -14,
+   "loop": false,
+   "files": [
+    "assets/audio/creak_0.ogg",
+    "assets/audio/creak_1.ogg",
+    "assets/audio/creak_2.ogg"
+   ],
+   "durations": [
+    0.887,
+    1.112,
+    0.456
+   ],
+   "use": "Present: old timber creaking in the wind.",
+   "sources": [
+    "Kenney RPG Audio creak (CC0)"
+   ]
+  },
+  "distant_moan": {
+   "bus": "amb",
+   "gain": -17,
+   "loop": false,
+   "files": [
+    "assets/audio/distant_moan_0.ogg",
+    "assets/audio/distant_moan_1.ogg",
+    "assets/audio/distant_moan_2.ogg"
+   ],
+   "durations": [
+    3.333,
+    3.333,
+    3.333
+   ],
+   "use": "Present: an Echo somewhere in the dark.",
+   "sources": [
+    "qubodup Ghost Moans (CC0)"
+   ]
+  },
+  "thunder": {
+   "bus": "amb",
+   "gain": -9,
+   "loop": false,
+   "files": [
+    "assets/audio/thunder.ogg"
+   ],
+   "durations": [
+    4.494
+   ],
+   "use": "Present: far thunder over the broken roofs.",
+   "sources": [
+    "100 CC0 SFX #2 thunder_01 (CC0)"
+   ]
+  },
+  "amb_present": {
+   "bus": "amb",
+   "gain": -4,
+   "loop": true,
+   "files": [
+    "assets/audio/amb_present.ogg"
+   ],
+   "durations": [
+    92.31
+   ],
+   "use": "Present bed: low wind through the ruin + drips.",
+   "sources": [
+    "Loopable Dungeon Ambience (JaggedStone, CC0)"
+   ]
+  },
+  "amb_wind": {
+   "bus": "amb",
+   "gain": -8,
+   "loop": true,
+   "files": [
+    "assets/audio/amb_wind.ogg"
+   ],
+   "durations": [
+    5.159
+   ],
+   "use": "Present: wind where the sky is open (Ward, collapsed roofs).",
+   "sources": [
+    "wind whoosh loop (SketchMan3, CC0)"
+   ]
+  },
+  "amb_drips": {
+   "bus": "amb",
+   "gain": -10,
+   "loop": true,
+   "files": [
+    "assets/audio/amb_drips.ogg"
+   ],
+   "durations": [
+    8.134
+   ],
+   "use": "Present undercroft/crypt water.",
+   "sources": [
+    "100 CC0 SFX #2 loop_water_02 (CC0)"
+   ]
+  },
+  "amb_fire": {
+   "bus": "amb",
+   "gain": -3,
+   "loop": true,
+   "files": [
+    "assets/audio/amb_fire.ogg"
+   ],
+   "durations": [
+    27.764
+   ],
+   "use": "Past: torches, braziers and hearths (volume follows the nearest flame).",
+   "sources": [
+    "Fireplace Sound loop (PagDev, CC0)"
+   ]
+  },
+  "amb_past": {
+   "bus": "amb",
+   "gain": -9,
+   "loop": true,
+   "files": [
+    "assets/audio/amb_past.ogg"
+   ],
+   "durations": [
+    92.31
+   ],
+   "use": "Past bed: the inhabited keep's room tone (warm, low).",
+   "sources": [
+    "Loopable Dungeon Ambience (JaggedStone, CC0), low-passed"
+   ]
+  }
+ }
+}

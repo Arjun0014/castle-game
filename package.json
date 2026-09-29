@@ -1,0 +1,37 @@
+{
+  "name": "time-castle",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Caer Veyr - third-person Past/Present castle action game (Three.js).",
+  "scripts": {
+    "predev": "node tools/build_floor_manifest.mjs",
+    "dev": "vite --port 5173 --strictPort",
+    "prebuild": "node tools/build_floor_manifest.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 4173 --strictPort",
+    "typecheck": "tsc --noEmit",
+    "assets:extract": "python tools/extract_assets.py",
+    "assets:textures": "python tools/build_textures.py",
+    "assets:hero": "\"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe\" --background --factory-startup --python tools/blender/build_hero.py",
+    "assets:enemies": "\"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe\" --background --factory-startup --python tools/blender/build_enemies.py",
+    "assets:floor01": "\"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe\" --background --factory-startup --python tools/blender/build_floor01.py",
+    "assets:audio": "python tools/build_audio.py",
+    "assets:floor02": "\"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe\" --background --factory-startup --python tools/blender/build_floor02.py",
+    "assets:manifest": "node tools/build_floor_manifest.mjs",
+    "assets:ktx2": "node tools/build_ktx2.mjs",
+    "assets:sfx": "node tools/elevenlabs_sfx.mjs"
+  },
+  "dependencies": {
+    "three": "^0.186.1",
+    "three-mesh-bvh": "^0.9.15"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@types/three": "^0.186.0",
+    "ktx2-encoder": "^0.6.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1"
+  }
+}
