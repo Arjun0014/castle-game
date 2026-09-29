@@ -28,8 +28,8 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 **AI authoring workflow:** Claude Code + Blender MCP where available  
 **World scope:** one ancestral castle  
 **Total floors:** 3  
-**Current implementation priority:** session 3 = performance + asset lifecycle (done, verified) and Floor 2 verification
-(see §6, §10). Floor 3 not started by design.
+**Current implementation priority:** session 4 = jam-facing portrait build (portrait default, touch controls, portrait
+camera/HUD), combat feel + new L1, archers, mobile performance, git — all done and verified (§2.1, §6, §10). Next: Floor 3.
 
 The player is a forgotten descendant of the royal bloodline that once ruled the castle. The bloodline is bound to an ancient temporal mechanism called the Crownheart. The player can force the castle between two spatial memories:
 
@@ -105,6 +105,22 @@ Expected action set includes, where supported by actual clips:
 Actual animation files must be inspected before final mapping.
 
 ---
+
+## 2.1 Locked Jam Requirements (session 4)
+
+- **The shipped jam build is a portrait 9:16 HTML5 game** (Three.js, static build uploaded to itch.io). Target around
+  720×1280 / 1080×1920.
+- **Portrait resolution and input method are separate axes.** `src/platform/Platform.ts`:
+  - view: `portrait` (default) or `wide` (`?view=wide`, internal only — never exposed in the UI; keeps the original
+    widescreen camera/HUD for Wavedash or a normal web platform). Same game, same systems; only camera profile + layout.
+  - input: `kbm` or `touch`, from real device capability (coarse primary pointer + touch points = handheld → touch),
+    then from what the player actually uses (a touch `pointerdown` → touch HUD; a gameplay key or a real mouse press/move
+    → keyboard/mouse). Never from the aspect ratio. `?input=touch|kbm` pins it for tests.
+- Desktop/laptop jam page: portrait stage centred (pillar-boxed) in the window/iframe, keyboard + mouse, **no touch HUD**.
+- Phone: the same portrait game, full-screen stage, touch HUD. A handheld held sideways in portrait view gets the
+  "Rotate your device to portrait" overlay (game pauses). Desktops never see it; `?view=wide` never shows it.
+- Automated runs stay silent (`?mute`, `?autopilot`, `?bench`, webdriver); normal play has full audio + ambience.
+- ElevenLabs stays build-time only (`.env` is git-ignored; nothing VITE_-prefixed).
 
 # 3. Narrative Snapshot
 
@@ -295,6 +311,15 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **Pooling** | DONE | fissure remnants (4, pre-instantiated), arrows (16), glints, shift rings, afterimages (no per-dodge buffers), blood decals, gibs, smoke wisps |
 | **KTX2 textures** | ADOPTED (default) | `tools/build_ktx2.mjs` → `public/assets/ktx2/**`; runtime prefers them, `?tex=jpg` forces the originals. See §10 benchmarks |
 | **Profiler** | DONE | `src/game/Perf.ts` (per-frame step/render/GPU timer query, compile/upload attribution, spikes, long tasks); `Game.bench()` drives real frames in hidden tabs |
+| **Portrait jam presentation (session 4)** | DONE, VERIFIED | `Platform.ts` stage 9:21..9:16; desktop 1024×768 → centred 432×768 stage, kbm, no touch HUD; phone emulation 375×812 → full stage, touch HUD, DPR 2 (1.2 MP), 1024 shadows; rotate overlay on a landscape handheld (pauses); `?view=wide` unchanged |
+| **Touch controls** | DONE, VERIFIED (emulated multitouch) | `src/ui/TouchControls.ts`; scripted PointerEvent tests: stick walk 3.1 m/s / rim sprint 6.3 m/s, look while moving, attack with a 3rd finger, lifting one finger keeps the others, Guard→slide = BASH, Guard + Heavy = KICK, directional dodge, Shift hold, no stuck holds; auto-crouch through both F1 crawl spots. **Not yet tried on a real phone.** |
+| **Portrait camera** | DONE, VERIFIED | `CameraRig` profiles; screenshots: spawn, E1 fight, crawl tunnel, Great Hall; ceiling/roof clearance fixes |
+| **Combat feel + new L1** | DONE, VERIFIED (numeric) | L1 contact 0.13 s after press; chain hit every 0.38–0.47 s; L1→Heavy continues into F1c; per-swing hit registry (fixed repeat-swing whiffs) |
+| **Archers** | DONE, VERIFIED | first arrow 1.0 s after sight at 27 m; straight runs hit 4/8, juking 0/8, guard blocks all, cover (gallery slab) 0 shots |
+| **Ledge-safe dodge/knockback** | DONE, VERIFIED | F2 real-damage 0 deaths (was 6) |
+| **itch.io build** | DONE, VERIFIED | `vite base './'`, `npm run package:itch` → `build/caer-veyr-itch.zip` (83 MB, 338 files); served from `/html/12345/`: 0 failed requests, F1→F2 2.1 s |
+| **Mobile quality tier** | DONE, VERIFIED | `Platform.quality`: handheld = 6 point lights + 1024 shadows (−20–25 % GPU at 720×1280) |
+| **Git** | DONE | local repo, pushed to github.com/Arjun0014/castle-game `main` as Arjun0014 (see §10) |
 
 ---
 
@@ -319,6 +344,10 @@ Audio: `npm run assets:audio` (= `python tools/build_audio.py`, needs ffmpeg + n
 
 Runtime (`src/`):
 
+- `platform/Platform.ts` — view profile (`portrait`/`wide`), input mode (`kbm`/`touch`, hybrid switching), handheld
+  detection, portrait stage layout + rotate overlay, fullscreen/orientation lock, haptics, load-time quality tier.
+- `ui/TouchControls.ts` — touch HUD (joystick, look, action arc, Shift ring, lock, interact pill, pause).
+  `ui/Hints.ts` — input-aware control hints (touch wording for key-based level prompts by prompt id).
 - `game/Game.ts` — renderer, per-state environment presets (fog/hemi/sun/exposure blend), loop, game-clock
   timers (`schedule`), voids + fall-respawn, prompts, finale arena lock, debug/test API.
 - `game/Physics.ts` — one MeshBVH per state (SHARED ∪ state), capsule resolve, `capsuleBuried` inside-solid
@@ -360,19 +389,35 @@ Conventions:
 
 ## Controls (implemented)
 
-WASD move · mouse look · Shift tap dodge (fires on release < 0.22 s) / hold sprint · Space jump · C crouch (toggle) · LMB light · RMB heavy ·
-hold Q guard (press just before a hit = parry) · Q+LMB shield bash · F kick · R hold 2.4 s to shift ·
-E interact (sigils, memory traces) · Tab or MMB lock-on · Esc pause · backquote debug overlay · F9 collision view.
+**Desktop / laptop (keyboard + mouse, portrait or wide):** WASD move · mouse look (pointer lock) · Shift tap dodge (fires
+on release < 0.22 s) / hold sprint · Space jump · C crouch (toggle) · LMB light · RMB heavy · hold Q guard (press just
+before a hit = parry) · Q+LMB shield bash · Q+RMB or F kick · R hold 2.4 s to shift · E interact (sigils, memory traces) ·
+Tab or MMB lock-on · Esc pause (click/Esc resumes) · M mute · backquote debug overlay · F9 collision view.
 
-Combos: L1 chop → L2 rising cut → L3 lunge → L4 advancing sweep (loops); L1/L2 + heavy = whirlwind finisher;
-L3/L4 + heavy = leap slam; heavy = spin slash → heavy = jump spin; sprint + light/heavy = dash lunge / leap slam;
-air attack; crouch sweep; kick and bash break guards. A parry staggers the attacker and grants +12 resonance.
+**Touch (handhelds; `?input=touch`):** left-lower zone = floating joystick (analog walk, push to the rim = sprint) ·
+drag anywhere else = camera · ATTACK (large) · HEAVY · GUARD (hold; tap just before a hit = parry) · DODGE (toward
+the stick, back-step without it) · JUMP · hold SHIFT (ring shows the 2.4 s channel; dimmed without charge) · lock-on
+toggle · contextual interact pill (sigils/traces) · pause. Guard + Attack = shield bash (second finger, or slide the
+guard thumb onto Attack); Guard + Heavy = kick. No crouch button: walking into a gap too low to stand crouches
+automatically and stands up after (`Player.autoCrouch`). Haptics (Android): light hit 8 ms … parry 34 ms, hurt 22–40 ms.
+
+Combos: **L1 whirlwind slash** (session 4) → L2 rising cut → L3 lunge cut → L4 advancing sweep (loops); L1 + heavy =
+**F1c** (the whirlwind continues: hits 2+3); L2 + heavy = F1 whirlwind; L3/L4 + heavy = leap slam; heavy = spin slash →
+heavy = jump spin; sprint + light/heavy = dash lunge / leap slam; air attack; crouch sweep; kick and bash break guards.
+A parry staggers the attacker and grants +12 resonance.
 
 ## Testing hooks
 
 - **Automation mute:** `?mute` (also implied by `?autopilot`, `?bench`, `navigator.webdriver`) = silent, ambience not
   decoded. Normal URLs play the full mix. `M` toggles mute in game.
 - `?tex=jpg` → original JPEG/PNG textures instead of KTX2 (A/B). `?floor=2` starts on Floor 2.
+- **`?view=wide`** = internal widescreen build (original camera + HUD). **`?input=touch|kbm`** pins the input mode.
+  **`?quality=high|mobile`** pins the render tier. `__platform` = the Platform singleton.
+- **Phone on the LAN:** `npm run dev:lan` (Vite on 0.0.0.0:5173) → open `http://192.168.1.39:5173/` on the phone (same
+  Wi-Fi; allow Node through the Windows firewall on first run). Production check: `npm run build && npm run preview:lan`
+  → `http://192.168.1.39:4173/`.
+- **itch.io:** `npm run package:itch` → `build/caer-veyr-itch.zip`; upload as HTML5, "This file will be played in the
+  browser", viewport e.g. 540×960 (or 720×1280), tick "Mobile friendly" (orientation: portrait) and "Fullscreen button".
 - `__perf.report()` / `__perf.spikes` / `__perf.reset()`; `__game.bench(seconds)` runs real frames (step+render, measured)
   without rAF (the Claude browser pane is hidden → rAF never fires); `__game.memoryReport()` (GL counts, heap, resident
   asset keys by scope); `__transition(n)` = the in-game floor transition (loading screen included); `__game.loadLog`.
@@ -387,22 +432,16 @@ air attack; crouch sweep; kick and bash break guards. A parry staggers the attac
 
 # 8. Next Concrete Tasks
 
-1. **Floor 2 balance:** the real-damage bot exits but dies 4× in E10 — the Captain's kick (knock 8, guard-break)
-   throws the player into the Present apartments' floor holes (fall = −25 % HP, lethal at low HP). Consider a smaller
-   kick knockback in E10, rim debris/low rails on the holes, or a CP nearer the arena; human playtest first. Also
-   watch the antechamber void fights (E1/E9) and the ridge wraiths (E6).
-2. **Listen to the mix** (a human): ambience is back on in normal play; the ElevenLabs layers (`gore_splat`,
-   `kill_impact`, `bone_crunch`, `echo_shatter`, `blood_splash`) were generated and wired at conservative gains but
-   were never heard — adjust gains in `tools/build_audio.py` (then `npm run assets:audio -- <ids>`) or drop a layer.
-3. **Floor 2 visual pass** with the new textures: add runtime material keys for `plaster_stone_wall_02` (Past royal
-   walls), `mossy_rock` (Present rubble), `aerial_rocks_02` and the ambientCG facade glass (Long Gallery windows);
-   they need `tools/build_textures.py` + `tools/build_ktx2.mjs` SETS entries, a `Materials.ts` DEF and the layout script
-   (`floor02_layout.py`) using them, then `build_floor02.py`.
-4. **Floor 3 prep (only after Floor 2 is verified):** convert `final_boss_light_monster.glb` to KTX2 and opaque
-   materials, and source more boss animation (it has one 8.8 s clip).
-5. New enemy GLBs (bat, spider, goblin, blob) are inspected but not integrated; the bat is the cheapest win (flying AI
-   + flap loop). Each needs a normalisation step like `ghost` in `GameAssets.prepareEnemy` and an archetype.
-6. Floor 1 leftovers: wall detailing, baked AO, roll/crouch-walk clips, archer decimation.
+1. **Floor 3** (next major content stage): blueprint first (`docs/LEVEL_03_BLUEPRINT.md`: short climb into the Crownheart
+   / Last Crown sequence), then `final_boss_light_monster.glb` processing (KTX2 + opaque materials; it has ONE 8.8 s
+   clip — see §9), then geometry (`floor03_layout.py` / `build_floor03.py`), runtime, and the existing floor-scoped
+   loading (`floorManifests.json` + `GameAssets.floorKeys`).
+2. **Real-phone test by a human** (touch feel, thumb reach, haptics, performance on a mid-range phone): `npm run dev:lan`.
+   Adjust `TouchControls` sizes (CSS `--tu`), look sensitivity (`2.6 / stage width` rad/px), rim-sprint threshold.
+3. Listen to the mix (human): combat impact layers were re-balanced by weight in session 4 (`Audio.hitEnemy`).
+4. Floor 2 visual pass with the new textures (plaster, mossy rock, aerial rocks, facade glass) — unchanged from session 3.
+5. New enemy GLBs (bat, spider, goblin, blob) still not integrated.
+6. Floor 1 leftovers: wall detailing, baked AO.
 
 ---
 
@@ -419,7 +458,13 @@ These would materially improve the game and are best sourced manually (licensing
 - **Audio:** human combat vocal efforts/grunts/death cries (royal guards + hero); a real bow draw/release/arrow set;
   distant crowd / war drums for Past halls; a choir/drone bed for the finale and the Crownheart; heavier plate-armour
   foley; stone-scrape / masonry-shift layers for the time shift. (Gore/kill/shatter layers now come from ElevenLabs.)
-- **Characters/animations:** a roll clip and a crouch-walk cycle for the Mixamo hero; a spear set for the knight.
+- **Characters/animations:** a roll clip and a crouch-walk cycle for the Mixamo hero; a spear set for the knight;
+  **an archer melee/shove or a quick point-blank shot clip** and **archer hit/death clips on the archer rig** (the archer
+  reuses the hero's retargeted hit/death clips); **2–3 more light sword slashes** on the same Mixamo rig (the chain now
+  uses whirlwind-opening → rising cut → lunge cut → advancing sweep; a fast horizontal and a fast backhand would let the
+  chain vary more).
+- **Audio (combat feel):** 3–5 heavier sword-on-flesh "thunk" impacts and sword-on-plate clangs with a short tail,
+  a parry "ring" with a long decay, an arrow whizz-by (for near misses), a bow creak for the archers' aim.
 - **Textures still missing:** tapestry / painted heraldry (House Vaelor), ivy / hanging moss alpha cards and a cobweb
   alpha for the Present, water / puddle normals. (Plaster, mossy rock, aerial rocks and facade glass arrived this
   session — not wired yet, §8.3.)
@@ -472,6 +517,78 @@ then generation + `Audio.voice(id)` hook.
 ---
 
 # 10. Latest Verified Session
+
+### Session 4 (2026-09-29) — jam portrait build, touch, combat feel, archers, mobile perf, git
+
+**Portrait / input split** (`Platform.ts`, `TouchControls.ts`, `Hints.ts`, `index.html` #stage, `style.css`, `main.ts`):
+see §2.1 and the Controls in §7. Title/loading cards and HUD are laid out against the stage with container units and
+safe-area insets (vitals top, prompts mid, controls bottom; touch prompts sit above the thumbs). Off-screen threat
+chevrons on the stage edge in portrait (radar mapping: screen-up = camera forward; archers tinted; attacking/aiming = hot).
+
+**Portrait camera** (`CameraRig` profiles): portrait = 5.7 m (combat 6.1, +up to 2.2 m pull-back in crowded fights and
+boss fights), height 1.65, pitch 0.38, no shoulder offset, vertical FOV widened with the aspect (66→78°, horizontal ≥ 44°),
+lens shift 12 % (hero low, space ahead; 3.5 % with the touch HUD so the hero stays clear of the thumbs), relaxed when a
+wall is close ahead; 3-ray boom collision; low-ceiling pitch fallback; never hangs above a roof reached through a Present
+roof hole; keeps ≥ 0.85 m under ceilings. Spring impulses (`punch`) + smooth layered-sine shake. Fog distances are shifted
+by the extra camera distance so the Present looks as smoky as before. Widescreen profile = the original values.
+
+**L1 changed** (`CombatData.ts`): was `atk_chop` (short upward flourish; the tip never crossed in front of the body,
+26 m/s). Now the opening forehand diagonal of `atk_whirlwind` (clip 0.30–1.02): chosen from measured sword-tip paths of
+every attack clip (`build/analysis/swing_paths.json`, Blender, hero.blend) — the torso unwinds ~177°, the tip reaches
+1.9 m at 44 m/s, and it starts near the idle stance. L1 + Heavy → new `F1c` (the whirlwind continues from 0.84: hits 2+3).
+L2/L3 start later in their wind-ups (0.46 / 0.36). Contact 0.13 s after the press; the chain lands a hit every 0.38–0.47 s.
+
+**Combat feel:** per-phase pacing (`speedAt`: anticipation ×1.3, strike ×1.1, follow-through ×0.8, recovery ×1.3; heavies
+windup ×0.95 / strike ×1.25); swing whooshes on the paced timeline (`realTimeTo`); magnetism during the wind-up (≤ 3–3.5 m/s
+toward a target within 5.5 m); `FEEL` table per attack kind (hit-stop 55–110 ms, shake, camera kick along the blade, FOV
+punch, haptics, enemy lean spring + hit shake on real time); blocked hits bounce the hero back; parry = 130 ms stop +
+slow-mo breath + zoom; impact audio layered by weight with pitch jitter + heavy body-blow; blade trail time-based
+(freezes in hit-stop), sub-sampled, pale for light / warm for heavy. **Bug fixed:** hits were registered per attack
+DEFINITION, so L1 → pause → L1 could never hit the same enemy twice (now per swing: `Player.attackSerial`).
+
+**Archers:** see the commit in §10 git list / `Enemy.rangedThink`. Root causes: on-sight aggro capped at 9 m with
+|dy| < 3 m, and perched archers checked LOS against the parapets' player-only collision (1.9 m; the stone is 1.2 m).
+Now sight 34 m from any height (LOS 4×/s), perched archers lean over parapet-height obstacles (never real walls), keep
+distance / find a firing spot instead of charging, readable draw → aim tracer → loose, cancel on lost LOS, ballistic
+lift + lead over the flight time. Archer stats: range [7, 32], 29 m/s, 14 dmg, interval 1.5–2.4 s.
+Placements reviewed: F1 E3 (ward gallery ±5,6,6) now covers the whole Past ward; E13 gallery archers (wave 2) cover the
+Great Hall; E7 (non-perched) back off; F2 E1b/E8/E3/E3p perched archers engage by sight. No placement moved.
+
+**Other fixes:** dormant (kneeling) enemies were drawn in bind/T-pose (their fade-in never advanced under
+`mixer.update(0)`) — visible in the Great Hall finale; risers no longer fade in from bind pose; the dodge dash and
+knockback stop at edges (the F2 Kingsguard deaths were dodges into the apartments' floor holes); Guard + Heavy = kick.
+
+**Performance (portrait):** handheld DPR ≤ 2 and ≤ 1.6 MP render budget (a 1080×1920 phone renders 720×1280); MSAA off on
+high-DPR handhelds; adaptive render scale 0.6–1.0 (1.5 s windows, drops only if it helps; off in automation);
+`Platform.quality` mobile tier (6 point lights, 1024 shadows). Measured on this machine (AMD iGPU, other sessions'
+game servers running = GPU contention; GPU timer query numbers), F1 finale, 30 active enemies, hero attacking:
+
+| View / size | GPU p50 / p95 |
+|---|---|
+| portrait 720×1280, high | 14.5–17.1 / 17.6–20.0 ms |
+| portrait 720×1280, mobile tier | 11.1–13.3 / 12.5–17.2 ms |
+| portrait 1080×1920, high | 24.2 / 26.9 ms |
+| wide 1920×1080, high | 25.7 / 27.4 ms |
+
+0 shader compiles / 0 texture uploads in all fights, including a mid-fight Past→Present shift.
+
+**Tests run:** desktop portrait kbm (1024×768 → 432×768 stage), phone emulation (375×812 touch; 450×800), rotate overlay
+(740×360 handheld), `?view=wide` desktop + handheld, hybrid switching, multitouch PointerEvent scripts, auto-crouch
+(both crawl spots), camera screenshots (spawn, E1 fight, tunnel, Great Hall), L1/chain/F1c timing, archer scenarios,
+F1 god autopilot (→ F2 transition), **F1 real-damage autopilot exit t = 357 s, 0 deaths; F2 real-damage exit t = 391 s,
+0 deaths, 1 fall**; itch sub-path build (0 failed requests, F1→F2 2.1 s); `npm run build` PASS.
+
+**Git:** repo initialised this session; local identity `Arjun0014 <23293383+Arjun0014@users.noreply.github.com>`
+(repo-local config only); remote `https://Arjun0014@github.com/Arjun0014/castle-game.git`; the Git Credential Manager
+entry for github.com is the Arjun0014 account (verified via the API: login Arjun0014, admin on the repo; the other
+account's entry is only used for `ArjunAJ7@github.com` URLs). `credential.https://github.com.username = Arjun0014`
+is set locally. Pushes are non-interactive (`GCM_INTERACTIVE=never`). The repo is **public**: raw third-party source
+packs (`assets/characters`, `assets/materials`, `assets/vegetation`, `assets/blender`) are git-ignored and stay local;
+runtime assets (`public/assets`) are committed. `.env` is ignored.
+
+**Known issues:** browser-pane screenshots crop at DPR 1.25 in desktop mode (use phone-size emulation for captures);
+touch controls never tried on a real device; CPU-side render timings on this machine are polluted by other sessions'
+GPU work (compare GPU timer numbers).
 
 ### Session 3 (2026-09-29) — performance, asset lifecycle, KTX2, audio correction, Floor 2 verification
 
