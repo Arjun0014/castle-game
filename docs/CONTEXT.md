@@ -29,7 +29,12 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 **World scope:** one ancestral castle  
 **Total floors:** 3  
 **Game title:** THE CASTLE REMEMBERS (the castle is Caer Veyr).
-**Current implementation priority:** session 8 = enemy robustness (stuck enemies, T-pose leftovers, no monsters in
+**Current implementation priority:** session 9 = polish + encounter redesign (§10 Session 9): frequent cinematic
+finishers (5 variants), faster touch camera + bigger pocket, the quiet crypt water, the four new monsters with their
+own brains + 3 mini-bosses, **Floor 3 rebuilt as the descent to the Crownheart**, the King's lift (F2 -> F3), the
+Last Crown's reveal/heart/death. STILL OPEN from the session-9 brief: loading-screen redesign, main menu, the
+guided Floor 1 tutorial, the idle-archer audit, playtests of Floor 3 end to end (see §8 Session 9 follow-ups).
+Session 8 = enemy robustness (stuck enemies, T-pose leftovers, no monsters in
 the Past), a redesigned touch HUD (no Dodge, empty camera pocket), floor-clearing rewards (Crownbreaker = HOLD HEAVY
 after Floor 1, Whirlwind = HOLD LIGHT after Floor 2), cinematic last-enemy finishers, dev-only floor/boss warps
 (§10 Session 8). Session 7 = mobile combat assist, touch HUD, sigils, onboarding, the heroine's voice, baked
@@ -385,6 +390,13 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **Floor rewards (s8)** | DONE, VERIFIED (numeric + screenshots) | `combat/Abilities.ts`: Crownbreaker (F2+), Whirlwind (F3); reveal + voice + tip; persistence F1→F2→F3 |
 | **Cinematic finishers (s8)** | DONE, VERIFIED (numeric + portrait screenshots) | `combat/Finishers.ts`: stab / frenzy / kick, safety checks, exactly-once credit |
 | **Dev warps (s8)** | DONE (dev server only) | `game/DevStart.ts`: `?floor=N`, `?at=<warp>`; stripped from production builds (verified) |
+| **Finishers everywhere (s9)** | DONE, VERIFIED (probes + F1 god run) | `combat/Finishers.ts`: 5 variants, mid-fight + last-Echo, others hold back; F1 bot run 58 kills -> 19 finishers |
+| **Touch camera (s9)** | DONE, VERIFIED (emulated 375x812) | pocket ~40 % larger, gain 5.2 rad/stage-width + flick acceleration; 100 px slow swipe 60°, fast 96° (before 40°) |
+| **Crypt water (s9)** | DONE (numeric; NOT heard by a human) | `amb_drips` low-passed, -21 dB (was 11 dB hotter than every bed), depth ramp, combat duck |
+| **New monsters (s9)** | DONE, VERIFIED (probes on F1 + F2 real encounters) | `enemies/Monsters.ts`: goblin / bat / widow (+ widowling) / lamia brains; KTX2 GLBs; 12 CC0 sounds |
+| **Mini-bosses (s9)** | DONE; Gutter King + Weeping Mother VERIFIED by bot, the Maw NOT fought yet | F2 E4 THE GUTTER KING, F2 E2b THE WEEPING MOTHER (optional lair), F3 E5 THE MAW OF THE CROWNHEART |
+| **Floor 3 v3 (s9)** | BUILT, loads, boss reveal VERIFIED; full playthrough NOT done | `tools/blender/floor03_layout.py` v3 -> floor03*.glb (20k tris, 0 issues), NAV3 baked |
+| **King's lift F2->F3 (s9)** | BUILT; NOT yet played through in the browser | `levels/Lift.ts`, F2 `lift` marker (bell chamber shaft), F3 arrival shot |
 
 ---
 
@@ -438,6 +450,14 @@ Runtime (`src/`):
   shaft dust, smoke wisps. Per-state presets `ATMO`; lighting presets `ENV` in `Game.ts` (Present: low hemi,
   near-vertical shadowing moon so light falls through roof holes, low-angle shadowless `fill`, hero light).
 - `vfx/Fire.ts` — all `fire` markers as one instanced procedural flame shader per state.
+- Session 9: `enemies/Monsters.ts` (Goblin / Bat / Widow / Lamia brains + MonsterFX pools: web globs, warning rings,
+  silk threads), Enemy hooks `brainThink` / `brainSpecial` / `afterAnimate` / `onAttackEnd`, `flyWant/flyRate`,
+  `floating`, ctx `hold` (finishers) / `playerAttack` / `playerAirborne`; `EnemyManager.devSpawn`, `bestiary`, BOSS_SUB;
+  `levels/Lift.ts` (the King's lift); `vfx/Crownheart.ts` (the heart + AbyssEmbers); `FloorDef.env` / `noSky` /
+  `epigraph`; `Game.envFor`, `leaveFloor`, `arrivedByLift`, `bestiarySeen`; `Player.webT`; `TouchControls.flushLook`.
+  Pipeline: `tools/blender/build_monsters.py` (`npm run assets:monsters`: goblin retarget + bat/widow/lamia copies),
+  `build_ktx2.mjs` GLB list + per-GLB cap, `build_audio.py` monster sounds. Dev: `dev/monsterProbe.js`
+  (`spawn/fight/duel/brawl/all/shot`, `?monsters` preloads the rigs on any floor), `dev/monsterLab.html?f=<glb>`.
 - Session 8: `combat/Abilities.ts` (floor rewards: ids, floor gating, hold threshold, measured spin-yaw tables),
   `combat/Finishers.ts` (cinematic last-enemy finishers), `game/DevStart.ts` (dev-only `?floor` / `?at` warps),
   `CameraRig.cine` (cinematic camera override), `NavGrid` NAV3 (cliff masks, `reachableCount`), `EnemyTypes`
@@ -550,6 +570,30 @@ A parry staggers the attacker and grants +12 resonance.
 ---
 
 # 8. Next Concrete Tasks
+
+**Session 9 follow-ups (do these first — the rest of the session-9 brief):**
+1. **Loading transitions (brief #6):** `ui/LoadingScreen.ts` still shows the block bar. Redesign it (chapter card with the
+   floor's `epigraph` from `levels/Floors.ts`, a real-progress sigil ring / thin gilt line, no fake progress).
+2. **Main menu (brief #9):** replace the title card in `index.html` / `LoadingScreen.showInitial` with a real menu
+   (New Game -> Guided / Minimal, Continue if meaningful, Controls, Credits — CC-BY credits for every Sketchfab model:
+   the four monster GLBs' `asset.extras` + knight/necromorph/night monster; audio packs in SOURCES.md — Settings:
+   volume/voice). Integrate the opening film through `import.meta.glob('./ui/Intro.ts')` so the pushed tree builds
+   without the other session's uncommitted `Intro.ts` (never commit their files: `src/ui/Intro.ts`,
+   `src/data/opening.json`, `public/cinematic/`, `tools/cinematic/`, `docs/CINEMATIC*.md`, `assets/audio/cinematic/`, the
+   intro hunks of `main.ts` / `style.css`, `Audio.unlock`, `package.json` fonts, `.gitignore`, CONTEXT film sections).
+3. **Guided Floor 1 tutorial (brief #10):** from the start of F1 to the end of the first crouch section; Guided vs
+   Minimal (minimal keeps objectives/navigation/shift instructions). Build on `game/Objectives.ts` (persistent teach
+   cards) + `data/objectives.ts` F1 + the heroine's lines; brief slow-mo for first introductions allowed.
+4. **Idle / stuck enemies audit (brief #8):** run `dev/enemyProbe.js` on all three floors (archers that never shoot,
+   slot waiters); F3 is new — run a full F3 bot playthrough (`M.brawl` per encounter or an AutoPilot ROUTES[3]).
+5. **Play Floor 2 -> 3 in the browser:** bell chamber -> lift -> loading -> arrival shot -> F3 start (untested end to end;
+   the lift's dynamic collider, `Game.leaveFloor`, `arrivedByLift`, scripted state reset in `unloadFloor`).
+6. **Floor 3 playthrough:** every weave (Hall chasm/grille, ossuary bridges, cistern doors, ramp gap + Past gate, Threshold
+   ward) walked in both memories; the Maw fight; the Last Crown fight in the new arena (wedge holes, blink points r 12.5,
+   arena r 14.5, bats out of the heart, adds at 35 %), the death shot + heart shatter + ending card.
+7. Floor 3 Present is dark by design — check readability on a phone (env overrides in `levels/Floors.ts`).
+8. `docs/LEVEL_03_BLUEPRINT.md` still describes v2.0 in its body; the authoritative v3 layout is
+   `tools/blender/floor03_layout.py` (header + section comments). Rewrite the blueprint text.
 
 **Session 8 follow-ups (do these first):**
 1. **Real phone** (`npm run dev:lan`): the v2 touch layout (thumb reach, pocket size, hold vs tap), finishers in
@@ -685,6 +729,69 @@ then generation + `Audio.voice(id)` hook.
 ---
 
 # 10. Latest Verified Session
+
+### Session 9 (2026-09-29) — finishers, touch camera, water, monsters + mini-bosses, Floor 3 rebuilt, the lift
+
+Commits (pushed to Arjun0014/castle-game main as Arjun0014): `7181783` finishers + touch camera + crypt water ·
+`c12165f` the monster roster + Floor 2 encounters · `700efeb` Floor 3 v3 + the King's lift + the heart + boss reveal ·
+this CONTEXT commit. Another session's opening-film work stayed uncommitted every time (hunk/blob staging; each staged
+tree was type-checked and production-built on its own: scratchpad `check_staged.ps1`).
+
+**1. Finishers** (`combat/Finishers.ts`): any lethal blow (combos included) can become one. Last Echo 90 % (3 s after
+the previous one), mid-fight 34 % + 14 % per normal kill since the last finisher, max 80 %, 6 s cooldown; never AoE
+(Whirlwind, Crownbreaker), executions, flyers, bosses, the lamia. While one plays every other Echo holds (EnemyCtx.hold:
+no new blows, no approach, archers lower their bows), the hero gets 0.45 s grace after. Variants dealt from a shuffle
+bag (a variant refused for safety stays first in the bag): stab, frenzy, kick, **headsman** (low sweep to the knees,
+spinning neck cut, blood fountain, low front shot), **passing cut** (knee-slide through the foe along a checked lane,
+it falls a beat later; camera ahead of her line). Slash ribbon VFX (warmed). Beasts (widow) get stab + passing only.
+Verified: all 5 play, exactly-once credit, camera never inside/behind geometry (probe), mid-fight holds (0 attacks
+started during), wall cases refuse correctly; F1 god autopilot to t = 323 s: 58 kills, 19 finishers (14 mid-fight).
+**2. Touch camera** (`ui/TouchControls.ts`, `style.css .t-*`): Attack ⌀90 (64, 228) · Jump ⌀74 (60, 334) · Heavy ⌀70
+(160, 198) · Guard ⌀66 (210, 112) · Shift ⌀54 (156, 304); the free pocket ≈ 177 × 163 u (was ≈ 150 × 130). Look gain
+5.2 rad per stage width + up to 2× for fast flicks, 30 ms ease on real time. Soft camera / manual priority /
+magnetism untouched.
+**3. Crypt water:** the loud "water" in Floor 1 was `amb_drips` (loop_water_02, broadband, RMS −17.7 dB vs −28 for the
+other beds) at full level whenever y < −2.5 (crypt, excavation). Now high/low-passed (110 Hz / 1.7 kHz), −21 dB, a depth
+ramp (y −1.5 → −4.5) and ducked in combat. Not heard by a human yet.
+**4. Monsters** (`enemies/Monsters.ts`, assets §4): goblin = the Sketchfab goblin retargeted with 25 hero clips
+(`build_monsters.py`, 1.32 m, scimitar kept); bat / widow / lamia = source copies normalised at load
+(`GameAssets.NORMALISE`: height, facing, first-frame bounds; lamia spec-gloss → base colour, goblin unlit → lit).
+Roles: goblin skirmisher (zig-zag, jump-spin leap 3.4–7.5 m, cuts, hop back, sidestep heavies, reinforcements drop from
+above); bat swarm (wall-aware orbit, ≤ 2 swoop at once, parried = drops stunned, A* when blind); Widow (ceiling drop on
+a thread, skitter, web spit → `Player.webT` slow 2.2 s, pounce, jab; widowlings); lamia (360° ankle sweep with a floor
+ring — jump/dodge, guard-breaking maw lunge, coil guard vs frontal hits). Mini-bosses: **THE GUTTER KING** (goblin ×1.6,
+600 HP, war cry at 60 % frenzies the pack), **THE WEEPING MOTHER** (widow ×1.6, 650 HP, volleys, brood hatches at 65/35),
+**THE MAW OF THE CROWNHEART** (lamia ×1.4, 900 HP, bats from its maw). First sight of each kind shows a bestiary card.
+Floor 2: bats in E1 + the ridge E6, goblins in E3p, the Gutter King in E4, a Widow ambush + brood in E9, the Weeping
+Mother in the optional Queen's Solar E2b. Verified (monsterProbe + brawl bot on the real F2 fights): goblin duel 2.8 s,
+bats 6 bites/12 s, Widow webs + pounce + jab, Gutter King fight 40 s (3 waves, 10 kills, 181 damage taken), Weeping
+Mother 24 s → HP raised to 650.
+**5. Floor 3 rebuilt** (`floor03_layout.py` v3, header describes every space; blueprint text still v2 — §8): the King's
+lift foot (CP1, F1) → Hall of Roots (E1 Present goblins/bats/Widow; Present chasm y 29–40 → Past floor; E2 Past royal
+wardens; Past Royal Grille y 51 → Present fallen; F2) → ossuary bridges over a cavern (E3 Present Widow + bats + brood on
+P1; Past-only bridge P1→P2 with walls; E4 Past guard on P2; Present fallen column P2→P3; CP2 on P3; F3) → the cistern
+(E5 the Maw; south door warded in the Past, north door crystal-fused in the Present) → the Great Descent (spiral r 6.5–13
+round the heart's shaft, z 0 → −16 over 450°; E6 Present goblins/bats, Present ramp gap 40–62°, E7 Past wardens/guards,
+Past iron gate 222°, E8 Present lamia + Widows + Remnants; F4, F5) → the Threshold (CP3, the empty throne, Past-warded
+Crown doors) → a bridge onto the Crownheart ring (r 17, lens r 4.2, pillars at r 11, Present wedge holes r 6–13.5 at
+45/135/225/315°). Every drop is an `abyss`: black shaft walls, broken rims, lights under the rims, embers rising
+(`AbyssEmbers`); no flat red floor anywhere. Floor lighting overrides (darker red-black Present, warm Past), no sky.
+Dev warps: `?at=hall3 | maw | descent | lastcrown`.
+**6. The finale:** the Crownheart (`vfx/Crownheart.ts`) beats over the arena (colour per phase, drives the level's own
+crown light — no new light); the Last Crown is 3.4 m, keeps to r 14.5 (lens marker), is revealed descending out of the
+heart (4.6 s shot, title, sting, then her line), calls bats out of the heart at 65 % and goblins + the brood at 35 %;
+her death shot tilts up as the heart convulses and shatters and the chamber goes dark. Verified: reveal plays and hands
+control back (`?at=lastcrown`, step onto the ring). The full fight and the ending in the new arena are NOT yet played.
+**7. The King's lift** (`levels/Lift.ts`): Floor 2's bell chamber no longer opens onto sky; the exit volume is out of
+reach; the cage hangs in the conduit shaft (dynamic collider), "THE KING'S LIFT / Descend to the Crownheart", 7.2 s
+descent, fade, `Game.leaveFloor()` → the normal transition; Floor 3 plays the arrival shot. NOT yet played end to end.
+
+**Tests run:** tsc + vite build on every staged tree; finisher probes (5 variants, walls, mid-fight); F1 god autopilot
+with finishers (to t = 323 s, 0 errors); touch layout + swipe measurements (375×812); monster probes (fight / duel) for
+every monster on F1 and real F2 encounters (E4, E2b) with the brawl bot; F3 load (55 enemies, 0 spawn fixes), portrait
+screenshots of F3 Past/Present, boss reveal; Blender builds F2/F3 0 issues; NAV3 rebaked for F2 + F3.
+**Needs a human / real phone:** the pocket + swipe speed, finisher frequency in real fights, the water bed by ear, the
+monster sounds (generated by varispeed from CC0 packs, unheard), F3 readability in the dark, the lift, the whole finale.
 
 ### Session 8 (2026-09-29) — enemy robustness, touch HUD v2, floor rewards, cinematic finishers, dev warps
 
