@@ -135,7 +135,7 @@ export class Enemy {
     });
     if (opts.tint === 'rebel') this.addSash(model);
     stabilizeShadowDepth(this.root);
-    if (opts.kneel) { this.state = 'dormant'; this.loop(arch.clips.kneel ?? arch.clips.idle, 0.0); }
+    if (opts.kneel) { this.state = 'dormant'; this.pose(arch.clips.kneel ?? arch.clips.idle); }
     else if (opts.rise) { this.state = 'hidden'; this.root.visible = false; }
     else this.loop(arch.clips.idle, 1);
   }
@@ -186,12 +186,21 @@ export class Enemy {
     return a;
   }
   private setState(s: EState) { this.state = s; this.stateTime = 0; }
+  /**
+   * Hold a static pose (dormant kneelers). No fade: dormant enemies only get mixer.update(0), so a fade-in
+   * would never advance and they would stand in the bind (T) pose until woken.
+   */
+  private pose(name: string) {
+    this.loop(name, 0, 0);
+    this.cur?.stopFading().setEffectiveWeight(1);
+    this.mixer.update(0);
+  }
 
   activate() {
     if (this.triggered || !this.alive) return;
     this.triggered = true;
     this.events.push('alert');
-    if (this.state === 'hidden') { this.root.visible = true; this.setState('rise'); this.once(this.arch.clips.rise ?? this.arch.clips.idle, 1.3, 0, 0.05); }
+    if (this.state === 'hidden') { this.root.visible = true; this.setState('rise'); this.once(this.arch.clips.rise ?? this.arch.clips.idle, 1.3, 0, 0.05)?.stopFading().setEffectiveWeight(1); }
     else if (this.state === 'dormant') { this.setState('rise'); this.once(this.arch.clips.rise ?? this.arch.clips.idle, 1.1, 0, 0.3); }
     else this.setState('chase');
   }
@@ -731,7 +740,7 @@ export class Enemy {
     this.cooldown = 0;
     this.yaw = this.opts.yaw ?? 0;
     for (const m of this.materials) { m.opacity = m.userData.baseOpacity ?? 1; m.transparent = !!m.userData.baseTransparent; }
-    if (this.opts.kneel) { this.state = 'dormant'; this.loop(this.arch.clips.kneel ?? this.arch.clips.idle, 0); this.root.visible = true; }
+    if (this.opts.kneel) { this.state = 'dormant'; this.pose(this.arch.clips.kneel ?? this.arch.clips.idle); this.root.visible = true; }
     else if (this.opts.rise) { this.state = 'hidden'; this.root.visible = false; }
     else { this.state = 'idle'; this.loop(this.arch.clips.idle, 1); this.root.visible = true; }
     this.tumble = 0; this.tumbleRate = 0; this.settled = false; this.shatterAt = -1;

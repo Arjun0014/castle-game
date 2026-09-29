@@ -9,6 +9,8 @@ const _right = new THREE.Vector3();
 const _pivot = new THREE.Vector3();
 const _off = new THREE.Vector3();
 const _q = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
+const DOWN = new THREE.Vector3(0, -1, 0);
 
 /**
  * Per-view camera tuning. The portrait profile is not a crop of the widescreen camera: it sits farther back
@@ -66,6 +68,14 @@ export class CameraRig {
   inCombat = false;
   /** current base vertical FOV (profile + aspect); Game subtracts its FOV punch from this */
   baseFov = 58;
+  /** 0 = a wall right ahead, 1 = open space ahead (portrait framing adapts; eased) */
+  private ahead = 1;
+  private vw = 1;
+  private vh = 1;
+  private shiftNow = 0;
+  private shiftFull = 0;
+  /** eased downward nudge keeping the camera clear of ceilings the boom rays did not touch */
+  private ceilDrop = 0;
 
   constructor(public camera: THREE.PerspectiveCamera) {}
 
@@ -87,8 +97,18 @@ export class CameraRig {
     this.baseFov = fov;
     this.camera.aspect = aspect;
     this.camera.fov = fov;
-    const shift = touch ? p.lensShiftTouch : p.lensShift;
-    if (shift) this.camera.setViewOffset(w, h, 0, -Math.round(h * shift), w, h);
+    this.vw = w; this.vh = h;
+    this.shiftFull = touch ? p.lensShiftTouch : p.lensShift;
+    this.shiftNow = -1;
+    this.applyShift();
+  }
+
+  /** Lens shift = shiftFull scaled by the open space ahead (a wall close ahead re-centres the hero). */
+  private applyShift() {
+    const shift = this.shiftFull * (0.3 + 0.7 * this.ahead);
+    if (Math.abs(shift - this.shiftNow) < 0.002) return;
+    this.shiftNow = shift;
+    if (shift > 0) this.camera.setViewOffset(this.vw, this.vh, 0, -Math.round(this.vh * shift), this.vw, this.vh);
     else this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
   }
@@ -145,6 +165,15 @@ export class CameraRig {
     }
     const h = crouch ? P.height - 0.5 : P.height;
     this.target.lerp(_v.set(focus.x, focus.y + h, focus.z), Math.min(1, dt * 18));
+    if (this.shiftFull > 0) {
+      // open space ahead of the hero (screen-up in portrait): a wall within ~3 m re-centres the frame
+      _dir.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+      const hit = world.raycast(this.target, _dir, 11, state);
+      const free = hit ? hit.distance : 11;
+      const want = THREE.MathUtils.clamp((free - 2.5) / 7, 0, 1);
+      this.ahead += (want - this.ahead) * Math.min(1, dt * 2.2);
+      this.applyShift();
+    }
     this.pull += (this.pullWant - this.pull) * Math.min(1, dt * (this.pullWant > this.pull ? 1.2 : 0.6));
     const wantDist = (this.inCombat ? P.combatDistance : P.distance) + Math.min(P.maxPull, this.pull);
     const right = _right.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
@@ -152,7 +181,8 @@ export class CameraRig {
     const head = this.target;
     // low ceilings (portrait's higher camera): if the wanted pitch is badly blocked but a flatter one is not,
     // ease the pitch down so the camera stays behind the hero instead of diving into the back of the head
-    let pitch = THREE.MathUtils.clamp(this.pitch + this.pitchAdj, P.pitchMin, P.pitchMax);
+    const tilt = this.shiftFull > 0 && !this.lockTarget ? (1 - this.ahead) * 0.14 : 0;
+    let pitch = THREE.MathUtils.clamp(this.pitch + this.pitchAdj + tilt, P.pitchMin, P.pitchMax);
     if (P.lowCeilingPitch > 0) {
       const dHigh = this.probe(pivot, head, this.pitch, wantDist, world, state);
       let adj = 0;
@@ -162,13 +192,27 @@ export class CameraRig {
         if (dLow > dHigh * 1.25 + 0.3) adj = low - this.pitch;
       }
       this.pitchAdj += (adj - this.pitchAdj) * Math.min(1, dt * (adj < this.pitchAdj ? 5 : 1.5));
-      pitch = THREE.MathUtils.clamp(this.pitch + this.pitchAdj, P.pitchMin, P.pitchMax);
+      pitch = THREE.MathUtils.clamp(this.pitch + this.pitchAdj + tilt, P.pitchMin, P.pitchMax);
     }
     const dist = this.probe(pivot, head, pitch, wantDist, world, state);
     // pull in fast, ease out slowly
     this.curDist += (dist - this.curDist) * Math.min(1, dt * (dist < this.curDist ? 22 : 4));
     const off = _off.set(Math.sin(this.yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(this.yaw) * Math.cos(pitch));
     const pos = _v.copy(pivot).addScaledVector(off, this.curDist);
+    if (P.lowCeilingPitch > 0) {
+      // the higher portrait camera must never hang above a roof or beam it reached through a hole (Present
+      // ruins): if a surface under the camera sits above the hero's head, pull in until it does not
+      for (const k of [1, 0.8, 0.62, 0.45]) {
+        pos.copy(pivot).addScaledVector(off, this.curDist * k);
+        const dn = world.raycast(pos, DOWN, pos.y - head.y + 2, state);
+        if (!dn || pos.y - dn.distance < head.y + 0.25) break;
+      }
+      // and keep it well below ceilings (a camera 15 cm under a vault fills the top of the frame with it)
+      const upHit = world.raycast(pos, UP, 0.85, state);
+      const drop = upHit ? 0.85 - upHit.distance : 0;
+      this.ceilDrop += (drop - this.ceilDrop) * Math.min(1, dt * (drop > this.ceilDrop ? 14 : 4));
+      pos.y -= this.ceilDrop;
+    }
     this.camera.position.copy(pos);
     this.camera.lookAt(pivot.x, pivot.y - P.lookDrop, pivot.z);
     // hit kick: critically-damped spring in camera space
