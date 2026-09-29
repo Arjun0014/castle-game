@@ -1,54 +1,547 @@
 {
-  "_doc": "Hand-authored classification of every clip in 'Sword and Shield Pack.zip', from visual contact-sheet review (build/reports/sheet_*.png) + kinematic inspection (build/reports/hero_inspect.json). root: loop = subtract linear horizontal drift (keeps sway), record velocity; extract = remove horizontal hips motion and record a per-frame root-motion curve for code-driven translation; extract_jump = extract + clamp vertical rise to standing height (physics owns jump height); none = leave as authored. Character faces -Y in Blender (+Z in three.js).",
-  "clips": {
-    "sword and shield idle (4)":         {"id": "idle_combat",        "cat": "idle",             "loop": true,  "root": "loop",    "note": "near-static guard stance, base idle"},
-    "sword and shield idle":             {"id": "idle_alert",         "cat": "idle",             "loop": true,  "root": "loop",    "note": "breathing guard with small sword adjustments"},
-    "sword and shield idle (2)":         {"id": "idle_flourish_a",    "cat": "idle",             "loop": false, "root": "loop",    "note": "7.5s sword flourish fidget"},
-    "sword and shield idle (3)":         {"id": "idle_flourish_b",    "cat": "idle",             "loop": false, "root": "loop",    "note": "8.7s sword twirl fidget"},
-    "sword and shield walk":             {"id": "walk_fwd",           "cat": "locomotion",       "loop": true,  "root": "loop"},
-    "sword and shield walk (2)":         {"id": "walk_back",          "cat": "combat_locomotion","loop": true,  "root": "loop"},
-    "sword and shield run":              {"id": "run_fwd",            "cat": "locomotion",       "loop": true,  "root": "loop"},
-    "sword and shield run (2)":          {"id": "run_back",           "cat": "combat_locomotion","loop": true,  "root": "loop",    "note": "backpedal run"},
-    "sword and shield strafe":           {"id": "strafe_walk_right",  "cat": "combat_locomotion","loop": true,  "root": "loop"},
-    "sword and shield strafe (2)":       {"id": "strafe_walk_left",   "cat": "combat_locomotion","loop": true,  "root": "loop"},
-    "sword and shield strafe (3)":       {"id": "strafe_run_left",    "cat": "combat_locomotion","loop": true,  "root": "loop"},
-    "sword and shield strafe (4)":       {"id": "strafe_run_right",   "cat": "combat_locomotion","loop": true,  "root": "loop"},
-    "sword and shield turn":             {"id": "turn_right_90",      "cat": "locomotion",       "loop": false, "root": "extract"},
-    "sword and shield turn (2)":         {"id": "turn_left_90",       "cat": "locomotion",       "loop": false, "root": "extract"},
-    "sword and shield 180 turn":         {"id": "turn_180",           "cat": "locomotion",       "loop": false, "root": "extract"},
-    "sword and shield 180 turn (2)":     {"id": "turn_180_fast",      "cat": "locomotion",       "loop": false, "root": "extract"},
-    "sword and shield crouch":           {"id": "crouch_enter",       "cat": "crouch",           "loop": false, "root": "extract"},
-    "sword and shield crouching":        {"id": "crouch_exit",        "cat": "crouch",           "loop": false, "root": "extract"},
-    "sword and shield crouch idle":      {"id": "crouch_idle",        "cat": "crouch",           "loop": true,  "root": "loop"},
-    "sword and shield crouching (3)":    {"id": "crouch_ready",       "cat": "crouch",           "loop": true,  "root": "loop",    "note": "crouched sword sweep-to-ready; used as crouch-move base"},
-    "sword and shield crouch block":     {"id": "crouch_block_enter", "cat": "block",            "loop": false, "root": "extract"},
-    "sword and shield crouch block idle":{"id": "crouch_block_idle",  "cat": "block",            "loop": true,  "root": "loop"},
-    "sword and shield crouch block (2)": {"id": "crouch_block_impact","cat": "block",            "loop": false, "root": "extract"},
-    "sword and shield crouching (2)":    {"id": "crouch_block_exit",  "cat": "block",            "loop": false, "root": "extract"},
-    "sword and shield jump":             {"id": "jump_run",           "cat": "jump",             "loop": false, "root": "extract_jump"},
-    "sword and shield jump (2)":         {"id": "jump_stand",         "cat": "jump",             "loop": false, "root": "extract_jump"},
-    "sword and shield block":            {"id": "block_enter",        "cat": "block",            "loop": false, "root": "extract"},
-    "sword and shield block idle":       {"id": "block_idle",         "cat": "block",            "loop": true,  "root": "loop"},
-    "sword and shield block (2)":        {"id": "block_exit",         "cat": "block",            "loop": false, "root": "extract"},
-    "sword and shield impact":           {"id": "block_impact",       "cat": "block",            "loop": false, "root": "extract", "note": "shield absorbs a hit while guarding"},
-    "sword and shield impact (2)":       {"id": "hit_heavy",          "cat": "reaction",         "loop": false, "root": "extract"},
-    "sword and shield impact (3)":       {"id": "hit_light",          "cat": "reaction",         "loop": false, "root": "extract"},
-    "sword and shield attack (4)":       {"id": "atk_chop",           "cat": "light_attack",     "loop": false, "root": "extract", "note": "fast overhead chop"},
-    "sword and shield slash (3)":        {"id": "atk_rising_cut",     "cat": "light_attack",     "loop": false, "root": "extract", "note": "overhead strike into rising cut"},
-    "sword and shield attack (3)":       {"id": "atk_lunge_cut",      "cat": "light_attack",     "loop": false, "root": "extract", "note": "stepping lunge with horizontal cut, ~2.4m travel"},
-    "sword and shield attack (2)":       {"id": "atk_advancing_sweep","cat": "combo",            "loop": false, "root": "extract", "note": "advancing sweep + overhead, ~2.8m travel"},
-    "sword and shield slash":            {"id": "atk_spin_slash",     "cat": "heavy_attack",     "loop": false, "root": "extract", "note": "full-body horizontal spin slash"},
-    "sword and shield attack":           {"id": "atk_leap_slam",      "cat": "heavy_attack",     "loop": false, "root": "extract", "note": "leaping overhead slam, ~3.5m travel"},
-    "sword and shield slash (2)":        {"id": "atk_whirlwind",      "cat": "combo",            "loop": false, "root": "extract", "note": "multi-hit spin, leap and kneeling strike finisher"},
-    "sword and shield slash (4)":        {"id": "atk_jump_spin",      "cat": "heavy_attack",     "loop": false, "root": "extract", "note": "jumping spin strike with kneeling landing"},
-    "sword and shield slash (5)":        {"id": "atk_crouch_sweep",   "cat": "light_attack",     "loop": false, "root": "extract", "note": "low sweep from crouch"},
-    "sword and shield kick":             {"id": "kick_front",         "cat": "kick_bash",        "loop": false, "root": "extract"},
-    "sword and shield casting (2)":      {"id": "shield_bash",        "cat": "shield",           "loop": false, "root": "extract", "note": "off-hand (shield arm) thrust"},
-    "sword and shield casting":          {"id": "shift_channel",      "cat": "misc",             "loop": false, "root": "extract", "note": "sword raised skyward then plunged down; time-shift channel"},
-    "sword and shield power up":         {"id": "power_up",           "cat": "misc",             "loop": false, "root": "extract", "note": "gather/absorb; blood-sigil checkpoint"},
-    "sword and shield death":            {"id": "death_back",         "cat": "death",            "loop": false, "root": "extract"},
-    "sword and shield death (2)":        {"id": "death_kneel",        "cat": "death",            "loop": false, "root": "extract"},
-    "sheath sword 1":                    {"id": "sheath",             "cat": "misc",             "loop": false, "root": "extract"},
-    "sheath sword 2":                    {"id": "unsheath",           "cat": "misc",             "loop": false, "root": "extract"}
+ "_doc": "Hand-authored classification of every clip in 'Sword and Shield Pack.zip', from visual contact-sheet review (build/reports/sheet_*.png) + kinematic inspection (build/reports/hero_inspect.json). root: loop = subtract linear horizontal drift (keeps sway), record velocity; extract = remove horizontal hips motion and record a per-frame root-motion curve for code-driven translation; extract_jump = extract + clamp vertical rise to standing height (physics owns jump height); none = leave as authored. Character faces -Y in Blender (+Z in three.js).",
+ "clips": {
+  "sword and shield idle (4)": {
+   "id": "idle_combat",
+   "cat": "idle",
+   "loop": true,
+   "root": "loop",
+   "note": "near-static guard stance, base idle"
+  },
+  "sword and shield idle": {
+   "id": "idle_alert",
+   "cat": "idle",
+   "loop": true,
+   "root": "loop",
+   "note": "breathing guard with small sword adjustments"
+  },
+  "sword and shield idle (2)": {
+   "id": "idle_flourish_a",
+   "cat": "idle",
+   "loop": false,
+   "root": "loop",
+   "note": "7.5s sword flourish fidget"
+  },
+  "sword and shield idle (3)": {
+   "id": "idle_flourish_b",
+   "cat": "idle",
+   "loop": false,
+   "root": "loop",
+   "note": "8.7s sword twirl fidget"
+  },
+  "sword and shield walk": {
+   "id": "walk_fwd",
+   "cat": "locomotion",
+   "loop": true,
+   "root": "loop"
+  },
+  "sword and shield walk (2)": {
+   "id": "walk_back",
+   "cat": "combat_locomotion",
+   "loop": true,
+   "root": "loop"
+  },
+  "sword and shield run": {
+   "id": "run_fwd",
+   "cat": "locomotion",
+   "loop": true,
+   "root": "loop"
+  },
+  "sword and shield run (2)": {
+   "id": "run_back",
+   "cat": "combat_locomotion",
+   "loop": true,
+   "root": "loop",
+   "note": "backpedal run"
+  },
+  "sword and shield strafe": {
+   "id": "strafe_walk_right",
+   "cat": "combat_locomotion",
+   "loop": true,
+   "root": "loop"
+  },
+  "sword and shield strafe (2)": {
+   "id": "strafe_walk_left",
+   "cat": "combat_locomotion",
+   "loop": true,
+   "root": "loop"
+  },
+  "sword and shield strafe (3)": {
+   "id": "strafe_run_left",
+   "cat": "combat_locomotion",
+   "loop": true,
+   "root": "loop"
+  },
+  "sword and shield strafe (4)": {
+   "id": "strafe_run_right",
+   "cat": "combat_locomotion",
+   "loop": true,
+   "root": "loop"
+  },
+  "sword and shield turn": {
+   "id": "turn_right_90",
+   "cat": "locomotion",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield turn (2)": {
+   "id": "turn_left_90",
+   "cat": "locomotion",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield 180 turn": {
+   "id": "turn_180",
+   "cat": "locomotion",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield 180 turn (2)": {
+   "id": "turn_180_fast",
+   "cat": "locomotion",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield crouch": {
+   "id": "crouch_enter",
+   "cat": "crouch",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield crouching": {
+   "id": "crouch_exit",
+   "cat": "crouch",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield crouch idle": {
+   "id": "crouch_idle",
+   "cat": "crouch",
+   "loop": true,
+   "root": "loop"
+  },
+  "sword and shield crouching (3)": {
+   "id": "crouch_ready",
+   "cat": "crouch",
+   "loop": true,
+   "root": "loop",
+   "note": "crouched sword sweep-to-ready; used as crouch-move base"
+  },
+  "sword and shield crouch block": {
+   "id": "crouch_block_enter",
+   "cat": "block",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield crouch block idle": {
+   "id": "crouch_block_idle",
+   "cat": "block",
+   "loop": true,
+   "root": "loop"
+  },
+  "sword and shield crouch block (2)": {
+   "id": "crouch_block_impact",
+   "cat": "block",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield crouching (2)": {
+   "id": "crouch_block_exit",
+   "cat": "block",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield jump": {
+   "id": "jump_run",
+   "cat": "jump",
+   "loop": false,
+   "root": "extract_jump"
+  },
+  "sword and shield jump (2)": {
+   "id": "jump_stand",
+   "cat": "jump",
+   "loop": false,
+   "root": "extract_jump"
+  },
+  "sword and shield block": {
+   "id": "block_enter",
+   "cat": "block",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield block idle": {
+   "id": "block_idle",
+   "cat": "block",
+   "loop": true,
+   "root": "loop"
+  },
+  "sword and shield block (2)": {
+   "id": "block_exit",
+   "cat": "block",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield impact": {
+   "id": "block_impact",
+   "cat": "block",
+   "loop": false,
+   "root": "extract",
+   "note": "shield absorbs a hit while guarding"
+  },
+  "sword and shield impact (2)": {
+   "id": "hit_heavy",
+   "cat": "reaction",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield impact (3)": {
+   "id": "hit_light",
+   "cat": "reaction",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield attack (4)": {
+   "id": "atk_chop",
+   "cat": "light_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "fast overhead chop"
+  },
+  "sword and shield slash (3)": {
+   "id": "atk_rising_cut",
+   "cat": "light_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "overhead strike into rising cut"
+  },
+  "sword and shield attack (3)": {
+   "id": "atk_lunge_cut",
+   "cat": "light_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "stepping lunge with horizontal cut, ~2.4m travel"
+  },
+  "sword and shield attack (2)": {
+   "id": "atk_advancing_sweep",
+   "cat": "combo",
+   "loop": false,
+   "root": "extract",
+   "note": "advancing sweep + overhead, ~2.8m travel"
+  },
+  "sword and shield slash": {
+   "id": "atk_spin_slash",
+   "cat": "heavy_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "full-body horizontal spin slash"
+  },
+  "sword and shield attack": {
+   "id": "atk_leap_slam",
+   "cat": "heavy_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "leaping overhead slam, ~3.5m travel"
+  },
+  "sword and shield slash (2)": {
+   "id": "atk_whirlwind",
+   "cat": "combo",
+   "loop": false,
+   "root": "extract",
+   "note": "multi-hit spin, leap and kneeling strike finisher"
+  },
+  "sword and shield slash (4)": {
+   "id": "atk_jump_spin",
+   "cat": "heavy_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "jumping spin strike with kneeling landing"
+  },
+  "sword and shield slash (5)": {
+   "id": "atk_crouch_sweep",
+   "cat": "light_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "low sweep from crouch"
+  },
+  "sword and shield kick": {
+   "id": "kick_front",
+   "cat": "kick_bash",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield casting (2)": {
+   "id": "shield_bash",
+   "cat": "shield",
+   "loop": false,
+   "root": "extract",
+   "note": "off-hand (shield arm) thrust"
+  },
+  "sword and shield casting": {
+   "id": "shift_channel",
+   "cat": "misc",
+   "loop": false,
+   "root": "extract",
+   "note": "sword raised skyward then plunged down; time-shift channel"
+  },
+  "sword and shield power up": {
+   "id": "power_up",
+   "cat": "misc",
+   "loop": false,
+   "root": "extract",
+   "note": "gather/absorb; blood-sigil checkpoint"
+  },
+  "sword and shield death": {
+   "id": "death_back",
+   "cat": "death",
+   "loop": false,
+   "root": "extract"
+  },
+  "sword and shield death (2)": {
+   "id": "death_kneel",
+   "cat": "death",
+   "loop": false,
+   "root": "extract"
+  },
+  "sheath sword 1": {
+   "id": "sheath",
+   "cat": "misc",
+   "loop": false,
+   "root": "extract"
+  },
+  "sheath sword 2": {
+   "id": "unsheath",
+   "cat": "misc",
+   "loop": false,
+   "root": "extract"
   }
+ },
+ "_doc_extra": "extraClips: clips from 'Great Sword Pack.zip' (same Maria FBX, same 65-bone rig \u2014 verified identical bone set) and the loose 'Crouch Walking.fbx' (65-bone rig), classified session 5 from contact sheets (build/analysis/greatsword/sheet_*.png, close_sheet.png) + tools/blender/inspect_pack.py (build/analysis/greatsword/inspect.json). Nearly every Great Sword clip is a true two-handed grip (left hand within 0.15 m of the right for the whole clip). Maria has NO separate shield mesh (the 'shield' is her armoured left vambrace; the red panel is a short cape), so two-handed grips cannot clip a shield.",
+ "extraClips": [
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword slash.fbx",
+   "id": "gs_cleave",
+   "cat": "light_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "horizontal cut then overhead chop, two hits (0.20 / 0.67), no travel"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword attack.fbx",
+   "id": "gs_quick_cut",
+   "cat": "light_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "fast two-handed cut from a raised guard, returns to guard; riposte / pause-combo opener"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword slash (3).fbx",
+   "id": "gs_low_sweep",
+   "cat": "light_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "raise overhead then a wide low sweep at knee height (0.83)"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword slash (4).fbx",
+   "id": "gs_spin_double",
+   "cat": "combo",
+   "loop": false,
+   "root": "extract",
+   "note": "360 deg spin with a double cut (0.70/0.93) and an overhead finish (1.40), ~1.1 m travel"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword slash (2).fbx",
+   "id": "gs_rampage",
+   "cat": "combo",
+   "loop": false,
+   "root": "extract",
+   "note": "3.5 s rampage: three heavy cuts (0.80 / 1.77 / 2.60) with a full spin and ~3 m advance"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword high spin attack.fbx",
+   "id": "gs_high_spin",
+   "cat": "heavy_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "advancing spin: diagonal cut (0.43) then a wide horizontal (1.07), ~2.2 m travel"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword jump attack.fbx",
+   "id": "gs_leap_spin",
+   "cat": "heavy_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "leap with a double airborne spin, lands in a ground cut (1.20), ~3 m travel"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword slide attack.fbx",
+   "id": "gs_slide_cut",
+   "cat": "heavy_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "running knee-slide with a sweeping cut (1.30), ~3.2 m travel"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword slash (5).fbx",
+   "id": "gs_crouch_sweep",
+   "cat": "light_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "crouched wide sweep (0.53), hips 0.49-0.62"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword kick.fbx",
+   "id": "gs_spin_kick",
+   "cat": "kick_bash",
+   "loop": false,
+   "root": "extract",
+   "note": "360 deg spinning back kick with the sword raised (foot 0.53)"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword casting.fbx",
+   "id": "gs_plunge",
+   "cat": "heavy_attack",
+   "loop": false,
+   "root": "extract",
+   "note": "sword raised overhead, kneeling plunge into the floor (2.10-2.33), rise; charged heavy + execution"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword blocking.fbx",
+   "id": "gs_block_enter",
+   "cat": "block",
+   "loop": false,
+   "root": "extract",
+   "note": "into the two-handed horizontal sword guard"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword blocking (2).fbx",
+   "id": "gs_block_idle",
+   "cat": "block",
+   "loop": true,
+   "root": "loop",
+   "note": "braced horizontal sword guard (hips 0.76)"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword blocking (3).fbx",
+   "id": "gs_block_exit",
+   "cat": "block",
+   "loop": false,
+   "root": "extract",
+   "note": "out of the sword guard"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword impact.fbx",
+   "id": "gs_block_impact",
+   "cat": "block",
+   "loop": false,
+   "root": "extract",
+   "note": "blow absorbed on the horizontal blade"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword crouching (4).fbx",
+   "id": "gs_crouch_block_enter",
+   "cat": "block",
+   "loop": false,
+   "root": "extract",
+   "note": "crouch idle -> crouched sword guard"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword crouching (5).fbx",
+   "id": "gs_crouch_block_idle",
+   "cat": "block",
+   "loop": true,
+   "root": "loop",
+   "note": "crouched horizontal sword guard"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword crouching (6).fbx",
+   "id": "gs_crouch_block_exit",
+   "cat": "block",
+   "loop": false,
+   "root": "extract",
+   "note": "crouched guard -> crouch idle"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword impact (4).fbx",
+   "id": "gs_crouch_block_impact",
+   "cat": "block",
+   "loop": false,
+   "root": "extract",
+   "note": "blow absorbed in the crouched guard"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword impact (2).fbx",
+   "id": "gs_hit_heavy",
+   "cat": "reaction",
+   "loop": false,
+   "root": "extract",
+   "note": "heavy hit: knocked down onto one knee and back up"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "great sword impact (3).fbx",
+   "id": "gs_hit_light",
+   "cat": "reaction",
+   "loop": false,
+   "root": "extract",
+   "note": "light hit: head snaps back, one hand off the hilt"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "two handed sword death (2).fbx",
+   "id": "gs_death_forward",
+   "cat": "death",
+   "loop": false,
+   "root": "extract",
+   "note": "kneels, falls forward face-down"
+  },
+  {
+   "dir": "assets/extracted/characters/hero/Great Sword Pack",
+   "file": "two handed sword death.fbx",
+   "id": "gs_death_collapse",
+   "cat": "death",
+   "loop": false,
+   "root": "extract",
+   "note": "doubles over and collapses sideways"
+  },
+  {
+   "dir": "assets/characters/hero",
+   "file": "Crouch Walking.fbx",
+   "id": "crouch_walk",
+   "cat": "crouch",
+   "loop": true,
+   "root": "loop",
+   "note": "real crouch-walk cycle, sword upright in the right hand; 36 frames, closes perfectly"
+  }
+ ],
+ "unusedGreatSword": {
+  "great sword idle / idle (2)-(5)": "two-handed idles: the base stance stays one-handed sword + vambrace (Sword & Shield set)",
+  "great sword walk / walk (2) / run / run (2) / strafe (1)-(4) / turn / turn (2) / 180 turn (1)-(2)": "locomotion duplicates of the Sword & Shield set in a two-handed stance",
+  "great sword jump / jump (2)": "jump duplicates",
+  "great sword crouching / crouching (2) / crouching (3)": "stand<->crouch transitions and crouch idle duplicates (two-handed)",
+  "great sword impact (5)": "crouched hit reaction; crouch hits are rare (crouch_block_impact covers the guard)",
+  "great sword kick (2)": "front kick; a third kick adds no role (kick_front + gs_spin_kick cover the kick chain)",
+  "great sword power up / spell cast": "no gameplay role (checkpoints use power_up; the time shift uses shift_channel)",
+  "draw a great sword 1 / 2": "draw/sheath: the sword is always drawn"
+ }
 }

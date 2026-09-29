@@ -331,6 +331,32 @@ export class Effects {
     }
   }
 
+  /** Ground shockwave (the sword plunge): a fast ring at floor level, dust and embers thrown outward. */
+  shockwave(at: THREE.Vector3, radius: number, level: number) {
+    const mesh = this.ringPool.pop() ?? this.makeRing();
+    (mesh.material as THREE.MeshBasicMaterial).color.set(level > 0.6 ? 0xffc070 : 0xffe2b0);
+    (mesh.material as THREE.MeshBasicMaterial).opacity = 0.9;
+    mesh.scale.setScalar(0.4);
+    mesh.position.copy(at).setY(at.y + 0.06);
+    this.scene.add(mesh);
+    this.rings.push({ mesh, life: 0.45, max: 0.45, grow: radius * 2.2 });
+    for (let i = 0; i < 26 + level * 30; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = new THREE.Vector3(Math.cos(a), 0.15 + Math.random() * 0.5, Math.sin(a)).multiplyScalar(4 + Math.random() * 5 + level * 3);
+      if (i % 3 === 0) this.emit(at.clone().setY(at.y + 0.2), v, 0xffb060, 0.5, 0.05, 6);
+      else this.emit(at.clone().setY(at.y + 0.15), v.multiplyScalar(0.6), 0x6a6258, 0.8 + Math.random() * 0.4, 0.22, -0.4, 0.15, true);
+    }
+  }
+
+  /** Charging a hold attack: motes drawn onto the raised blade, brighter with the charge. */
+  chargeGlow(tip: THREE.Vector3, hilt: THREE.Vector3, level: number) {
+    for (let i = 0; i < 2; i++) {
+      const on = hilt.clone().lerp(tip, Math.random());
+      const from = on.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.6, (Math.random() - 0.3) * 1.2, (Math.random() - 0.5) * 1.6));
+      this.emit(from, on.sub(from).multiplyScalar(3), level > 0.95 ? 0xfff0c0 : 0xffb060, 0.3, 0.05 + level * 0.05, 0);
+    }
+  }
+
   channelStart(at: THREE.Vector3, to: TimeState) { this.channel = { center: at.clone(), color: new THREE.Color(to === 'PAST' ? 0xffb060 : 0x80c8ff), t: 0 }; }
   channelStop() { this.channel = null; }
 

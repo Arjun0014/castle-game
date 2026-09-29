@@ -4,7 +4,7 @@ import type { CameraRig } from './CameraRig';
 import type { Input } from '../game/Input';
 import type { CollisionWorld, CapsuleResult } from '../game/Physics';
 import type { TimeState } from '../levels/Materials';
-import { ATTACKS, type AttackDef, type HitWindow, DODGE, PARRY_WINDOW, BLOCK_ARC_DEG, BLOCK_DAMAGE_SCALE, PLAYER_HP, speedAt } from '../combat/CombatData';
+import { ATTACKS, type AttackDef, type HitWindow, DODGE, PARRY_WINDOW, BLOCK_ARC_DEG, BLOCK_DAMAGE_SCALE, PLAYER_HP, PAUSE_GRACE, COUNTER_WINDOW, speedAt } from '../combat/CombatData';
 import { HERO_CLIPS, JUMP_PHASES, LOOPING, rootAt } from '../data/animationManifest';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
 
@@ -22,6 +22,12 @@ export interface PlayerEvents {
   onLand?(fall: number): void;
   onJump?(): void;
   onBlock?(parry: boolean): void;
+  /** a hit window of the current attack opened (charged attacks cue their audio/VFX here) */
+  onHitWindow?(a: AttackDef, index: number): void;
+  /** charging a hold attack: level 0..1 (every frame while held) */
+  onCharge?(level: number): void;
+  /** a staggered enemy low enough to execute, in front of the hero (heavy from neutral = EXECUTE) */
+  executionTarget?(): THREE.Vector3 | null;
 }
 
 const RADIUS = 0.35;
@@ -34,7 +40,11 @@ const SPRINT = 6.3;
 /** Shift held at least this long = sprint; released sooner = dodge. */
 const SPRINT_HOLD = 0.22;
 const WALK_GUARD = 1.7;
-const CROUCH = 1.8;
+/** crouch-walk speed: the real crouch-walk loop covers 1.21 m/s at 1x; playback follows ground speed (no sliding) */
+const CROUCH = 1.55;
+const CROUCH_CLIP_SPEED = HERO_CLIPS.crouch_walk.speed ?? 1.21;
+/** a light press this long (real s) after the combo window passed = the pause route (next.pause) */
+const PAUSE_DELAY = 0.25;
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
@@ -63,7 +73,22 @@ export class Player {
   attackSerial = 0;
   attackClipTime = 0;
   hitsDone = new Set<number>();
-  buffered: { kind: 'light' | 'heavy' | 'kick' | 'bash'; t: number } | null = null;
+  /** queued = accepted as the current attack's follow-up: kept until its cancel point (long heavies) */
+  buffered: { kind: 'light' | 'heavy' | 'kick' | 'bash'; t: number; queued?: boolean } | null = null;
+  /** combo bookkeeping: when the current attack passed its cancel point, the last finished attack */
+  private cancelPassedAt = -1;
+  private lastAttack: AttackDef | null = null;
+  private lastAttackEnd = -10;
+  private lastCancelAt = -10;
+  /** riposte window after a parry (input time) and dodge→attack window */
+  counterUntil = -10;
+  private dodgeEndAt = -10;
+  /** hold-to-charge (H3): seconds held at the raised pose, 0..1 level for damage/reach */
+  chargeTime = 0;
+  chargeLevel = 0;
+  private charged = false;
+  private hitCue = -1;
+  private crouchSettle = 1;
   lastRoot: [number, number] = [0, 0];
   blockStart = -10;
   dodgeDir = new THREE.Vector3();
@@ -195,7 +220,7 @@ export class Player {
     // Guard + Heavy = kick (the touch HUD has no kick button; keyboard keeps F as well)
     if (input.wasPressed('heavy')) this.buffered = { kind: input.isDown('block') ? 'kick' : 'heavy', t: input.now };
     if (input.wasPressed('kick')) this.buffered = { kind: 'kick', t: input.now };
-    if (this.buffered && input.now - this.buffered.t > 0.4) this.buffered = null;
+    if (this.buffered && !this.buffered.queued && input.now - this.buffered.t > 0.4) this.buffered = null;
 
     const canAct = this.state === 'move' || this.state === 'crouch' || this.state === 'land' || this.state === 'block';
 
@@ -224,29 +249,42 @@ export class Player {
     }
     // ---- crouch toggle
     if (input.wasPressed('crouch') && this.grounded && (this.state === 'move' || this.state === 'crouch')) {
-      if (this.crouching) { if (this.tryStand(world, tstate)) { this.crouching = false; this.anim.play('crouch_exit', { speed: 1.6, fade: 0.1 }); this.setState('land'); } }
-      else { this.crouching = true; this.autoCrouched = false; this.anim.play('crouch_enter', { speed: 1.8, fade: 0.1 }); this.setState('crouch'); }
+      if (this.crouching) { if (this.tryStand(world, tstate)) { this.crouching = false; if (!moving) this.anim.play('crouch_exit', { speed: 1.6, fade: 0.1 }); this.setState('land'); } }
+      else { this.crouching = true; this.autoCrouched = false; this.enterCrouch(moving); }
     }
     // ---- attacks from neutral
     if (this.buffered && (canAct || this.state === 'air') && this.state !== 'channel') {
       const b = this.buffered.kind;
       let def: AttackDef | null = null;
+      const now = input.now;
+      const counter = now < this.counterUntil;
+      const late = this.lastAttack?.next?.pause && now - this.lastAttackEnd < PAUSE_GRACE && now - this.lastCancelAt >= PAUSE_DELAY;
       if (this.state === 'air') def = b === 'light' || b === 'heavy' ? ATTACKS.AIR : null;
       else if (this.crouching) def = b === 'light' ? ATTACKS.CROUCH_L : b === 'heavy' ? ATTACKS.H1 : b === 'kick' ? ATTACKS.KICK : null;
+      // a parry opens a riposte (guard may still be held: light/bash = cleave, heavy/kick = high spin)
+      else if (counter) def = b === 'light' || b === 'bash' ? ATTACKS.RIPOSTE : ATTACKS.F3;
       else if (b === 'bash' || (b === 'light' && this.state === 'block')) def = ATTACKS.BASH;
       else if (b === 'kick') def = ATTACKS.KICK;
+      else if (now - this.dodgeEndAt < 0.35) def = b === 'heavy' ? ATTACKS.DODGE_H : ATTACKS.DODGE_L;
       else if (this.sprinting && moving) def = b === 'heavy' ? ATTACKS.SPRINT_H : ATTACKS.SPRINT_L;
+      else if (b === 'heavy' && this.events.executionTarget?.()) def = ATTACKS.EXECUTE;
+      else if (b === 'light' && late) def = ATTACKS[this.lastAttack!.next!.pause!];
       else def = b === 'heavy' ? ATTACKS.H1 : ATTACKS.L1;
+      if (def) this.counterUntil = -10;
       if (def) {
         if (this.crouching && def.kind !== 'crouch') { if (this.tryStand(world, tstate)) this.crouching = false; else def = null; }
-        if (def) { this.buffered = null; this.beginAttack(def, lock ?? autoTarget()); }
+        if (def) {
+          const exec = def === ATTACKS.EXECUTE ? this.events.executionTarget?.() : null;
+          this.buffered = null;
+          this.beginAttack(def, exec ?? lock ?? autoTarget());
+        }
       }
     }
     // ---- guard
     if (input.isDown('block') && (this.state === 'move' || this.state === 'crouch' || this.state === 'land') && this.grounded) {
       this.setState('block');
       this.blockStart = input.now;
-      this.anim.play(this.crouching ? 'crouch_block_enter' : 'block_enter', { speed: 2.0, fade: 0.06 });
+      this.anim.play(this.crouching ? 'gs_crouch_block_enter' : 'gs_block_enter', { speed: 2.4, fade: 0.06 });
     }
 
     // ------------------------------------------------ per-state behaviour
@@ -268,6 +306,9 @@ export class Player {
           this.anim.release(0.18);
         }
         if (this.state === 'land' && moving && this.stateTime > 0.1) { this.setState(this.crouching ? 'crouch' : 'move'); this.anim.release(0.12); }
+        // crouch_enter is a clamped one-shot: hand over to the crouch base layer (idle / real crouch walk) once it
+        // has played, or at once when moving — before session 5 it stayed at full weight and the pose slid along
+        if (this.state === 'crouch' && this.anim.overlayId === 'crouch_enter' && (moving || this.stateTime > 0.32)) this.anim.release(moving ? 0.15 : 0.25);
         this.driveLocomotion(hv, lock, dt);
         break;
       }
@@ -281,7 +322,7 @@ export class Player {
         if (this.stateTime > 0.12 && this.anim.overlayId?.includes('enter')) this.anim.release(0.12);
         if (!input.isDown('block')) {
           this.setState(this.crouching ? 'crouch' : 'land');
-          this.anim.play(this.crouching ? 'crouch_block_exit' : 'block_exit', { speed: 2.2, fade: 0.08 });
+          this.anim.play(this.crouching ? 'gs_crouch_block_exit' : 'gs_block_exit', { speed: 2.4, fade: 0.08 });
         }
         this.driveGuardLocomotion(hv);
         break;
@@ -302,6 +343,7 @@ export class Player {
         this.invuln = this.stateTime > DODGE.iframes[0] && this.stateTime < DODGE.iframes[1] ? 0.05 : this.invuln;
         if (Math.floor(this.stateTime * 30) % 2 === 0) this.onAfterimage?.();
         if (this.stateTime >= DODGE.duration) {
+          this.dodgeEndAt = input.now;
           this.setState('land');
           this.anim.release(0.14);
         }
@@ -435,8 +477,7 @@ export class Player {
       if (world.overlap(probe, RADIUS - 0.03, H_STAND, tstate) > 0.02 && world.overlap(probe, RADIUS - 0.03, H_CROUCH, tstate) < 0.02) {
         this.crouching = true;
         this.autoCrouched = true;
-        this.anim.play('crouch_enter', { speed: 2.2, fade: 0.08 });
-        this.setState('crouch');
+        this.enterCrouch(true);
       }
       return;
     }
@@ -448,8 +489,15 @@ export class Player {
     }
     this.crouching = false;
     this.autoCrouched = false;
-    this.anim.play('crouch_exit', { speed: 1.8, fade: 0.1 });
+    if (!dir) this.anim.play('crouch_exit', { speed: 1.8, fade: 0.1 });
     this.setState('move');
+  }
+
+  /** Crouch down: from a standstill the crouch_enter one-shot; while moving, blend straight into the crouch walk. */
+  private enterCrouch(moving: boolean) {
+    if (moving) this.crouchSettle = 0;
+    else { this.crouchSettle = 1; this.anim.play('crouch_enter', { speed: 1.8, fade: 0.1 }); }
+    this.setState('crouch');
   }
 
   tryStand(world: CollisionWorld, tstate: TimeState) {
@@ -461,8 +509,11 @@ export class Player {
   private driveLocomotion(hv: THREE.Vector3, lock: THREE.Vector3 | null, dt: number) {
     const speed = hv.length();
     if (this.crouching) {
-      const m = Math.min(1, speed / CROUCH);
-      this.anim.setBase({ crouch_idle: 1 - m, crouch_ready: m }, { crouch_ready: 0.6 + m * 0.9 });
+      // the crouch-walk loop plays at ground speed (feet stay planted); standing still it freezes, then settles
+      // into the deep crouch idle after a moment, and starting to move blends straight back into the walk
+      if (speed > 0.15) this.crouchSettle = Math.max(0, this.crouchSettle - dt * 6);
+      else this.crouchSettle = Math.min(1, this.crouchSettle + dt * 1.4);
+      this.anim.setBase({ crouch_walk: 1 - this.crouchSettle, crouch_idle: this.crouchSettle }, { crouch_walk: speed / CROUCH_CLIP_SPEED });
       return;
     }
     if (lock && speed > 0.2) {
@@ -501,9 +552,9 @@ export class Player {
 
   private driveGuardLocomotion(hv: THREE.Vector3) {
     const speed = hv.length();
-    const upper = this.crouching ? 'crouch_block_idle.upper' : 'block_idle.upper';
-    if (this.crouching) { this.anim.setBase({ crouch_block_idle: 1 }); return; }
-    if (speed < 0.2) { this.anim.setBase({ block_idle: 1 }); return; }
+    const upper = 'gs_block_idle.upper';
+    if (this.crouching) { this.anim.setBase({ gs_crouch_block_idle: 1 }); return; }
+    if (speed < 0.2) { this.anim.setBase({ gs_block_idle: 1 }); return; }
     const f = this.facing;
     const r = _v.crossVectors(f, UP);
     const lf = hv.dot(f) / speed, lr = hv.dot(r) / speed;
@@ -577,6 +628,11 @@ export class Player {
     this.attackSerial++;
     this.attackClipTime = def.start;
     this.hitsDone.clear();
+    this.cancelPassedAt = -1;
+    this.chargeTime = 0;
+    this.chargeLevel = 0;
+    this.charged = false;
+    this.hitCue = -1;
     this.lastRoot = rootAt(def.clip, def.start);
     this.setState('attack');
     this.anim.play(def.clip, { start: def.start, speed: speedAt(def, def.start), fade: 0.09 });
@@ -589,8 +645,22 @@ export class Player {
     const prevT = this.attackClipTime;
     this.attackClipTime = this.anim.overlayTime;
     const t = this.attackClipTime;
+    // hold-to-charge: the clip freezes at the raised pose while heavy stays held (up to charge.max seconds)
+    if (def.charge && !this.charged && t >= def.charge.at) {
+      if (input.isDown('heavy') && this.chargeTime < def.charge.max) {
+        this.chargeTime += dt;
+        this.chargeLevel = Math.min(1, this.chargeTime / def.charge.max);
+        this.anim.setOverlaySpeed(0);
+        this.events.onCharge?.(this.chargeLevel);
+        if (target) this.turnToward(_v.subVectors(target, this.pos).setY(0), 5, dt);
+        return new THREE.Vector3();
+      }
+      this.charged = true;
+    }
     // pacing: quick anticipation, accelerated strike, a beat of hang on the follow-through, fast recovery
     this.anim.setOverlaySpeed(speedAt(def, t));
+    for (let i = this.hitCue + 1; i < def.hits.length && t >= def.hits[i].t0; i++) { this.hitCue = i; this.events.onHitWindow?.(def, i); }
+    if (t >= def.cancelAt && this.cancelPassedAt < 0) this.cancelPassedAt = input.now;
     if (target && t < def.start + def.track) this.turnToward(_v.subVectors(target, this.pos).setY(0), 7, dt);
     // root motion: clip-space delta → world velocity
     const r = rootAt(def.clip, t);
@@ -621,17 +691,24 @@ export class Player {
     // follow-ups
     const buf = this.buffered;
     if (buf && t >= def.inputFrom && def.next) {
-      const nextId = buf.kind === 'heavy' ? def.next.heavy : buf.kind === 'light' ? def.next.light : undefined;
-      if (buf.kind === 'kick' && t >= def.recoveryCancel) { this.buffered = null; this.beginAttack(ATTACKS.KICK, target); return hv; }
+      // a light press one beat after the combo window passed takes the alternative (pause) route
+      const late = buf.kind === 'light' && def.next.pause && this.cancelPassedAt >= 0 && buf.t - this.cancelPassedAt >= PAUSE_DELAY;
+      const nextId = late ? def.next.pause : buf.kind === 'heavy' ? def.next.heavy : buf.kind === 'light' ? def.next.light : buf.kind === 'kick' ? def.next.kick : undefined;
+      if (buf.kind === 'kick' && !def.next.kick && t >= def.recoveryCancel) { this.buffered = null; this.beginAttack(ATTACKS.KICK, target); return hv; }
+      if (nextId) buf.queued = true;
       if (nextId && t >= def.cancelAt) { this.buffered = null; this.beginAttack(ATTACKS[nextId], target); return hv; }
     }
     if (input.isDown('block') && t >= def.recoveryCancel) {
       this.setState('block');
       this.blockStart = input.now;
-      this.anim.play('block_enter', { start: 0.1, speed: 2.2, fade: 0.08 });
+      this.anim.play('gs_block_enter', { start: 0.1, speed: 2.4, fade: 0.08 });
       return hv;
     }
     if (t >= def.endAt || (!this.anim.overlayId && prevT > 0)) {
+      if (this.buffered?.queued) this.buffered = null;
+      this.lastAttack = def;
+      this.lastAttackEnd = input.now;
+      this.lastCancelAt = this.cancelPassedAt >= 0 ? this.cancelPassedAt : input.now;
       this.attack = null;
       this.setState(this.crouching ? 'crouch' : 'land');
       this.stateTime = 0.2;
@@ -645,7 +722,9 @@ export class Player {
     if (this.state !== 'attack' || !this.attack) return [];
     const out: { win: HitWindow; index: number }[] = [];
     this.attack.hits.forEach((win, index) => {
-      if (!this.hitsDone.has(index) && this.attackClipTime >= win.t0 && this.attackClipTime <= win.t1) out.push({ win, index });
+      // (repeat hits are filtered per swing, window and enemy by EnemyManager's registry; hitsDone holds
+      // index*1000+enemyId keys, so it must not be tested against a bare window index here)
+      if (this.attackClipTime >= win.t0 && this.attackClipTime <= win.t1) out.push({ win, index });
     });
     return out;
   }
@@ -685,15 +764,18 @@ export class Player {
     const toAttacker = _v.subVectors(from, this.pos).setY(0).normalize();
     const frontal = toAttacker.dot(this.facing) > Math.cos(THREE.MathUtils.degToRad(BLOCK_ARC_DEG / 2));
     if (this.state === 'block' && frontal && !opts.unblockable) {
+      // the sword guard meets the blow: square up to the attacker so the blade is across the incoming strike
+      this.yaw = Math.atan2(toAttacker.x, toAttacker.z);
       if (now - this.blockStart < PARRY_WINDOW) {
-        this.anim.play(this.crouching ? 'crouch_block_impact' : 'block_impact', { speed: 1.8, fade: 0.04 });
+        this.anim.play(this.crouching ? 'gs_crouch_block_impact' : 'gs_block_impact', { speed: 2.3, fade: 0.03 });
+        this.counterUntil = now + COUNTER_WINDOW;
         this.events.onBlock?.(true);
         return 'parry';
       }
       if (!opts.guardBreak) {
         this.hp -= damage * BLOCK_DAMAGE_SCALE;
         this.vel.addScaledVector(toAttacker, -this.ledgeSafeKnock(toAttacker.clone().negate(), (opts.knock ?? 1.5) * 0.6));
-        this.anim.play(this.crouching ? 'crouch_block_impact' : 'block_impact', { speed: 1.6, fade: 0.04 });
+        this.anim.play(this.crouching ? 'gs_crouch_block_impact' : 'gs_block_impact', { speed: 1.8, fade: 0.04 });
         this.events.onBlock?.(false);
         if (this.hp <= 0) this.die();
         return 'block';
@@ -704,12 +786,15 @@ export class Player {
     if (this.hp <= 0) { this.die(); return 'hit'; }
     if (this.hasHyperArmor() && !opts.heavy) return 'hit';
     this.attack = null;
+    this.buffered = null;
     const heavy = opts.heavy || damage >= 22 || opts.guardBreak;
     if (this.crouching && this.tryStandSafe) this.crouching = false;
     this.setState('hit');
     this.hitStun = heavy ? 0.62 : 0.34;
     this.vel.set(0, this.vel.y, 0).addScaledVector(toAttacker, -this.ledgeSafeKnock(toAttacker.clone().negate(), opts.knock ?? (heavy ? 4 : 2)));
-    this.anim.play(heavy ? 'hit_heavy' : 'hit_light', { speed: heavy ? 1.2 : 1.5, fade: 0.05 });
+    // alternate the one-handed and two-handed reaction sets so repeated hits do not look identical
+    const alt = Math.random() < 0.5;
+    this.anim.play(heavy ? (alt ? 'gs_hit_heavy' : 'hit_heavy') : (alt ? 'gs_hit_light' : 'hit_light'), { speed: heavy ? 1.2 : alt ? 1.8 : 1.5, fade: 0.05 });
     this.invuln = 0.22;
     return 'hit';
   }
@@ -737,7 +822,8 @@ export class Player {
     this.hp = 0;
     this.setState('dead');
     this.attack = null;
-    this.anim.play(Math.random() < 0.5 ? 'death_back' : 'death_kneel', { speed: 1.1, fade: 0.1 });
+    const deaths = ['death_back', 'death_kneel', 'gs_death_forward', 'gs_death_collapse'];
+    this.anim.play(deaths[Math.floor(Math.random() * deaths.length)], { speed: 1.1, fade: 0.1 });
     this.events.onDeath?.();
   }
 

@@ -150,21 +150,33 @@ def speed_series(samples, key, rel_key="hips"):
     return out
 
 
-manifest = {"_generatedBy": "tools/blender/build_hero.py", "_source": "assets/characters/hero/Sword and Shield Pack.zip",
+manifest = {"_generatedBy": "tools/blender/build_hero.py", "_source": "assets/characters/hero/Sword and Shield Pack.zip + Great Sword Pack.zip + Crouch Walking.fbx",
             "fps": FPS, "characterFacing": "+Z (three.js)", "rootCurveSpace": "[forward, right] meters relative to clip start",
             "clips": {}}
 
 if hero.animation_data is None:
     hero.animation_data_create()
 
+jobs = []
 for fname in sorted(os.listdir(PACK)):
     if not fname.lower().endswith(".fbx") or fname.startswith("Maria"):
         continue
     key = fname[:-4]
     if key not in clip_map:
         raise RuntimeError("Clip not classified in hero_clip_map.json: " + fname)
-    info = clip_map[key]
-    new = import_fbx(os.path.join(PACK, fname))
+    jobs.append((os.path.join(PACK, fname), fname, clip_map[key]))
+# session 5: Great Sword Pack + the loose Crouch Walking clip (same 65-bone rig; see hero_clip_map.json extraClips)
+for info in json.load(open(CLIP_MAP)).get("extraClips", []):
+    path = os.path.join(ROOT, info["dir"], info["file"])
+    if not os.path.exists(path):
+        raise RuntimeError("Missing extra hero clip (run python tools/extract_assets.py): " + path)
+    jobs.append((path, info["file"], info))
+
+for path, fname, info in jobs:
+    new = import_fbx(path)
+    src_bones = {b.name for b in next(o for o in new if o.type == "ARMATURE").data.bones}
+    if src_bones != {b.name for b in hero.data.bones}:
+        raise RuntimeError("Skeleton mismatch in " + fname)
     src = next(o for o in new if o.type == "ARMATURE")
     act = src.animation_data.action
     src.animation_data.action = None
@@ -226,7 +238,7 @@ for fname in sorted(os.listdir(PACK)):
             kp.interpolation = "LINEAR"
         fc.update()
 
-    entry = {"source": fname, "cat": info["cat"], "loop": info["loop"], "root": policy,
+    entry = {"source": fname, "pack": os.path.basename(os.path.dirname(path)), "cat": info["cat"], "loop": info["loop"], "root": policy,
              "frames": n, "duration": round(dur, 4)}
     if info.get("note"):
         entry["note"] = info["note"]

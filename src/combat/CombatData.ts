@@ -27,7 +27,15 @@ export interface AttackDef {
   track: number;                      // clip seconds of steering toward the target at the start
   hyperArmor?: [number, number];
   resonance?: number;                 // bonus resonance when any hit of this attack connects (finishers)
-  next?: { light?: string; heavy?: string };
+  /**
+   * Follow-ups. light/heavy/kick = pressed during the combo window. pause = a light press that comes a beat
+   * late (after the combo window closed, up to PAUSE_GRACE after the attack ends): the alternative route.
+   */
+  next?: { light?: string; heavy?: string; kick?: string; pause?: string };
+  /** hold the heavy button: the clip freezes at `at` (sword raised) for up to `max` s; hits scale with the charge */
+  charge?: { at: number; max: number };
+  /** two-handed Great Sword technique (trail colour / tooling) */
+  twoHanded?: boolean;
   /** max extra forward speed (m/s) used during the wind-up to close the gap to the target (magnetism) */
   lunge?: number;
   /** playback pacing multipliers per phase (default from the kind): see speedAt() */
@@ -102,6 +110,24 @@ function shieldWindow(clipId: string): [number, number] {
 
 const w = (clipId: string, i: number) => peakWindow(clipId, i);
 
+/**
+ * Combo graph (session 5: one-handed Sword & Shield base + two-handed Great Sword techniques).
+ *
+ *   ROUTE A (light, tempo):   L1 → L2 → L3 → L4 → L5 (two-handed cleave) → L1
+ *   ROUTE B (light, "pause"): L1 ‥ L2 ‥ L3 ‥ — a light press one beat late — → B2 quick cut → B3 low sweep → B4 spin
+ *                             double (finisher) → L1.  (L1‥→B2, L2‥→B3, L3‥→B4)
+ *   HEAVY ENDPOINTS:          L1+H F1c whirlwind · L2+H F1 whirlwind · L3+H F3 high spin · L4+H F2 leap slam ·
+ *                             L5+H F4 rampage (3 cuts) · B2+H F2 · B3+H F5 leaping double spin
+ *   HEAVY CHAIN:              H1 spin slash → H2 jump spin → H3 Crownbreaker (HOLD heavy to charge, release = plunge
+ *                             shockwave; guard break).  H1+L → L3.
+ *   CONTEXTUAL:               sprint+L slide cut · sprint+H leaping double spin · dodge→L lunge cut · dodge→H high spin
+ *                             · air attack · crouch L → crouch sweep → two-handed crouch sweep · kick → spinning kick ·
+ *                             guard+L shield bash · parry→L riposte (cleave) · parry→H high spin · heavy near a
+ *                             staggered enemy under 45 % HP = EXECUTION (plunge).
+ */
+export const PAUSE_GRACE = 0.5;       // s after an attack ends in which a late light press still branches (route B)
+export const COUNTER_WINDOW = 0.75;   // s after a parry in which light/heavy = riposte
+
 export const ATTACKS: Record<string, AttackDef> = {
   /**
    * L1 = the opening forehand diagonal of 'atk_whirlwind' (session 4; was 'atk_chop', a short upward
@@ -115,25 +141,25 @@ export const ATTACKS: Record<string, AttackDef> = {
     hits: [{ t0: w('atk_whirlwind', 0)[0], t1: 0.86, damage: 15, poise: 24, knock: 1.7, shape: 'blade', reach: 2.3 }],
     inputFrom: 0.32, cancelAt: 0.84, endAt: 1.02, recoveryCancel: 0.76, rootScale: 1.3, track: 0.45, lunge: 3.5,
     pace: { windup: 1.35, strike: 1.1, follow: 0.8, recover: 1.3 },
-    next: { light: 'L2', heavy: 'F1c' },
+    next: { light: 'L2', heavy: 'F1c', pause: 'B2' },
   },
   L2: {
     id: 'L2', clip: 'atk_rising_cut', kind: 'light', speed: 1.55, start: 0.46,
     hits: [{ t0: w('atk_rising_cut', 0)[0], t1: w('atk_rising_cut', 0)[1], damage: 16, poise: 25, knock: 1.5, shape: 'blade', reach: 2.1 }],
     inputFrom: 0.5, cancelAt: 0.96, endAt: 1.26, recoveryCancel: 0.9, rootScale: 1, track: 0.4, lunge: 3,
-    next: { light: 'L3', heavy: 'F1' },
+    next: { light: 'L3', heavy: 'F1', pause: 'B3' },
   },
   L3: {
     id: 'L3', clip: 'atk_lunge_cut', kind: 'light', speed: 1.5, start: 0.36,
     hits: [{ t0: w('atk_lunge_cut', 0)[0], t1: w('atk_lunge_cut', 0)[1], damage: 20, poise: 38, knock: 2.4, shape: 'blade', reach: 2.4 }],
     inputFrom: 0.5, cancelAt: 1.0, endAt: 1.4, recoveryCancel: 0.9, rootScale: 0.75, track: 0.45, lunge: 3,
-    next: { light: 'L4', heavy: 'F2' },
+    next: { light: 'L4', heavy: 'F3', pause: 'B4' },
   },
   L4: {
     id: 'L4', clip: 'atk_advancing_sweep', kind: 'light', speed: 1.35, start: 0.08,
     hits: [{ t0: w('atk_advancing_sweep', 0)[0] - 0.12, t1: w('atk_advancing_sweep', 0)[1], damage: 24, poise: 45, knock: 3.0, shape: 'blade', reach: 2.6 }],
     inputFrom: 0.5, cancelAt: 0.95, endAt: 1.2, recoveryCancel: 0.8, rootScale: 0.65, track: 0.4, lunge: 3,
-    next: { light: 'L1', heavy: 'F2' },
+    next: { light: 'L5', heavy: 'F2' },
   },
   H1: {
     id: 'H1', clip: 'atk_spin_slash', kind: 'heavy', speed: 1.22, start: 0.0,
@@ -145,7 +171,7 @@ export const ATTACKS: Record<string, AttackDef> = {
     id: 'H2', clip: 'atk_jump_spin', kind: 'heavy', speed: 1.4, start: 0.35,
     hits: [{ t0: w('atk_jump_spin', 0)[0] - 0.1, t1: w('atk_jump_spin', 0)[1] + 0.05, damage: 36, poise: 90, knock: 4.0, shape: 'radial', reach: 2.9, knockdown: true }],
     inputFrom: 1.5, cancelAt: 1.85, endAt: 2.1, recoveryCancel: 1.7, rootScale: 1, track: 0.6,
-    hyperArmor: [0.6, 1.45], resonance: 6, next: { light: 'L1' },
+    hyperArmor: [0.6, 1.45], resonance: 6, next: { light: 'L1', heavy: 'H3' },
   },
   F1: {
     id: 'F1', clip: 'atk_whirlwind', kind: 'finisher', speed: 1.55, start: 0.25,
@@ -173,18 +199,6 @@ export const ATTACKS: Record<string, AttackDef> = {
     inputFrom: 1.8, cancelAt: 2.0, endAt: 2.2, recoveryCancel: 1.6, rootScale: 0.85, track: 0.75,
     hyperArmor: [0.35, 1.3], resonance: 6,
   },
-  SPRINT_H: {
-    id: 'SPRINT_H', clip: 'atk_leap_slam', kind: 'sprint', speed: 1.45, start: 0.2,
-    hits: [{ t0: w('atk_leap_slam', 0)[0], t1: w('atk_leap_slam', 0)[1] + 0.05, damage: 40, poise: 110, knock: 5.0, shape: 'radial', reach: 3.2, knockdown: true }],
-    inputFrom: 1.8, cancelAt: 2.0, endAt: 2.2, recoveryCancel: 1.6, rootScale: 1.0, track: 0.75,
-    hyperArmor: [0.3, 1.3],
-  },
-  SPRINT_L: {
-    id: 'SPRINT_L', clip: 'atk_lunge_cut', kind: 'sprint', speed: 1.6, start: 0.1,
-    hits: [{ t0: w('atk_lunge_cut', 0)[0], t1: w('atk_lunge_cut', 0)[1], damage: 22, poise: 45, knock: 2.6, shape: 'blade', reach: 2.4 }],
-    inputFrom: 0.5, cancelAt: 1.0, endAt: 1.4, recoveryCancel: 0.9, rootScale: 1.0, track: 0.5,
-    next: { light: 'L4', heavy: 'F2' },
-  },
   AIR: {
     id: 'AIR', clip: 'atk_jump_spin', kind: 'air', speed: 1.5, start: 0.95,
     hits: [{ t0: w('atk_jump_spin', 0)[0] - 0.1, t1: w('atk_jump_spin', 0)[1] + 0.08, damage: 30, poise: 80, knock: 3.2, shape: 'radial', reach: 2.6, knockdown: true }],
@@ -194,18 +208,155 @@ export const ATTACKS: Record<string, AttackDef> = {
     id: 'CROUCH_L', clip: 'atk_crouch_sweep', kind: 'crouch', speed: 1.45, start: 0.0,
     hits: [{ t0: w('atk_crouch_sweep', 0)[0], t1: w('atk_crouch_sweep', 0)[1], damage: 14, poise: 70, knock: 1.5, shape: 'radial', reach: 2.4, arc: 200, knockdown: true }],
     inputFrom: 0.7, cancelAt: 0.95, endAt: 1.2, recoveryCancel: 0.8, rootScale: 1, track: 0.3,
+    next: { light: 'CROUCH_L2' },
   },
   KICK: {
     id: 'KICK', clip: 'kick_front', kind: 'kick', speed: 1.4, start: 0.05,
     hits: [{ t0: footWindow('kick_front')[0], t1: footWindow('kick_front')[1], damage: 8, poise: 70, knock: 7.5, shape: 'front', reach: 1.9, arc: 80, guardBreak: true }],
     inputFrom: 0.6, cancelAt: 0.75, endAt: 0.95, recoveryCancel: 0.6, rootScale: 1, track: 0.2,
-    next: { light: 'L3', heavy: 'H1' },
+    next: { light: 'L3', heavy: 'H1', kick: 'KICK2' },
   },
   BASH: {
     id: 'BASH', clip: 'shield_bash', kind: 'bash', speed: 1.25, start: 0.0,
     hits: [{ t0: shieldWindow('shield_bash')[0], t1: shieldWindow('shield_bash')[1], damage: 6, poise: 90, knock: 4.0, shape: 'front', reach: 1.7, arc: 100, guardBreak: true }],
     inputFrom: 0.35, cancelAt: 0.5, endAt: 0.8, recoveryCancel: 0.4, rootScale: 1, track: 0.15,
     next: { light: 'L2', heavy: 'H1' },
+  },
+
+  // ---------------------------------------------------------------- session 5: Great Sword techniques (two-handed)
+  /** Route A end: horizontal cut, then an overhead two-handed chop (the chain's heaviest light blow). */
+  L5: {
+    id: 'L5', clip: 'gs_cleave', kind: 'light', speed: 1.3, start: 0.0, twoHanded: true,
+    hits: [
+      { t0: w('gs_cleave', 0)[0], t1: w('gs_cleave', 0)[1], damage: 13, poise: 22, knock: 1.4, shape: 'blade', reach: 2.4 },
+      { t0: w('gs_cleave', 1)[0], t1: w('gs_cleave', 1)[1], damage: 26, poise: 60, knock: 3.4, shape: 'blade', reach: 2.6 },
+    ],
+    inputFrom: 0.62, cancelAt: 0.92, endAt: 1.15, recoveryCancel: 0.84, rootScale: 1, track: 0.4, lunge: 3,
+    next: { light: 'L1', heavy: 'F4' },
+  },
+  /** Route B opener (pause combo): quick two-handed double cut from a raised guard. */
+  B2: {
+    id: 'B2', clip: 'gs_quick_cut', kind: 'light', speed: 1.4, start: 0.0, twoHanded: true,
+    hits: [
+      { t0: w('gs_quick_cut', 0)[0], t1: w('gs_quick_cut', 0)[1], damage: 12, poise: 20, knock: 1.3, shape: 'blade', reach: 2.4 },
+      { t0: w('gs_quick_cut', 1)[0], t1: w('gs_quick_cut', 1)[1], damage: 14, poise: 26, knock: 1.8, shape: 'blade', reach: 2.4 },
+    ],
+    inputFrom: 0.42, cancelAt: 0.62, endAt: 0.95, recoveryCancel: 0.6, rootScale: 1, track: 0.4, lunge: 3.2,
+    next: { light: 'B3', heavy: 'F2' },
+  },
+  /** Route B: the blade goes up and comes round at knee height — a wide low sweep that trips crowds. */
+  B3: {
+    id: 'B3', clip: 'gs_low_sweep', kind: 'light', speed: 1.5, start: 0.25, twoHanded: true,
+    hits: [{ t0: w('gs_low_sweep', 0)[0], t1: w('gs_low_sweep', 0)[1], damage: 22, poise: 55, knock: 2.8, shape: 'blade', reach: 2.7 }],
+    inputFrom: 0.95, cancelAt: 1.16, endAt: 1.45, recoveryCancel: 1.1, rootScale: 1, track: 0.45, lunge: 3,
+    next: { light: 'B4', heavy: 'F5' },
+  },
+  /** Route B finisher: a full spin with a double cut and an overhead finish (~1.1 m advance). */
+  B4: {
+    id: 'B4', clip: 'gs_spin_double', kind: 'finisher', speed: 1.35, start: 0.1, twoHanded: true,
+    hits: [
+      { t0: 0.55, t1: 0.8, damage: 16, poise: 34, knock: 2.0, shape: 'radial', reach: 2.7 },
+      { t0: 0.82, t1: 1.06, damage: 16, poise: 34, knock: 2.2, shape: 'radial', reach: 2.7 },
+      { t0: w('gs_spin_double', 2)[0], t1: w('gs_spin_double', 2)[1], damage: 30, poise: 90, knock: 4.2, shape: 'blade', reach: 2.8, knockdown: true },
+    ],
+    inputFrom: 1.5, cancelAt: 1.62, endAt: 1.75, recoveryCancel: 1.52, rootScale: 1, track: 0.5,
+    hyperArmor: [0.3, 1.4], resonance: 6, next: { light: 'L1' },
+  },
+  /** L3 + Heavy: advancing two-cut spin (≈2.3 m) — the gap closer inside a chain. */
+  F3: {
+    id: 'F3', clip: 'gs_high_spin', kind: 'finisher', speed: 1.4, start: 0.0, twoHanded: true,
+    hits: [
+      { t0: w('gs_high_spin', 0)[0], t1: w('gs_high_spin', 0)[1], damage: 22, poise: 50, knock: 2.6, shape: 'blade', reach: 2.8 },
+      { t0: w('gs_high_spin', 1)[0], t1: w('gs_high_spin', 1)[1], damage: 30, poise: 100, knock: 4.4, shape: 'radial', reach: 3.1, knockdown: true },
+    ],
+    inputFrom: 1.5, cancelAt: 1.62, endAt: 1.8, recoveryCancel: 1.45, rootScale: 1, track: 0.55,
+    hyperArmor: [0.2, 1.25], resonance: 6,
+  },
+  /** L5 + Heavy: the rampage — three heavy two-handed cuts with a full spin, ~3 m forward. */
+  F4: {
+    id: 'F4', clip: 'gs_rampage', kind: 'finisher', speed: 1.4, start: 0.3, twoHanded: true,
+    hits: [
+      { t0: w('gs_rampage', 0)[0], t1: w('gs_rampage', 0)[1], damage: 22, poise: 50, knock: 2.4, shape: 'blade', reach: 2.8 },
+      { t0: w('gs_rampage', 1)[0], t1: w('gs_rampage', 1)[1], damage: 26, poise: 60, knock: 2.8, shape: 'radial', reach: 3.0 },
+      { t0: w('gs_rampage', 2)[0], t1: w('gs_rampage', 2)[1], damage: 42, poise: 130, knock: 5.0, shape: 'radial', reach: 3.2, knockdown: true },
+    ],
+    inputFrom: 3.2, cancelAt: 3.35, endAt: 3.45, recoveryCancel: 3.0, rootScale: 0.85, track: 0.9,
+    hyperArmor: [0.5, 2.9], resonance: 8,
+  },
+  /** B3 + Heavy: leap with a double airborne spin, landing in a ground cut (~3 m). */
+  F5: {
+    id: 'F5', clip: 'gs_leap_spin', kind: 'finisher', speed: 1.4, start: 0.2, twoHanded: true,
+    hits: [{ t0: w('gs_leap_spin', 0)[0], t1: w('gs_leap_spin', 0)[1] + 0.05, damage: 42, poise: 120, knock: 5.0, shape: 'radial', reach: 3.2, knockdown: true }],
+    inputFrom: 1.8, cancelAt: 1.95, endAt: 2.1, recoveryCancel: 1.7, rootScale: 1.0, track: 0.8,
+    hyperArmor: [0.3, 1.4], resonance: 6,
+  },
+  /** Sprint + Heavy: the same leaping double spin out of a run (the gap closer). */
+  SPRINT_H: {
+    id: 'SPRINT_H', clip: 'gs_leap_spin', kind: 'sprint', speed: 1.45, start: 0.25, twoHanded: true,
+    hits: [{ t0: w('gs_leap_spin', 0)[0], t1: w('gs_leap_spin', 0)[1] + 0.05, damage: 40, poise: 110, knock: 5.0, shape: 'radial', reach: 3.2, knockdown: true }],
+    inputFrom: 1.8, cancelAt: 1.95, endAt: 2.1, recoveryCancel: 1.7, rootScale: 1.0, track: 0.8,
+    hyperArmor: [0.3, 1.4],
+  },
+  /** Sprint + Light: knee-slide under the guard with a sweeping cut (~3.5 m). */
+  SPRINT_L: {
+    id: 'SPRINT_L', clip: 'gs_slide_cut', kind: 'sprint', speed: 1.5, start: 0.35, twoHanded: true,
+    hits: [{ t0: w('gs_slide_cut', 0)[0], t1: w('gs_slide_cut', 0)[1], damage: 24, poise: 60, knock: 3.0, shape: 'blade', reach: 2.7 }],
+    inputFrom: 1.5, cancelAt: 1.72, endAt: 1.98, recoveryCancel: 1.6, rootScale: 0.9, track: 0.6,
+    next: { light: 'L2', heavy: 'F2' },
+  },
+  /** Dodge → Light: the stepping lunge cut out of the dash. */
+  DODGE_L: {
+    id: 'DODGE_L', clip: 'atk_lunge_cut', kind: 'sprint', speed: 1.6, start: 0.1,
+    hits: [{ t0: w('atk_lunge_cut', 0)[0], t1: w('atk_lunge_cut', 0)[1], damage: 22, poise: 45, knock: 2.6, shape: 'blade', reach: 2.4 }],
+    inputFrom: 0.5, cancelAt: 1.0, endAt: 1.4, recoveryCancel: 0.9, rootScale: 1.0, track: 0.5, lunge: 3.5,
+    next: { light: 'L4', heavy: 'F2' },
+  },
+  /** Dodge → Heavy: the advancing high spin. */
+  DODGE_H: {
+    id: 'DODGE_H', clip: 'gs_high_spin', kind: 'sprint', speed: 1.45, start: 0.05, twoHanded: true,
+    hits: [
+      { t0: w('gs_high_spin', 0)[0], t1: w('gs_high_spin', 0)[1], damage: 22, poise: 50, knock: 2.6, shape: 'blade', reach: 2.8 },
+      { t0: w('gs_high_spin', 1)[0], t1: w('gs_high_spin', 1)[1], damage: 28, poise: 90, knock: 4.2, shape: 'radial', reach: 3.1, knockdown: true },
+    ],
+    inputFrom: 1.5, cancelAt: 1.62, endAt: 1.8, recoveryCancel: 1.45, rootScale: 1, track: 0.55, hyperArmor: [0.2, 1.25],
+  },
+  /** H2 + Heavy (hold to charge): the Crownbreaker — sword raised, then a kneeling plunge that sends a shockwave. */
+  H3: {
+    id: 'H3', clip: 'gs_plunge', kind: 'heavy', speed: 1.7, start: 0.3, twoHanded: true, charge: { at: 1.0, max: 1.2 },
+    hits: [{ t0: 2.26, t1: 2.62, damage: 40, poise: 140, knock: 6.0, shape: 'radial', reach: 3.4, knockdown: true, guardBreak: true }],
+    inputFrom: 3.0, cancelAt: 3.15, endAt: 3.3, recoveryCancel: 2.85, rootScale: 0, track: 0.9,
+    hyperArmor: [0.3, 2.7], resonance: 8, pace: { windup: 1.1, strike: 1.3, follow: 0.8, recover: 1.35 },
+  },
+  /** Heavy beside a reeling enemy under 45 % HP: a two-handed plunge through it. */
+  EXECUTE: {
+    id: 'EXECUTE', clip: 'gs_plunge', kind: 'finisher', speed: 2.0, start: 1.25, twoHanded: true,
+    hits: [{ t0: 2.2, t1: 2.62, damage: 95, poise: 200, knock: 3.0, shape: 'front', reach: 2.6, arc: 70, knockdown: true, guardBreak: true }],
+    inputFrom: 3.0, cancelAt: 3.15, endAt: 3.25, recoveryCancel: 2.8, rootScale: 0, track: 1.2,
+    hyperArmor: [1.25, 2.8], resonance: 10, pace: { windup: 1.0, strike: 1.3, follow: 0.7, recover: 1.4 },
+  },
+  /** Parry → Light: the riposte — a two-handed cleave into the opening. */
+  RIPOSTE: {
+    id: 'RIPOSTE', clip: 'gs_cleave', kind: 'finisher', speed: 1.55, start: 0.05, twoHanded: true,
+    hits: [
+      { t0: w('gs_cleave', 0)[0], t1: w('gs_cleave', 0)[1], damage: 24, poise: 60, knock: 2.0, shape: 'blade', reach: 2.6 },
+      { t0: w('gs_cleave', 1)[0], t1: w('gs_cleave', 1)[1], damage: 40, poise: 120, knock: 4.0, shape: 'blade', reach: 2.8, knockdown: true },
+    ],
+    inputFrom: 0.62, cancelAt: 0.92, endAt: 1.1, recoveryCancel: 0.84, rootScale: 1, track: 0.5, lunge: 4,
+    resonance: 8, next: { light: 'L2', heavy: 'F4' },
+  },
+  /** Crouch chain part 2: the two-handed crouched sweep. */
+  CROUCH_L2: {
+    id: 'CROUCH_L2', clip: 'gs_crouch_sweep', kind: 'crouch', speed: 1.45, start: 0.1, twoHanded: true,
+    hits: [{ t0: w('gs_crouch_sweep', 0)[0], t1: w('gs_crouch_sweep', 0)[1], damage: 16, poise: 75, knock: 1.8, shape: 'radial', reach: 2.6, arc: 220, knockdown: true }],
+    inputFrom: 0.75, cancelAt: 0.95, endAt: 1.25, recoveryCancel: 0.85, rootScale: 1, track: 0.3,
+    next: { light: 'CROUCH_L' },
+  },
+  /** Kick → Kick: spinning back kick with the sword raised (bigger shove, breaks guards). */
+  KICK2: {
+    id: 'KICK2', clip: 'gs_spin_kick', kind: 'kick', speed: 1.45, start: 0.15, twoHanded: true,
+    hits: [{ t0: footWindow('gs_spin_kick')[0], t1: footWindow('gs_spin_kick')[0] + 0.3, damage: 12, poise: 90, knock: 9, shape: 'front', reach: 2.1, arc: 110, guardBreak: true }],
+    inputFrom: 0.9, cancelAt: 1.05, endAt: 1.3, recoveryCancel: 0.95, rootScale: 1, track: 0.3,
+    next: { light: 'L3', heavy: 'H1' },
   },
 };
 

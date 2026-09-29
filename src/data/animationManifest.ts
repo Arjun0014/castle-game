@@ -6,8 +6,9 @@
  * sword/foot/shield speed peaks measured from the actual motion). Classification was authored from the
  * rendered contact sheets (tools/blender/hero_clip_map.json).
  *
- * The pack has NO roll clip and NO crouch-walk cycle; dodge is a directional dash built on the
- * run/strafe clips (with i-frames and afterimages), crouch movement uses crouch_ready.
+ * Session 5 added 24 clips from 'Great Sword Pack.zip' (two-handed techniques, the sword guard set, hits, deaths) and
+ * the loose 'Crouch Walking.fbx' (a real crouch-walk loop, 1.21 m/s): tools/blender/hero_clip_map.json extraClips
+ * (+ the unused Great Sword clips with reasons). Dodge is still a directional dash (no roll clip in any pack).
  */
 import raw from './heroAnimations.json';
 
@@ -33,18 +34,19 @@ export const INVENTORY: Record<string, string[]> = {
   idle: ['idle_combat', 'idle_alert', 'idle_flourish_a', 'idle_flourish_b'],
   locomotion: ['walk_fwd', 'run_fwd', 'turn_left_90', 'turn_right_90', 'turn_180', 'turn_180_fast'],
   combat_locomotion: ['walk_back', 'run_back', 'strafe_walk_left', 'strafe_walk_right', 'strafe_run_left', 'strafe_run_right'],
-  crouch: ['crouch_enter', 'crouch_exit', 'crouch_idle', 'crouch_ready'],
+  crouch: ['crouch_enter', 'crouch_exit', 'crouch_idle', 'crouch_ready', 'crouch_walk'],
   jump_fall_land: ['jump_stand', 'jump_run'],
-  rolls_dodges: [], // none in the pack — dash dodge uses run_fwd / run_back / strafe_run_* at high playback rate
-  blocks_parries: ['block_enter', 'block_idle', 'block_exit', 'block_impact', 'crouch_block_enter', 'crouch_block_idle', 'crouch_block_impact', 'crouch_block_exit'],
-  light_attacks: ['atk_chop', 'atk_rising_cut', 'atk_lunge_cut', 'atk_crouch_sweep'],
-  heavy_attacks: ['atk_spin_slash', 'atk_leap_slam', 'atk_jump_spin'],
-  combo_candidates: ['atk_advancing_sweep', 'atk_whirlwind'],
+  rolls_dodges: [], // none in any pack — dash dodge uses run_fwd / run_back / strafe_run_* at high playback rate
+  blocks_parries: ['block_enter', 'block_idle', 'block_exit', 'block_impact', 'crouch_block_enter', 'crouch_block_idle', 'crouch_block_impact', 'crouch_block_exit',
+    'gs_block_enter', 'gs_block_idle', 'gs_block_exit', 'gs_block_impact', 'gs_crouch_block_enter', 'gs_crouch_block_idle', 'gs_crouch_block_exit', 'gs_crouch_block_impact'],
+  light_attacks: ['atk_chop', 'atk_rising_cut', 'atk_lunge_cut', 'atk_crouch_sweep', 'gs_cleave', 'gs_quick_cut', 'gs_low_sweep', 'gs_crouch_sweep'],
+  heavy_attacks: ['atk_spin_slash', 'atk_leap_slam', 'atk_jump_spin', 'gs_high_spin', 'gs_leap_spin', 'gs_slide_cut', 'gs_plunge'],
+  combo_candidates: ['atk_advancing_sweep', 'atk_whirlwind', 'gs_spin_double', 'gs_rampage'],
   shield_actions: ['shield_bash'],
-  kick_bash: ['kick_front'],
-  reactions: ['hit_light', 'hit_heavy'],
+  kick_bash: ['kick_front', 'gs_spin_kick'],
+  reactions: ['hit_light', 'hit_heavy', 'gs_hit_light', 'gs_hit_heavy'],
   knockdown: [], // no dedicated knockdown/get-up clip for the hero; heavy reactions use hit_heavy
-  death: ['death_back', 'death_kneel'],
+  death: ['death_back', 'death_kneel', 'gs_death_forward', 'gs_death_collapse'],
   misc: ['shift_channel', 'power_up', 'sheath', 'unsheath'],
 };
 

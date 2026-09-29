@@ -349,6 +349,24 @@ export class EnemyManager {
     return out.map((x) => x.e);
   }
 
+  /**
+   * Execution: a non-boss enemy reeling from a heavy stagger with ≤ 45 % HP, within 2.6 m and roughly in front
+   * (heavy from neutral turns into the two-handed plunge).
+   */
+  executionTarget(from: THREE.Vector3, facing: THREE.Vector3): THREE.Vector3 | null {
+    const st = this.g.time.state;
+    for (const e of [...this.enemies, ...this.remnants]) {
+      if (!this.liveIn(st)(e) || e.arch.boss || e.isFlying || e.state !== 'hit' || e.stun < 0.25 || e.hp > e.arch.hp * 0.45) continue;
+      const to = _a.subVectors(e.pos, from).setY(0);
+      const d = to.length();
+      if (d < 2.6 && Math.abs(e.pos.y - from.y) < 1 && facing.angleTo(to.normalize()) < 1.1) {
+        e.stun = Math.max(e.stun, 1.2); // it stays down for the blow
+        return e.pos;
+      }
+    }
+    return null;
+  }
+
   autoTarget(from: THREE.Vector3, facing: THREE.Vector3): THREE.Vector3 | null {
     const st = this.g.time.state;
     let best: Enemy | null = null, bestD = 4.2;
@@ -711,7 +729,7 @@ export class EnemyManager {
         } else {
           const to = e.pos.clone().sub(p.pos).setY(0);
           const d = to.length();
-          const reach = (win.reach ?? 2.5) + e.radius;
+          const reach = (win.reach ?? 2.5) + e.radius + (p.attack?.charge ? p.chargeLevel * 1.5 : 0);
           const arc = win.shape === 'front' ? (win.arc ?? 90) : (win.arc ?? 360);
           const ang = THREE.MathUtils.radToDeg(f.angleTo(to.normalize()));
           if (d < reach && (arc >= 360 || ang < arc / 2) && dy < 1.9) hit = true;
@@ -719,7 +737,8 @@ export class EnemyManager {
         if (!hit) continue;
         this.hitRegistry.add(key);
         p.hitsDone.add(index * 1000 + e.id);
-        const res = e.takeHit(win.damage, win.poise, win.knock, p.pos, { knockdown: win.knockdown, guardBreak: win.guardBreak });
+        const cm = p.attack?.charge ? 1 + p.chargeLevel : 1; // the Crownbreaker's charge doubles its blow
+        const res = e.takeHit(win.damage * cm, win.poise * cm, win.knock, p.pos, { knockdown: win.knockdown, guardBreak: win.guardBreak });
         const kind = p.attack?.kind ?? 'light';
         const feel = FEEL[kind];
         // how heavy this connection sounds/feels: attack kind, damage, and the last beat of a chain

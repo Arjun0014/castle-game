@@ -407,13 +407,15 @@ export class Game {
     p.events.onLand = (fall) => this.audio.land(fall);
     p.events.onBlock = (parry) => {
       this.audio.block(parry);
-      this.fx.sparks(p.blade.hilt, parry ? 24 : 10, parry ? 0xfff0c0 : 0xffc080);
+      // sparks where the blow meets the blade (its middle), not the hilt
+      this.fx.sparks(p.blade.hilt.clone().lerp(p.blade.tip, 0.45), parry ? 30 : 12, parry ? 0xfff0c0 : 0xffc080);
       if (parry) { this.time.gain(12, 'parry'); this.hud.flash('#fff6d8', 0.25); this.rig.addShake(0.2); }
     };
     p.events.onAttackStart = (a) => {
       // one swing per hit window, timed to the blade's motion rather than the button press
       const weight = SWING_WEIGHT[a.kind];
       const serial = p.attackSerial;
+      if (a.charge) return; // hold attacks: the swing is cued when the window opens (onHitWindow)
       a.hits.forEach((w, i) => {
         // the whoosh leads the contact slightly (paced timeline, not a constant playback speed)
         const delay = Math.max(0, realTimeTo(a, w.t0) - 0.05);
@@ -425,6 +427,26 @@ export class Game {
       });
     };
     p.onAfterimage = () => this.fx.afterimage(p);
+    p.events.executionTarget = () => this.enemies.executionTarget(p.pos, p.facing);
+    p.events.onCharge = (level) => {
+      if (p.chargeTime < 0.02) this.audio.play('blade_ring', { rate: 0.8, vol: 0.9 });
+      this.fx.chargeGlow(p.blade.tip, p.blade.hilt, level);
+    };
+    p.events.onHitWindow = (a, i) => {
+      if (a.charge) this.audio.swing(1, undefined, 1.1);
+      // the plunge: the sword strikes the floor and a shockwave runs out (the Crownbreaker scales with its charge)
+      if (a.clip === 'gs_plunge') {
+        const at = p.pos.clone().addScaledVector(p.facing, 1.1);
+        const lvl = a.charge ? p.chargeLevel : 0.4;
+        this.schedule(0.1, () => {
+          this.fx.shockwave(at, (a.hits[i].reach ?? 3) + lvl * 1.5, lvl);
+          this.rig.addShake(0.3 + lvl * 0.3);
+          this.audio.play('kill_impact', { pos: at, rate: 0.75 });
+          this.audio.play('land_heavy', { pos: at, vol: 1.3 });
+          Platform.haptic(30 + Math.round(lvl * 20));
+        });
+      }
+    };
     this.time.onShift = (to) => {
       this.perf.mark('shift ' + to);
       if (this.hatchLid) this.hatchLid.visible = to === 'PAST' && !!this.level.collision.dynamic.find((x) => x.name === 'hatch' && x.enabled);
