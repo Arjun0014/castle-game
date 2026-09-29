@@ -6,6 +6,7 @@ import { MaterialLibrary, type TimeState } from './Materials';
 import { Fires } from '../vfx/Fire';
 import type { VegProto } from '../assets/GameAssets';
 import { stabilizeShadowDepth } from '../vfx/ShadowDepth';
+import { Platform } from '../platform/Platform';
 
 export type Group = 'SHARED' | TimeState;
 
@@ -134,7 +135,7 @@ export class Level {
         });
       }
     }
-    this.buildLightPool(10);
+    this.buildLightPool(Platform.quality.pointLights);
     this.buildFires();
     stabilizeShadowDepth(this.root);
     this.applyState(this.state);

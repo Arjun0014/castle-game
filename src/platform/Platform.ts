@@ -18,6 +18,16 @@
 export type ViewProfile = 'portrait' | 'wide';
 export type InputMode = 'kbm' | 'touch';
 
+/**
+ * Load-time render quality (fixed per session: light count and shadow size are part of shader program keys
+ * and GPU allocations). Handhelds default to 'mobile'; `?quality=high|mobile` overrides.
+ */
+export interface Quality { name: 'high' | 'mobile'; pointLights: number; shadowMap: number }
+const QUALITY: Record<Quality['name'], Quality> = {
+  high: { name: 'high', pointLights: 10, shadowMap: 2048 },
+  mobile: { name: 'mobile', pointLights: 6, shadowMap: 1024 },
+};
+
 /** tallest / widest stage aspect (width / height) in portrait view */
 export const PORTRAIT_ASPECT_MIN = 9 / 21;
 export const PORTRAIT_ASPECT_MAX = 9 / 16;
@@ -38,6 +48,7 @@ class PlatformImpl {
   /** phone/tablet: the primary pointer is a finger (a touchscreen laptop's primary pointer is fine) */
   readonly handheld: boolean;
   inputMode: InputMode;
+  quality: Quality;
   /** stage size in CSS px (what the renderer and HUD lay out against) */
   width = 1;
   height = 1;
@@ -53,6 +64,8 @@ class PlatformImpl {
     const noHover = matchMedia('(hover: none)').matches;
     this.handheld = this.touchCapable && (coarse || noHover);
     this.inputMode = this.forcedInput ?? (this.handheld ? 'touch' : 'kbm');
+    const q = this.params.get('quality');
+    this.quality = QUALITY[q === 'high' || q === 'mobile' ? q : this.handheld ? 'mobile' : 'high'];
   }
 
   get isTouch() { return this.inputMode === 'touch'; }

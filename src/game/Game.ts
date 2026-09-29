@@ -144,7 +144,7 @@ export class Game {
     this.atmo = new Atmosphere(this.scene, new THREE.Vector3(0.45, 0.42, -0.79));
     this.sun.castShadow = true;
     // phones: half the shadow resolution (same coverage — the dark Present look is unchanged)
-    const sm = Platform.handheld ? 1024 : 2048;
+    const sm = Platform.quality.shadowMap;
     this.sun.shadow.mapSize.set(sm, sm);
     const sc = this.sun.shadow.camera as THREE.OrthographicCamera;
     sc.left = -32; sc.right = 32; sc.top = 32; sc.bottom = -32; sc.near = 1; sc.far = 160;
