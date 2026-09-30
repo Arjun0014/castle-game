@@ -13,6 +13,7 @@
  *   boss:start {id} · boss:phase {id, phase} · boss:dead {id}
  *   hero:hurt {hp, max} · hero:death · hero:respawn
  *   fracture {id} · floor:start {id} · objective {id}
+ *   reinforce {id, area, kinds}   a memory-return group rose (enemies/Reinforcements.ts)
  */
 export type SignalData = Record<string, any>;
 type Listener = (data: SignalData) => void;

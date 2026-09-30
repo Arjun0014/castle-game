@@ -127,6 +127,30 @@ export class Enemy {
   lastSeen = new THREE.Vector3();
   voiceT = 2 + Math.random() * 5;
   castsShadow = true;
+  /** a memory-return reinforcement (session 14, enemies/Reinforcements.ts): reduced rewards, pooled body */
+  reinforced = false;
+  /** the encounter this body was built for (a revived body fights for a new one: EnemyManager.revive) */
+  origEncounter: string | null = null;
+  /** appearing out of the castle's memory (reinforcements, boss adds): 0..1 over `appearDur` s, -1 = not appearing */
+  appearT = -1;
+  private appearDur = 0.6;
+  /** Fade in over `dur` s (the per-body material copies; their transparent variant is compiled in the warm-up). */
+  appear(dur = 0.6) {
+    this.appearT = 0;
+    this.appearDur = dur;
+    for (const m of this.materials) { m.transparent = true; m.opacity = 0; }
+  }
+  /** advance the fade-in (EnemyManager.update, drawn bodies only) */
+  updateAppear(dt: number) {
+    if (this.appearT < 0) return;
+    this.appearT = Math.min(1, this.appearT + dt / this.appearDur);
+    const k = this.appearT * this.appearT * (3 - 2 * this.appearT);
+    for (const m of this.materials) m.opacity = k * (m.userData.baseOpacity ?? 1);
+    if (this.appearT >= 1) {
+      this.appearT = -1;
+      for (const m of this.materials) { m.opacity = m.userData.baseOpacity ?? 1; m.transparent = !!m.userData.baseTransparent; }
+    }
+  }
   /** not hittable / lockable right now (the Last Crown mid-blink or dying) */
   untargetable = false;
   /** death presentation: tumble while flung, shatter after settling */
@@ -547,7 +571,8 @@ export class Enemy {
     const drag = this.state === 'dead' && !this.grounded ? 0.5 : 7;
     this.vel.x *= Math.max(0, 1 - dt * drag);
     this.vel.z *= Math.max(0, 1 - dt * drag);
-    if (!this.isFlying && ctx.nav && this.alive && (this.state === 'chase' || this.state === 'circle')) move = this.navigate(move, dirP, dy, dt, ctx);
+    // (a perched archer walks its own gallery — perchThink — never an A* route down to her)
+    if (!this.isFlying && !this.opts.perch && ctx.nav && this.alive && (this.state === 'chase' || this.state === 'circle')) move = this.navigate(move, dirP, dy, dt, ctx);
     if (!this.isFlying && (this.state === 'chase' || this.state === 'circle') && this.navMode !== 'hold') move = this.steer(move, dt, ctx);
     // walkers never step off a ledge on their own (chasing straight across a floor hole was a free kill —
     // the Kingsguard died in the Present apartments' voids 1 s into its fight); knockback still can
@@ -558,8 +583,12 @@ export class Enemy {
     else this.integrate(dt, hv, ctx.world, ctx.state);
     // a perched archer holds its perch: standing on a stair ramp it used to creep down the slope under gravity
     // (the undercroft scaffold archer, F1 E12c, slid 6 m to the foot of the stair behind the scaffold, lost every
-    // line of sight and never loosed another arrow); only a real knock moves it
-    if (this.opts.perch && this.alive && this.grounded && Math.hypot(this.vel.x, this.vel.z) < 0.6) this.pos.set(px, Math.max(py, this.pos.y), pz);
+    // line of sight and never loosed another arrow); only a real knock — or its own walk along the perch to a firing
+    // spot (session 14, perchThink) — moves it, and never below its perch
+    if (this.opts.perch && this.alive && this.grounded && Math.hypot(this.vel.x, this.vel.z) < 0.6) {
+      if (move.lengthSq() < 0.04) this.pos.set(px, Math.max(py, this.pos.y), pz);
+      else if (this.pos.y < this.home.y - 0.35) this.pos.set(px, py, pz);
+    }
     if (move.lengthSq() > 0.25) { this.navMoved += Math.hypot(this.pos.x - px, this.pos.z - pz); this.navExpected += move.length() * dt; }
     this.mixer.update(dt);
     this.syncRoot();
@@ -972,11 +1001,13 @@ export class Enemy {
         if (this.repoTarget && this.repoTarget.distanceTo(this.pos) > 0.5) {
           move = new THREE.Vector3().subVectors(this.repoTarget, this.pos).setY(0).normalize().multiplyScalar(a.walkSpeed * 1.2);
           this.loop(a.clips.walk, 1.2);
-        } else if (dist > r.range[1] && this.pos.distanceTo(this.home) < 10) {
+        } else if ((dist > r.range[1] || !this.losOk) && this.pos.distanceTo(this.home) < (this.losOk ? 10 : 16)) {
+          // no shot and no spot close by (session 14: it used to stand idle there — a gallery archer with her below
+          // it): it comes to her along the grid (navigate() routes it down the stair) until it can see her again
           move = dirP.clone().multiplyScalar(a.walkSpeed); this.loop(a.clips.walk, 1);
         } else this.loop(a.clips.idle, 1);
       } else this.loop(a.clips.idle, 1);
-    } else this.loop(a.clips.idle, 1);
+    } else move = this.perchThink(dt, ctx, dirP);
     if (this.cooldown <= 0 && this.losOk && dist <= r.range[1] + 2) {
       this.panic = dist < 3.5;
       this.setState('shoot');
@@ -984,6 +1015,76 @@ export class Enemy {
       this.once('a_draw', this.panic ? 2.4 : 1.6, 0.1, 0.1);
     }
     return move;
+  }
+
+  /**
+   * A perched archer without a shot (session 14). It used to stand on its gallery doing nothing whenever the parapet,
+   * a pillar or the floor edge hid her. Now, after 0.8 s blind, it walks ALONG its perch (same floor height, within
+   * 12 m of its post, never off the edge) to the nearest spot that sees her — the gallery's rail, the far end; with
+   * nowhere to see her from it paces the gallery, bow half-raised, watching for her, instead of freezing.
+   */
+  private perchBlindT = 0;
+  private perchPace = 1;
+  private perchThink(dt: number, ctx: EnemyCtx, dirP: THREE.Vector3): THREE.Vector3 {
+    const a = this.arch;
+    this.perchBlindT = this.losOk ? 0 : this.perchBlindT + dt;
+    if (this.losOk || this.perchBlindT < 0.8) {
+      if (this.repoTarget && this.losOk) this.repoTarget = null;
+      this.loop(a.clips.idle, 1);
+      return new THREE.Vector3();
+    }
+    if (this.repoT <= 0) { this.repoT = 1.2; this.repoTarget = this.findPerchSpot(ctx, dirP); }
+    const to = this.repoTarget ? new THREE.Vector3().subVectors(this.repoTarget, this.pos).setY(0) : null;
+    if (to && to.length() > 0.4) {
+      const f = this.facing, side = to.clone().normalize();
+      // it keeps facing her while it moves: sideways steps along the rail read as looking for the shot
+      const lat = side.dot(new THREE.Vector3().crossVectors(UP, f));
+      this.loop(Math.abs(lat) > 0.5 ? ((lat > 0 ? a.clips.strafeL : a.clips.strafeR) ?? a.clips.walk) : side.dot(f) > 0 ? a.clips.walk : (a.clips.back ?? a.clips.walk), 1.15);
+      return side.multiplyScalar(a.walkSpeed * 1.15);
+    }
+    // nowhere better: pace the gallery near its post, watching
+    const home = new THREE.Vector3().subVectors(this.home, this.pos).setY(0);
+    if (home.length() > 3.5) this.perchPace = Math.sign(home.dot(new THREE.Vector3().crossVectors(UP, dirP))) || 1;
+    const tangent = new THREE.Vector3().crossVectors(UP, dirP).multiplyScalar(this.perchPace);
+    if (!ctx.world.hasFooting(this.pos.clone().addScaledVector(tangent, 0.9).setY(this.pos.y + 1), 1.2, ctx.state)) this.perchPace *= -1;
+    this.loop((this.perchPace > 0 ? a.clips.strafeL : a.clips.strafeR) ?? a.clips.walk, 0.9);
+    return tangent.multiplyScalar(a.walkSpeed * 0.6);
+  }
+
+  /** a spot on the same perch (floor within 0.5 m of its height, reachable in a straight line) that sees her */
+  private findPerchSpot(ctx: EnemyCtx, dirP: THREE.Vector3): THREE.Vector3 | null {
+    const w = ctx.world, st = ctx.state;
+    const chest = ctx.playerPos.clone().setY(ctx.playerPos.y + 1.2);
+    let best: THREE.Vector3 | null = null, bestD = Infinity;
+    const c = new THREE.Vector3();
+    for (let k = 0; k < 16; k++) {
+      const ang = (k / 16) * Math.PI * 2;
+      const dir = new THREE.Vector3(Math.cos(ang), 0, Math.sin(ang));
+      // toward her first (the rail), then along the gallery
+      const bias = dir.dot(dirP) > 0.5 ? -0.8 : 0;
+      for (const d of [1.5, 3, 5, 7.5, 10]) {
+        c.copy(this.pos).addScaledVector(dir, d);
+        if (c.distanceTo(this.home) > 12) break;
+        const gy = w.groundBelow(c.clone().setY(this.pos.y + 1), 1.6, st);
+        if (gy === null || Math.abs(gy - this.home.y) > 0.5) break;           // off the perch: stop this ray
+        c.y = gy;
+        if (w.inVoid(c.clone().setY(gy - 0.3), st)) break;
+        if (w.raycast(this.pos.clone().setY(this.pos.y + 0.6), dir, d, st)) break;  // a wall in the way
+        // footing all along (never across a gap in the gallery)
+        let gap = false;
+        for (const f of [0.33, 0.66]) { const q = this.pos.clone().addScaledVector(dir, d * f); if (!w.hasFooting(q.setY(this.pos.y + 1), 1.4, st)) gap = true; }
+        if (gap) break;
+        const eye = c.clone().setY(c.y + 1.45 * this.arch.scale);
+        const hit = w.raycast(eye, chest.clone().sub(eye).normalize(), eye.distanceTo(chest), st);
+        const over = c.clone().setY(c.y + 2.05);
+        const hit2 = hit && hit.distance < 1.8 ? w.raycast(over, chest.clone().sub(over).normalize(), over.distanceTo(chest), st) : hit;
+        if (hit && hit2) continue;
+        const score = d + bias;
+        if (score < bestD) { bestD = score; best = c.clone(); }
+        break;
+      }
+    }
+    return best;
   }
 
   /** A spot within a few metres (and within 9 m of home) with footing and a clear line to the player. */
@@ -1145,7 +1246,9 @@ export class Enemy {
     this.setState('dead');
     this.deadTime = 0;
     const clips = this.arch.clips.death;
-    this.once(clips[Math.floor(Math.random() * clips.length)], 1.1, 0, 0.1);
+    // a fall already under way (a finisher's reeling stumble: the Maw) carries on instead of snapping back to its start
+    if (this.cur && clips.includes(this.curName) && this.cur.isRunning()) this.cur.timeScale = 1.1;
+    else this.once(clips[Math.floor(Math.random() * clips.length)], 1.1, 0, 0.1);
     this.events.push('death');
     this.settled = false;
     this.shatterAt = -1;
@@ -1210,6 +1313,7 @@ export class Enemy {
     this.hasSlot = false;
     this.cooldown = 0;
     this.yaw = this.opts.yaw ?? 0;
+    this.appearT = -1;
     for (const m of this.materials) { m.opacity = m.userData.baseOpacity ?? 1; m.transparent = !!m.userData.baseTransparent; }
     if (this.opts.kneel) { this.state = 'dormant'; this.pose(this.arch.clips.kneel ?? this.arch.clips.idle); this.root.visible = true; }
     else if (this.opts.rise) { this.state = 'hidden'; this.root.visible = false; }

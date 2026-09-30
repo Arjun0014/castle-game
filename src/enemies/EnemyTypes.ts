@@ -54,6 +54,25 @@ export const PAST_COUNTERPART: Partial<Record<ArchetypeId, ArchetypeId>> = {
   goblin: 'guard', goblin_king: 'royal_warden', bat: 'remnant_guard', widow: 'archer', widowling: 'remnant_guard', widow_mother: 'royal_warden',
   maw: 'kingsguard', crown_brute: 'royal_warden',
 };
+/**
+ * Health from kills (session 14): every Echo destroyed gives some of her blood back, scaled by how dangerous it was
+ * (PLAYER_HP = 240). Aggressive play is rewarded without making her immortal: a guard's kill (+18) is about one of
+ * its blows; a mini-boss gives back nearly half the bar. The Last Crown's adds heal ×KILL_HEAL_CROWN_FIGHT (they are
+ * the fight's pacing and her only way to recover there); memory-return reinforcements ×KILL_HEAL_REINFORCED (no farming).
+ */
+export type KillTier = 'weak' | 'normal' | 'elite' | 'mini' | 'boss';
+export const KILL_TIER: Record<ArchetypeId, KillTier> = {
+  bat: 'weak', widowling: 'weak', remnant: 'weak', remnant_guard: 'weak', goblin: 'weak', wraith: 'weak',
+  guard: 'normal', muster: 'normal', hollow: 'normal', archer: 'normal', echo_archer: 'normal',
+  royal_warden: 'elite', hollow_warden: 'elite', widow: 'elite', crown_brute: 'elite',
+  gate_warden: 'mini', kingsguard: 'mini', goblin_king: 'mini', widow_mother: 'mini', maw: 'mini',
+  last_crown: 'boss',
+};
+export const KILL_HEAL: Record<KillTier, number> = { weak: 8, normal: 18, elite: 40, mini: 110, boss: 0 };
+export const KILL_HEAL_CROWN_FIGHT = 1.6;
+export const KILL_HEAL_CROWN_MIN = 16;
+export const KILL_HEAL_REINFORCED = 0.6;
+
 export const MONSTER_RIGS = new Set<AssetId>(['hollow', 'ghost', 'goblin', 'bat', 'widow', 'mutant']);
 
 /** Hit window from the hero manifest's measured sword peak (same clip, retargeted). */

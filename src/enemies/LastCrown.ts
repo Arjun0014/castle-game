@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Enemy, type EnemyCtx } from './Enemy';
-import type { Archetype } from './EnemyTypes';
+import type { Archetype, ArchetypeId } from './EnemyTypes';
 import type { Game } from '../game/Game';
 import type { TimeState } from '../levels/Materials';
 import { Spells, GOLD, VIOLET, EMBER } from '../vfx/Spells';
@@ -38,6 +38,32 @@ const PHASE_RANGE = [0, 8.5, 7.5, 6.5];
 /** default ring radius she keeps to; the arena's lens marker overrides it (prop r; session 9: the Crownheart ring) */
 const ARENA_R = 10.5;
 
+/**
+ * Add waves (session 14): the fight's pacing, not clutter. She calls the castle's memory at set beats — 80 % in phase 1,
+ * each phase break, once more mid phase 2, then every ~24 s of phase 3 while the field is clear — and the fallen of
+ * this floor rise at the ring's edge (EnemyManager.revive: the floor's own bodies, nothing loaded mid-fight). The
+ * Present sends the monsters she made, the Past its guards. Never more than ADD_CAP adds at once; while three or more
+ * stand she casts a little less often (her gap x1.3) so the hero can cut through them — every kill heals
+ * xKILL_HEAL_CROWN_FIGHT (EnemyTypes), her only way to recover here.
+ */
+type AddWave = 'first' | 'break2' | 'mid2' | 'break3' | 'late';
+const ADD_WAVES: Record<AddWave, { PRESENT: ArchetypeId[]; PAST: ArchetypeId[] }> = {
+  first: { PRESENT: ['goblin', 'goblin', 'bat'], PAST: ['guard', 'remnant_guard', 'muster'] },
+  break2: { PRESENT: ['crown_brute', 'widowling', 'widowling'], PAST: ['royal_warden', 'muster', 'muster'] },
+  mid2: { PRESENT: ['bat', 'goblin', 'goblin', 'widowling'], PAST: ['guard', 'guard', 'archer'] },
+  break3: { PRESENT: ['widow', 'goblin', 'remnant', 'remnant'], PAST: ['royal_warden', 'guard', 'muster'] },
+  late: { PRESENT: ['goblin', 'bat', 'widowling'], PAST: ['guard', 'muster', 'remnant_guard'] },
+};
+/** stand-ins when a kind has no fallen body on the floor (same memory) */
+const ADD_FALLBACK: Record<TimeState, ArchetypeId[]> = {
+  PRESENT: ['goblin', 'widowling', 'bat', 'remnant', 'crown_brute', 'widow'],
+  PAST: ['guard', 'muster', 'remnant_guard', 'archer', 'royal_warden'],
+};
+const ADD_CAP = 5;
+const MID2_AFTER = 20;
+const LATE_EVERY = 24;
+const LATE_MAX = 2;
+
 const _v = new THREE.Vector3();
 const _w = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
@@ -66,6 +92,14 @@ export class LastCrown extends Enemy {
   private nextBind = 12;
   private beamYaw = 0;
   private summoned80 = false;
+  /** add waves already called this attempt, the phase start, the last wave's time, the late waves */
+  private wavesDone = new Set<AddWave>();
+  private phaseAt = 0;
+  private lastWaveAt = -1e9;
+  private lateCount = 0;
+  private waveN = 0;
+  /** tests: every wave [time, wave, memory, kinds] */
+  waveLog: [number, string, string, string[]][] = [];
   private deathT = 0;
   private breakTo = 0;
   private lens: THREE.Vector3;
@@ -107,6 +141,17 @@ export class LastCrown extends Enemy {
       },
       sound: (id, at, vol, rate) => this.sfx(id, at, vol, rate),
     }, this.wedges, this.lens);
+    this.conceal();
+  }
+
+  /**
+   * Not there until her reveal (session 14): she used to stand idle on the lens from the moment the floor loaded and
+   * could be seen — body and shadow — across the chamber before the scene that brings her down out of the heart.
+   * 'hidden' is never drawn (EnemyManager), casts no shadow, shows no aura and is not a target.
+   */
+  private conceal() {
+    this.state = 'hidden';
+    this.root.visible = false;
   }
 
   // ---------------------------------------------------------------------------------------------- helpers
@@ -163,7 +208,8 @@ export class LastCrown extends Enemy {
     this.updateWard(dt, ctx.state);
     this.updateSlip(dt, ctx.state);
     this.updateBinding(dt);
-    if (this.phase === 1 && !this.summoned80 && this.hp < this.arch.hp * 0.8) { this.summoned80 = true; this.g.enemies.summonRemnants(2, this.lens); }
+    if (this.phase === 1 && !this.summoned80 && this.hp < this.arch.hp * 0.8) { this.summoned80 = true; this.callWave('first'); }
+    this.paceWaves();
     if (this.phase === 3 && Math.random() < dt * 20) {
       const a = Math.random() * Math.PI * 2, r = Math.random() * 12;
       this.g.fx.emit(this.lens.clone().add(new THREE.Vector3(Math.cos(a) * r, 0.1, Math.sin(a) * r)), new THREE.Vector3(0, 0.8 + Math.random(), 0), EMBER, 1.4, 0.06, -0.3, 0.3);
@@ -261,7 +307,7 @@ export class LastCrown extends Enemy {
       this.spells.setBeam(false);
       this.mode = 'idle'; this.t = 0;
       const [a, b] = PHASE_GAP[this.phase];
-      this.gap = a + Math.random() * (b - a);
+      this.gap = (a + Math.random() * (b - a)) * (this.addsAlive() >= 3 ? 1.3 : 1);
       // phase 3 chains a second spell straight away now and then
       if (this.phase === 3 && Math.random() < 0.35) this.gap = 0.15;
       this.loop(this.arch.clips.idle, 1, 0.25);
@@ -494,7 +540,7 @@ export class LastCrown extends Enemy {
     this.spells.wave(this.pos, 16, 12, 0, EMBER);
     if (p.pos.distanceTo(this.pos) < 6) p.vel.addScaledVector(p.pos.clone().sub(this.pos).setY(0).normalize(), 9);
     g.time.gain(Math.max(0, 100 - g.time.charge) + 100, 'surge');
-    g.enemies.summonRemnants(2, this.lens);
+    this.callWave(next === 2 ? 'break2' : 'break3');
   }
   private updateBreak(dt: number) {
     void dt;
@@ -502,6 +548,7 @@ export class LastCrown extends Enemy {
     if (this.t > 2.8 && this.curName === 'kneel_idle') this.once('rise', 1.2, 0, 0.2);
     if (this.t > 3.7) {
       this.phase = this.breakTo;
+      this.phaseAt = this.g.t;
       this.g.heart?.setPhase(this.phase);
       this.g.signals.emit('boss:phase', { id: 'last_crown', phase: this.phase });
       this.invuln = false;
@@ -518,6 +565,7 @@ export class LastCrown extends Enemy {
     this.mode = 'dying'; this.t = 0; this.deathT = 0;
     this.untargetable = true;
     this.spells.clearAll();
+    g.enemies.endGroups('A');
     this.once('death', 0.9, 0, 0.1);
     this.sfx('boss_death', this.pos, 1.3);
     g.fx.slowmo(1.2, 0.3);
@@ -573,15 +621,20 @@ export class LastCrown extends Enemy {
     this.phase = 1; this.mode = 'idle'; this.t = 0; this.gap = 2.5; this.invuln = false; this.untargetable = false;
     this.wardUp = false; this.bindT = -1; this.slipT = -1; this.staggerT = 0; this.summoned80 = false; this.castId = '';
     this.nextWard = 14; this.nextSlip = 20; this.nextBind = 12;
+    this.wavesDone.clear(); this.lateCount = 0; this.lastWaveAt = -1e9; this.phaseAt = 0;
     this.spells.clearAll();
     this.g.heart?.setPhase(1);
+    // a retry: out of sight again until the reveal replays
+    this.conceal();
   }
 
   /** Floor time is relative: schedule the phase clocks from the moment the fight starts. */
   activate() {
     const was = this.triggered;
     super.activate();
-    if (!was) { const t = this.g.t; this.nextWard = t + 14; this.nextSlip = t + 20; this.nextBind = t + 12; this.gap = 2.2; this.t = 0; }
+    // (the base wakes a hidden body with its rise clip; she has her own entrance — beginIntro, the same frame)
+    if (this.state === 'rise' || this.state === 'hidden') { this.setState('chase'); this.root.visible = true; }
+    if (!was) { const t = this.g.t; this.nextWard = t + 14; this.nextSlip = t + 20; this.nextBind = t + 12; this.gap = 2.2; this.t = 0; this.phaseAt = t; }
   }
 
   /**
@@ -592,6 +645,8 @@ export class LastCrown extends Enemy {
     const g = this.g, p = g.player;
     if (!this.heartPos || !p.alive) return false;
     this.mode = 'intro'; this.introT = 0; this.invuln = true; this.untargetable = true;
+    if (this.state === 'hidden' || this.state === 'rise') this.setState('chase');
+    this.root.visible = true;
     this.pos.copy(this.heartPos).setY(this.heartPos.y - 3.2);
     this.yaw = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
     this.loop('idle', 1, 0);
@@ -649,6 +704,70 @@ export class LastCrown extends Enemy {
       g.touch?.cinematic(false);
       this.loop(this.arch.clips.idle, 1, 0.3);
     }
+  }
+
+  // ---------------------------------------------------------------------------------------------- add waves
+  /** her adds standing right now in the hero's memory (those left in the other one wait there, out of the fight) */
+  addsAlive() {
+    const st = this.g.time.state;
+    let n = 0;
+    for (const enc of this.g.enemies.encounters.values()) {
+      if (!enc.reinforce || !enc.id.startsWith('A')) continue;
+      for (const e of enc.enemies) if (e.alive && (e.owner === st || e.owner === 'BOTH')) n++;
+    }
+    return n;
+  }
+
+  /** the timed beats: once mid phase 2, then every LATE_EVERY s of phase 3 while the field is (nearly) clear */
+  private paceWaves() {
+    const now = this.g.t;
+    if (this.mode === 'break' || this.mode === 'dying' || this.mode === 'intro') return;
+    if (this.phase === 2 && !this.wavesDone.has('mid2') && now - this.phaseAt > MID2_AFTER && this.addsAlive() <= 1) this.callWave('mid2');
+    if (this.phase === 3 && this.lateCount < LATE_MAX && now - Math.max(this.phaseAt, this.lastWaveAt) > LATE_EVERY && this.addsAlive() <= 1) {
+      this.lateCount++;
+      this.callWave('late', true);
+    }
+  }
+
+  /** Call a wave: the Crownheart flares, a line, and the fallen rise at the ring's edge, away from her and the hero. */
+  private callWave(w: AddWave, again = false) {
+    if (this.wavesDone.has(w) && !again) return;
+    this.wavesDone.add(w);
+    const g = this.g, em = g.enemies, st = g.time.state, p = g.player.pos;
+    const room = Math.max(0, ADD_CAP - this.addsAlive());
+    const want = ADD_WAVES[w][st].slice(0, room);
+    if (!want.length) return;
+    // spots: on the ring, never next to her or on top of the hero, never in the Present's wedges (holes)
+    const spots = em.walkableAround(this.lens, st, this.arenaR * 0.55, this.arenaR * 1.05, 6)
+      .filter((q) => q.distanceTo(this.pos) > 4.5 && !(st === 'PRESENT' && this.inWedge(q)));
+    const taken = new Set<Enemy>();
+    const list: { e: Enemy; at: THREE.Vector3 | null }[] = [];
+    for (const kind of want) {
+      if (!spots.length) break;
+      const kinds = [kind, ...ADD_FALLBACK[st].filter((k) => k !== kind)];
+      let body: Enemy | null = null;
+      for (const k of kinds) {
+        body = em.fallen([k], this.lens, st).find((e) => !taken.has(e) && !e.opts.perch) ?? null;
+        if (body) break;
+      }
+      if (!body) continue;
+      taken.add(body);
+      // the spot farthest from the hero first: they rise across the ring, never in her face
+      spots.sort((a, b) => b.distanceTo(p) - a.distanceTo(p));
+      list.push({ e: body, at: spots.shift()! });
+    }
+    this.lastWaveAt = g.t;
+    const id = `A${++this.waveN}`;
+    if (list.length) em.openGroup(id, st, this.lens, list);
+    const short = want.length - list.length;
+    // no fallen body of any kind left: the pooled Remnants stand in
+    if (short > 0) em.summonRemnants(Math.min(2, short), this.lens);
+    this.waveLog.push([+g.t.toFixed(1), w, st, list.map((x) => x.e.arch.id)]);
+    // the call itself: she draws on the heart, the chamber answers
+    g.heart?.charge(0.6);
+    g.hud.prompt(st === 'PAST' ? "The Crown calls the castle's guard." : 'The Crown calls up what the castle became.', 3);
+    this.sfx('crown_resonance', this.lens, 0.8, 1.15);
+    g.rig.addShake(0.18);
   }
 
   dispose() {

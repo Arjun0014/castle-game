@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Game } from '../game/Game';
 import type { Enemy } from '../enemies/Enemy';
+import type { ArchetypeId } from '../enemies/EnemyTypes';
 import { Platform } from '../platform/Platform';
 
 const _s1 = new THREE.Vector3(), _s2 = new THREE.Vector3(), _sr = new THREE.Vector3(), _sc = new THREE.Vector3();
@@ -49,13 +50,34 @@ function segDist(p1: THREE.Vector3, q1: THREE.Vector3, p2: THREE.Vector3, q2: TH
  * Kill credit (resonance, heal, kill signal, encounter clear) happens exactly once, at the final blow
  * (EnemyManager.finisherKill); until then the foe is alive in state 'finisher' so the encounter cannot clear early.
  */
-export type FinisherId = 'stab' | 'frenzy' | 'kick' | 'headsman' | 'passing';
+export type FinisherId = 'stab' | 'frenzy' | 'kick' | 'headsman' | 'passing' | 'stand';
 export const FINISHERS: FinisherId[] = ['stab', 'frenzy', 'kick', 'headsman', 'passing'];
 
 const UP = new THREE.Vector3(0, 1, 0);
 /** hero → foe distance at which each finisher is staged (m); the passing cut starts farther out */
-const STANDOFF: Record<FinisherId, number> = { stab: 1.05, frenzy: 1.35, kick: 1.45, headsman: 1.3, passing: 1.7 };
-const DURATION: Record<FinisherId, number> = { stab: 1.85, frenzy: 2.0, kick: 2.15, headsman: 1.95, passing: 1.9 };
+const STANDOFF: Record<FinisherId, number> = { stab: 1.05, frenzy: 1.35, kick: 1.45, headsman: 1.3, passing: 1.7, stand: 0 };
+const DURATION: Record<FinisherId, number> = { stab: 1.85, frenzy: 2.0, kick: 2.15, headsman: 1.95, passing: 1.9, stand: 1.55 };
+
+/**
+ * Mini-boss finishers (session 14): every titled mini-boss and elite Warden dies in a finisher — guaranteed on the
+ * killing blow (no chance roll, no cooldown, any blow incl. the Whirlwind / Crownbreaker), with the variants that
+ * read best on its body, in this order of preference. Staging is tried from the side she struck from, then round the
+ * body (±45°, ±90°, ±135°, behind) with a longer step; if nothing is safe (a wall, a hole, no camera) the in-place
+ * 'stand' finisher plays — no step, the gameplay camera — so it never fails and never stages over a drop.
+ * The Last Crown keeps her own death scene (LastCrown.beginDeath).
+ */
+export const MINI_FINISH: Partial<Record<ArchetypeId, FinisherId[]>> = {
+  gate_warden: ['headsman', 'frenzy', 'stab', 'passing'],
+  kingsguard: ['frenzy', 'headsman', 'stab', 'passing'],
+  goblin_king: ['stab', 'frenzy', 'headsman', 'passing'],
+  widow_mother: ['stab', 'passing'],
+  maw: ['frenzy', 'passing'],
+  royal_warden: ['headsman', 'stab', 'frenzy', 'passing', 'kick'],
+  hollow_warden: ['frenzy', 'headsman', 'stab', 'passing', 'kick'],
+  crown_brute: ['frenzy', 'passing'],
+};
+/** approach angles round the body tried for a guaranteed finisher (rad; 0 = the side she struck from) */
+const MINI_ROTS = [0, 0.8, -0.8, 1.6, -1.6, 2.4, -2.4, Math.PI];
 /**
  * the passing cut: lateral offset of her line past the body, and how far beyond it she comes to rest. Session 11:
  * NEGATIVE = the body passes on her sword side — at +0.55 the slide cut's sweep went by 0.55–1.7 m from it (measured);
@@ -137,28 +159,50 @@ export class Finishers {
     if (this.active || !p.alive || g.finished || p.scripted) return false;
     const refuse = (why: string) => { this.log.push({ t: +g.t.toFixed(2), enemy: e.arch.id, enc: e.encounter, result: 'refused: ' + why }); this.killsSince++; return false; };
     const kind = e.arch.finisher ?? 'humanoid';
-    if (e.isFlying || e.arch.boss || kind === 'none') return refuse('kind');
+    // a mini-boss or an elite Warden: always (the Last Crown has her own death scene)
+    // (not the Crown's own adds — a brute rising in her fight dies fast: she stays the focus)
+    const mini = e.arch.id !== 'last_crown' && !g.enemies.crownFight ? MINI_FINISH[e.arch.id] : undefined;
+    if (!mini && (e.isFlying || e.arch.boss || kind === 'none')) return refuse('kind');
     const atk = p.attack;
-    if (atk && (atk.whirl || atk.shock || atk.id === 'EXECUTE')) return refuse('area / execution blow');
+    if (!mini && atk && (atk.whirl || atk.shock || atk.id === 'EXECUTE')) return refuse('area / execution blow');
+    // her adds in the Last Crown's fight die fast: the Crown stays the focus (and she never holds back for one)
+    if (!mini && g.enemies.crownFight) return refuse('the Crown fight');
     const enc = g.enemies.encounters.get(e.encounter);
     // a proper fight (fissure / boss adds have no encounter record of their own and die normally)
-    if (!enc || !enc.triggered || enc.cleared) return refuse('no proper encounter');
-    const maxWave = Math.max(...enc.enemies.map((x) => x.wave));
-    const last = enc.wave >= maxWave && !enc.enemies.some((x) => x !== e && x.alive);
+    if (!mini && (!enc || !enc.triggered || enc.cleared)) return refuse('no proper encounter');
+    const maxWave = enc ? Math.max(...enc.enemies.map((x) => x.wave)) : 1;
+    const last = !enc || (enc.wave >= maxWave && !enc.enemies.some((x) => x !== e && x.alive));
     const T = FINISHER_TUNING;
     const since = g.t - this.lastAt;
-    if (!this.force && !this.always) {
+    if (!this.force && !this.always && !mini) {
       if (since < (last ? T.lastCooldown : T.midCooldown)) return refuse('cooldown');
       const chance = last ? T.lastChance : Math.min(T.midMax, T.midBase + T.midPerKill * this.killsSince);
       if (Math.random() > chance) return refuse('chance');
     }
-    const order: FinisherId[] = this.force ? [this.force] : this.pick(e, kind);
-    for (const id of order) {
-      const why = this.plan(id, e);
-      if (!why) { this.lastFight = last; this.begin(id, e); return true; }
-      this.log.push({ t: +g.t.toFixed(2), enemy: e.arch.id, enc: e.encounter, result: `${id} unsafe: ${why}` });
+    const order: FinisherId[] = this.force ? [this.force] : mini ? this.miniOrder(e, mini) : this.pick(e, kind as 'humanoid' | 'beast');
+    for (const rot of mini ? MINI_ROTS : [0]) {
+      for (const id of order) {
+        if (id === 'stand') continue;
+        const why = this.plan(id, e, rot, !!mini);
+        if (!why) { this.lastFight = last; this.mini = !!mini; this.begin(id, e); return true; }
+        this.log.push({ t: +g.t.toFixed(2), enemy: e.arch.id, enc: e.encounter, result: `${id}${rot ? ` @${rot.toFixed(1)}` : ''} unsafe: ${why}` });
+      }
     }
+    if (mini || this.force === 'stand') { this.lastFight = last; this.mini = !!mini; this.planStand(e); this.begin('stand', e); return true; }
     return refuse('no safe staging');
+  }
+
+  /** this finisher is a mini-boss's (guaranteed; the camera and staging scale with the body) */
+  mini = false;
+  /** camera distance factor for big bodies (1 = a man; a 2.7 m Maw ≈ 1.4) */
+  private camK = 1;
+
+  /** a mini-boss's variants: its preferred order, but not the one just played first (so two fights differ) */
+  private miniOrder(e: Enemy, list: FinisherId[]): FinisherId[] {
+    let order = [...list];
+    if (e.arch.scale > 1.2 && e.arch.asset !== 'knight') order = order.filter((id) => id !== 'kick');
+    if (order.length > 1 && order[0] === this.lastId) order.push(order.shift()!);
+    return order;
   }
 
   /**
@@ -221,11 +265,14 @@ export class Finishers {
   }
 
   /** Stage variant `id` for foe `e`: returns null when safe (the plan is stored), else the reason. */
-  private plan(id: FinisherId, e: Enemy): string | null {
+  private plan(id: FinisherId, e: Enemy, rot = 0, mini = false): string | null {
     const g = this.g, p = g.player, w = g.level.collision, st = g.time.state;
     const fwd = this.fwd.subVectors(e.pos, p.pos).setY(0);
     if (fwd.lengthSq() < 0.04) fwd.copy(p.facing);
     fwd.normalize();
+    // a guaranteed finisher may come at the body from another side (walls, holes, no room for the camera)
+    if (rot) fwd.applyAxisAngle(UP, rot);
+    this.camK = THREE.MathUtils.clamp(e.height / 1.95, 1, 1.45);
     this.right.crossVectors(fwd, UP).normalize();
     const bodies = this.others(e);
     // a bigger body is met farther out (its surface is nearer): the blade's measured reach stays on its flesh
@@ -240,7 +287,7 @@ export class Finishers {
     if (bodies.some((b) => b.pos.distanceTo(hero) < b.radius + 0.7)) return 'an Echo stands there';
     // the step in must be unobstructed and short
     const step = hero.clone().sub(p.pos).setY(0);
-    if (step.length() > 3.2) return 'too far';
+    if (step.length() > (mini ? 4.8 : 3.2)) return 'too far';
     if (step.length() > 0.05 && w.raycast(p.pos.clone().setY(p.pos.y + 0.6), step.clone().normalize(), step.length(), st)) return 'step blocked';
     // never over a hole: a ring round the pair must have floor under it
     const mid = this.mid.copy(hero).lerp(e.pos, 0.5);
@@ -308,6 +355,19 @@ export class Finishers {
 
   /** the camera path of each variant, in the pair's frame (fwd = hero → foe, right, up) */
   private setShot(id: FinisherId, e: Enemy) {
+    this.setBaseShot(id, e);
+    if (this.camK <= 1.001) return;
+    // a big body (a mini-boss): the same composition, pulled back from the pair and looking a little higher
+    const base = this.shot, k = this.camK;
+    const pivot = this.heroTo.clone().lerp(e.pos, 0.5).setY(this.heroTo.y + 1.1);
+    this.shot = (t, out) => {
+      base(t, out);
+      out.pos.sub(pivot).multiplyScalar(k).add(pivot);
+      out.pos.y += (k - 1) * 0.9;
+      out.look.y += (k - 1) * 0.55;
+    };
+  }
+  private setBaseShot(id: FinisherId, e: Enemy) {
     const fwd = this.fwd.clone(), right = this.right.clone().multiplyScalar(this.side);
     const hero = this.heroTo.clone(), foe = e.pos.clone(), mid = hero.clone().lerp(foe, 0.5);
     const sc = e.arch.scale;
@@ -357,6 +417,22 @@ export class Finishers {
     }
   }
 
+  /**
+   * The in-place finisher (a guaranteed one with nowhere safe to stage): she stays where she stands and delivers one
+   * great overhead cleave; the body takes it where it is. No step, no camera move — the gameplay camera, a narrower lens,
+   * slow motion — so it is safe beside any wall or hole.
+   */
+  private planStand(e: Enemy) {
+    const p = this.g.player;
+    this.fwd.subVectors(e.pos, p.pos).setY(0);
+    if (this.fwd.lengthSq() < 0.04) this.fwd.copy(p.facing);
+    this.fwd.normalize();
+    this.right.crossVectors(this.fwd, UP).normalize();
+    this.heroTo.copy(p.pos);
+    this.heroPath = (_t, out) => out.copy(this.heroTo);
+    this.shot = () => undefined;
+  }
+
   // ------------------------------------------------------------------ playback
   private begin(id: FinisherId, e: Enemy) {
     const g = this.g, p = g.player;
@@ -371,7 +447,7 @@ export class Finishers {
     this.dur = DURATION[id];
     this.followBody = 0;
     this.trailOn = false;
-    this.fovOffset = id === 'stab' ? 7 : id === 'frenzy' ? 3 : id === 'headsman' ? 4 : 2;
+    this.fovOffset = id === 'stab' ? 7 : id === 'frenzy' ? 3 : id === 'headsman' ? 4 : id === 'stand' ? 6 : 2;
     this.log.push({ t: +g.t.toFixed(2), enemy: e.arch.id, enc: e.encounter, result: `played ${id}${this.lastFight ? ' (last)' : ' (mid-fight)'}` });
     // the foe is caught: alive (the encounter must not clear yet) but out of the fight
     g.enemies.holdForFinisher(e);
@@ -380,8 +456,7 @@ export class Finishers {
     this.heroFrom.copy(p.pos);
     p.beginScripted();
     p.yaw = Math.atan2(this.fwd.x, this.fwd.z);
-    g.rig.cine = this.cam;
-    this.shot(0, this.cam);
+    if (id !== 'stand') { g.rig.cine = this.cam; this.shot(0, this.cam); }
     g.hud.cinematic(true);
     g.touch?.cinematic(true);
     g.audio.play('blade_ring', { rate: 0.7, vol: 0.6 });
@@ -461,7 +536,15 @@ export class Finishers {
     const flesh = e.arch.asset === 'knight' ? 'armor' : 'flesh';
     const bloodCol = e.arch.blood ?? (e.arch.asset === 'hollow' ? 0x3c0906 : 0x7a0909);
     const gibKind = e.arch.asset === 'hollow' ? 'rotten' : e.arch.asset === 'knight' ? 'armor' : 'flesh';
-    const react = (heavy: boolean) => { if (!beast) e.once(heavy ? e.arch.clips.hitH : e.arch.clips.hitL, heavy ? 1.1 : 1.5, 0, 0.05); };
+    // the Maw / a crown brute has no hit clips: its reaction is the opening stumble of its fall, started once and slowly
+    // (Enemy.die carries on with that clip instead of restarting it)
+    const mutant = e.arch.asset === 'mutant';
+    let reeling = false;
+    const react = (heavy: boolean) => {
+      if (beast) return;
+      if (mutant) { if (!reeling) { reeling = true; e.once('death', 0.42, 0.05, 0.12); } return; }
+      e.once(heavy ? e.arch.clips.hitH : e.arch.clips.hitL, heavy ? 1.1 : 1.5, 0, 0.05);
+    };
     const kneel = () => { if (!beast && e.actions.has('crouch_idle')) e.once('crouch_idle', 1, 0, 0.22); };
     /** a cut that has just met the body (a contact beat): blood thrown along the blade's travel from where it went in */
     const cut = (sideSign: number, amount: number, heavy = false) => {
@@ -628,6 +711,33 @@ export class Finishers {
         { at: 1.3, fn: () => { g.fx.bloodSpray(this.neckAt, UP, 0.45, bloodCol); g.enemies.finisherKill(e, fwd.clone().negate().setY(-0.2).normalize(), 0.12, 0); } },
       ];
     }
+    if (id === 'stand') {
+      // one great overhead cleave where she stands (gs_cleave from 0.3 at x1.25: through a body ~0.15–0.45 s in)
+      return [
+        { at: 0, fn: () => { anim('gs_cleave', 0.3, 1.25, 0.1); this.trailOn = true; swing(0.85); react(true); g.fx.slowmo(0.7, 0.45); } },
+        { at: 0.12, until: 0.62, fn: () => {
+          const fresh = this.lastGap <= 0.12;
+          const at = fresh ? this.contact.clone() : chest();
+          const d = (fresh ? this.contactDir.clone() : fwd.clone().add(new THREE.Vector3(0, -0.5, 0))).normalize();
+          g.fx.hitstop(0.14);
+          g.fx.slowmo(0.45, 0.45);
+          this.streak(at.clone().addScaledVector(UP, 0.9).addScaledVector(fwd, -0.2), at.clone().addScaledVector(UP, -0.7).addScaledVector(fwd, 0.2), 0xffe6c0);
+          g.fx.bloodSpray(at, d, 1.5, bloodCol);
+          g.fx.bloodSpray(at, fwd.clone().add(new THREE.Vector3(0, 0.8, 0)).normalize(), 1.1, bloodCol);
+          g.gore.splat(at, new THREE.Vector3(0, -1, 0), 1.9, 3);
+          g.audio.play('hit_slice', { pos: at, rate: 0.66, vol: 1.2 });
+          g.audio.play('bone_crunch', { pos: at, rate: 0.85 });
+          g.audio.play('kill_impact', { pos: at, rate: 0.8 });
+          g.rig.addShake(0.45);
+          g.rig.punch(d, 3.2);
+          g.kickFov(5);
+          g.hud.flash('#4a0000', 0.18);
+          Platform.haptic(50);
+          g.enemies.finisherKill(e, fwd, 0.5, gibKind === 'armor' ? 6 : 10);
+        } },
+        { at: 0.9, fn: () => { this.trailOn = false; } },
+      ];
+    }
     // the passing cut
     return [
       // skip the run-up: the knee slide itself, its sweeping cut (1.30 s) meeting the body at 0.36 s
@@ -742,8 +852,8 @@ export class Finishers {
     this.t += dt;
     if (this.heroPath) this.heroPath(this.t, p.pos);
     else {
-      // the step in (0.16 s), facing the foe
-      const k = Math.min(1, this.t / 0.16);
+      // the step in (0.16 s; a longer approach round a mini-boss takes a little longer), facing the foe
+      const k = Math.min(1, this.t / (0.16 + Math.max(0, this.heroFrom.distanceTo(this.heroTo) - 1.6) * 0.06));
       p.pos.lerpVectors(this.heroFrom, this.heroTo, k * k * (3 - 2 * k));
     }
     p.invuln = 1;
@@ -753,7 +863,7 @@ export class Finishers {
       if (b.until !== undefined) this.contactLog.push({ id: this.id!, at: b.at, t: +this.t.toFixed(3), gap: +this.lastGap.toFixed(3) });
       b.done = true; b.fn();
     }
-    this.shot(this.t, this.cam);
+    if (this.id !== 'stand') this.shot(this.t, this.cam);
     if (this.t >= this.dur) this.end();
   }
 

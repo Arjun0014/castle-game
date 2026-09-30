@@ -111,8 +111,10 @@ export function wireSettings(root: HTMLElement, settings: Settings, sound: (k: U
 
 export function creditsHTML() {
   return CREDITS.map((s) => `
-    <section class="mm-cred">
+    <section class="mm-cred${s.byline ? ' mm-cred-top' : ''}">
       <h4 class="mm-h4">${s.title}</h4>
+      ${s.byline ? `<div class="mm-cred-by"><span>A game by</span><b>${s.byline}</b></div>` : ''}
+      ${s.statement ? `<div class="mm-cred-statement">${s.statement.map((p) => `<p>${p}</p>`).join('')}</div>` : ''}
       ${s.intro ? `<p class="mm-cred-intro">${s.intro}</p>` : ''}
       ${s.lines.map((l) => `<div class="mm-cred-line"><span>${l.what}</span><b>${l.who}${l.note ? ` <i>${l.note}</i>` : ''}</b>${l.url ? `<small>${l.url.replace(/^https:\/\//, '')}</small>` : ''}</div>`).join('')}
     </section>`).join('') + '<p class="mm-cred-end">Caer Veyr remembers you.</p>';

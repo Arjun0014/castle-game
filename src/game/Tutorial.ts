@@ -249,7 +249,7 @@ export class Tutorial {
 
   /** the first shift (G1): say what is missing, and why this gate */
   private firstShiftText(inLane: boolean, charged: boolean, hold: string) {
-    if (!charged) return 'A shift needs one full segment of Resonance. Destroy Echoes to fill it — or wait: the castle\'s pull slowly returns.';
+    if (!charged) return 'A shift needs one full segment of Resonance. Destroy Echoes to fill it — or wait a few moments: the castle\'s pull returns.';
     if (!inLane) return 'Go back to the rusted gate in the passage. It is shut in this memory — in the castle\'s memory of itself it stood open.';
     return `Stand before the gate, in the blue ring, and ${hold} until the castle turns. Let go — or take a heavy blow — and the shift breaks.`;
   }
@@ -265,7 +265,7 @@ export class Tutorial {
   private stairShiftText(pad: boolean, ramp: boolean, inPast: boolean, charged: boolean, hold: string) {
     if (inPast) return 'In this memory the stair\'s gate is locked and there is no rubble to climb. Shift back to the Present, climb the rubble to the old landing, and shift there.';
     if (!pad && !ramp) return 'Climb the rubble up to the old landing, then shift there — in the Past the stair above it still stands.';
-    if (!charged) return 'You need a full segment of Resonance to shift. Destroy Echoes — or wait here a while: the castle\'s pull slowly returns.';
+    if (!charged) return 'You need a full segment of Resonance to shift. Destroy Echoes — or wait a few moments: the castle\'s pull returns.';
     return `You stand where the stair's landing was. In the Past the stair above still stands: ${hold} here, and climb on in that memory.`;
   }
 

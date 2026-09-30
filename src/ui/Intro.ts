@@ -9,9 +9,11 @@ const smooth = (a: number, b: number, x: number) => {
 };
 
 /**
- * The opening film. It plays inside the stage after the player's first click (which also unlocked audio), with
- * subtitles driven by the video clock (tools/cinematic/timeline.json -> src/data/opening.json), and hands straight
- * over to gameplay when it ends or is skipped — no reload, the floor is already loaded behind it.
+ * The opening film. It plays inside the stage after the player's first click (which also unlocked audio) and hands
+ * straight over to gameplay when it ends or is skipped — no reload, the floor is already loaded behind it.
+ * Session 14: the film is the Remotion cut "The Castle Remembers" (tools/cinematic/ship_intro.py ->
+ * public/cinematic/intro_720.mp4 + src/data/opening.json); its captions are burned in, so the DOM subtitle track
+ * (used by the session-10 film, driven by the video clock) stays empty.
  *
  * Skip: the Skip button, Esc / Enter / Space, or on touch a tap (which reveals Skip) then Skip.
  * A video that cannot load or play never blocks the game: the error is logged and play begins.
@@ -29,7 +31,8 @@ export class Intro {
   private skipShownAt = 0;
   private useGlow = false;
   private failed = false;
-  private readonly subs: Sub[] = opening.subtitles;
+  /** the Remotion cut (session 14) burns its narration captions into the picture: no DOM subtitle track then */
+  private readonly subs: Sub[] = opening.burnedInCaptions ? [] : (opening.subtitles as Sub[]);
   private readonly fade = opening.subtitleFade as [number, number];
 
   /** Automated runs (autopilot, tests, benchmarks), later floors and `?nointro` go straight to play. */
@@ -109,11 +112,12 @@ export class Intro {
     this.raf = requestAnimationFrame(this.tick);
   }
 
+  /** the smallest encode that still covers the stage's device pixels (the tallest when none does) */
   private pickSource() {
     const r = this.stage.getBoundingClientRect();
     const px = Math.max(r.width, r.height) * (window.devicePixelRatio || 1);
-    const vids = opening.videos;
-    const v = px > 1500 ? vids[0] : vids[1];
+    const vids = [...opening.videos].sort((a, b) => a.height - b.height);
+    const v = vids.find((x) => x.height >= px * 0.85) ?? vids[vids.length - 1];
     return import.meta.env.BASE_URL + v.src;
   }
 

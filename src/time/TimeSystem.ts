@@ -7,15 +7,20 @@ export const PER_SHIFT = 100;
 export const CAPACITY = 200;
 export const SHIFT_COOLDOWN = 1.2;
 /**
- * Passive Resonance (session 11). Outside combat the castle's pull on her blood refills the gauge slowly, so nobody
- * has to hunt Echoes just to try the other memory — but only up to one shift's worth: kills (+25–200), hits (+2) and
- * parries (+12) stay the fast source and the only way to bank a second shift. Paused while any live Echo of her fight
- * is within 22 m (EnemyManager.inCombat) and for PASSIVE_DELAY after combat or a shift, then eases in over 2 s.
- * 1.6/s = an empty gauge holds a shift again after ≈ 66 s of calm; a shift right after another still needs a fight.
+ * Passive Resonance (session 11, retuned session 14). Outside combat the castle's pull on her blood refills the gauge,
+ * so nobody has to hunt Echoes just to try the other memory — but only up to one shift's worth (PASSIVE.cap): kills
+ * (+12–200 at once), hits (+2) and parries (+12) stay the fast source and the only way to bank a second shift.
+ * Paused while any live Echo of her fight is within 22 m (EnemyManager.inCombat), a finisher or a scripted beat; it
+ * resumes `afterCombat` s after the fight and `afterShift` s after a shift, easing in over `ease` s.
+ *
+ * Session 11 ran 1.6/s after 4 s: an empty gauge needed ≈ 66 s of standing about. Session 14 (traversal-tested on
+ * Floor 1, CONTEXT §10 s14): 7/s after 2.5 s (shift) / 2 s (combat) — an empty gauge holds a shift again ≈ 17 s after
+ * a shift, i.e. by the time she has walked to the next place worth shifting; one guard's kill (40) is still ≈ 6 s of it.
  */
-export const PASSIVE_RATE = 1.6;
-export const PASSIVE_CAP = PER_SHIFT;
-export const PASSIVE_DELAY = 4;
+export const PASSIVE = { rate: 7, cap: PER_SHIFT, afterShift: 2.5, afterCombat: 2, ease: 1 };
+/** kept for older imports */
+export const PASSIVE_RATE = PASSIVE.rate;
+export const PASSIVE_CAP = PASSIVE.cap;
 
 export type ShiftVerdict = { ok: true; correction: THREE.Vector3 } | { ok: false; reason: string };
 
@@ -49,16 +54,18 @@ export class TimeSystem {
 
   /** seconds of calm (no combat, no shift) — drives the passive refill */
   calm = 0;
+  /** the calm before the refill resumes: PASSIVE.afterShift after a shift, PASSIVE.afterCombat after a fight */
+  private calmNeeded = PASSIVE.afterCombat;
   /** refilling passively right now (the HUD's gauge shimmers) */
   trickling = false;
-  /** Passive Resonance: see PASSIVE_RATE. `combat` = a live fight is on her (EnemyManager.inCombat). */
+  /** Passive Resonance: see PASSIVE. `combat` = a live fight is on her (EnemyManager.inCombat). */
   passive(dt: number, combat: boolean) {
     this.trickling = false;
-    if (combat || !this.unlocked) { this.calm = 0; return; }
+    if (combat || !this.unlocked) { this.calm = 0; this.calmNeeded = PASSIVE.afterCombat; return; }
     this.calm += dt;
-    if (this.calm < PASSIVE_DELAY || this.charge >= PASSIVE_CAP) return;
-    const ease = Math.min(1, (this.calm - PASSIVE_DELAY) / 2);
-    this.charge = Math.min(PASSIVE_CAP, this.charge + PASSIVE_RATE * ease * dt);
+    if (this.calm < this.calmNeeded || this.charge >= PASSIVE.cap) return;
+    const ease = Math.min(1, (this.calm - this.calmNeeded) / PASSIVE.ease);
+    this.charge = Math.min(PASSIVE.cap, this.charge + PASSIVE.rate * ease * dt);
     this.trickling = true;
   }
 
@@ -85,7 +92,7 @@ export class TimeSystem {
   canBegin(player: Player): { ok: boolean; reason?: string } {
     if (!this.unlocked) return { ok: false, reason: 'Your blood has not yet woken to the castle.' };
     if (this.cooldown > 0) return { ok: false, reason: 'The castle has not settled.' };
-    if (this.charge < PER_SHIFT) return { ok: false, reason: 'Not enough resonance. Defeat Echoes — or give the castle time: its pull returns slowly.' };
+    if (this.charge < PER_SHIFT) return { ok: false, reason: 'Not enough Resonance. Destroy Echoes — or give the castle a few moments: its pull returns.' };
     const v = this.validate(player);
     if (!v.ok) return { ok: false, reason: v.reason };
     return { ok: true };
@@ -101,6 +108,7 @@ export class TimeSystem {
     this.cooldown = SHIFT_COOLDOWN;
     this.shiftCount++;
     this.calm = 0;
+    this.calmNeeded = PASSIVE.afterShift;
     return v;
   }
 

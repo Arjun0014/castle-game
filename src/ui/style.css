@@ -37,6 +37,13 @@ html.view-portrait #stage { box-shadow: 0 0 0 1px rgba(216,179,106,0.08), 0 0 60
 .hp-bar { height: 10px; background: rgba(0,0,0,0.6); border: 1px solid #5a2222; margin-bottom: 10px; position: relative; }
 .hp-fill { height: 100%; background: linear-gradient(90deg, #7a1216, #c9343a); transition: width .15s; }
 .hp-lag { position: absolute; top: 0; left: 0; height: 100%; background: rgba(255,230,200,0.35); transition: width .8s ease-out .2s; }
+/* health from a kill (session 14): a warm glow along the bar and a rising "+N" */
+.hp-bar.healed { animation: hp-heal .75s ease-out; }
+@keyframes hp-heal { 0% { box-shadow: 0 0 0 rgba(255,120,90,0); border-color: #5a2222; } 25% { box-shadow: 0 0 12px rgba(255,120,90,0.85); border-color: #ffb08a; } 100% { box-shadow: 0 0 0 rgba(255,120,90,0); border-color: #5a2222; } }
+.hp-gain { position: absolute; right: -4px; top: 50%; transform: translate(100%, -50%); font: 600 12px/1 'EB Garamond', Georgia, serif; color: #ffb49a; letter-spacing: 0.04em;
+  text-shadow: 0 0 6px rgba(255,90,60,0.7), 0 1px 2px #000; opacity: 0; pointer-events: none; white-space: nowrap; padding-left: 6px; }
+.hp-gain.on { animation: hp-gain 1.3s ease-out forwards; }
+@keyframes hp-gain { 0% { opacity: 0; transform: translate(100%, -30%); } 15% { opacity: 1; transform: translate(100%, -60%); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(100%, -120%); } }
 .charge { display: flex; gap: 6px; align-items: center; }
 .charge-seg { flex: 1; height: 12px; background: rgba(0,0,0,0.6); border: 1px solid #3a3a48; position: relative; overflow: hidden; }
 /* the fill scales (compositor only) instead of changing width: the passive refill moves it continuously (session 13) */

@@ -3,7 +3,8 @@ import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.j
 import { Enemy, type EnemyCtx } from './Enemy';
 import { LastCrown } from './LastCrown';
 import { makeMonster, MonsterFX } from './Monsters';
-import { ARCHETYPES, MONSTER_RIGS, PAST_COUNTERPART, type ArchetypeId, type AssetId, type EnemyAttack } from './EnemyTypes';
+import { Reinforcements } from './Reinforcements';
+import { ARCHETYPES, MONSTER_RIGS, PAST_COUNTERPART, KILL_TIER, KILL_HEAL, KILL_HEAL_CROWN_FIGHT, KILL_HEAL_CROWN_MIN, KILL_HEAL_REINFORCED, type ArchetypeId, type AssetId, type EnemyAttack } from './EnemyTypes';
 import type { Game } from '../game/Game';
 import type { TimeState } from '../levels/Materials';
 import type { Marker } from '../levels/Level';
@@ -17,7 +18,20 @@ interface Encounter {
   id: string; state: TimeState | 'BOTH'; box: THREE.Box3; enemies: Enemy[];
   triggered: boolean; cleared: boolean; wave: number; optional: boolean; finale: boolean; tutorial: boolean;
   bossFight: boolean; surge: boolean; title?: string;
+  /** a group of revived Echoes (session 14: memory-return reinforcements, EnemyManager.openGroup) */
+  reinforce?: boolean;
+  /** game time the current wave was released (boss fights' kneeling ranks: KNEEL_RELEASE) */
+  waveAt?: number;
+  /** game time the current rank (non-boss) had all fallen */
+  rankDownAt?: number;
 }
+
+/**
+ * A boss fight's next rank that waits KNEELING in plain sight (Floor 1's Last Muster) rises at the boss's HP threshold —
+ * or after `after` s of its wave, or `cleared` s after the rank before it has fallen, whichever comes first (session 14:
+ * on a slower fight the kneeling musters looked stuck for a minute or more).
+ */
+const KNEEL_RELEASE = { after: 20, cleared: 7 };
 
 interface Arrow { mesh: THREE.Mesh; vel: THREE.Vector3; life: number; damage: number; owner: Enemy; state: TimeState; }
 
@@ -105,6 +119,10 @@ export class EnemyManager {
   activeCount = 0;
   fissureCooldown = new Map<string, number>();
   remnants: Enemy[] = [];
+  /** memory-return reinforcements (session 14) */
+  reinforcements: Reinforcements | null = null;
+  /** tests: the last kills' heal (tier value) and what she actually got (capped by the missing health) */
+  healLog: { arch: string; heal: number; got: number }[] = [];
   statues: THREE.Object3D[] = [];
   imprints: { obj: THREE.Object3D; mats: THREE.Material[]; fade: number }[] = [];
   private arrowGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.8, 5).rotateX(Math.PI / 2);
@@ -136,6 +154,7 @@ export class EnemyManager {
     this.checkPerches();
     this.checkFlyers();
     this.spawnStaticFigures();
+    this.reinforcements = new Reinforcements(this.g);
     if (this.enemies.some((e) => e.arch.brain)) this.monsterFx = new MonsterFX(this.g);
     if (this.g.level.markersOf('fissure').length || this.enemies.some((e) => e instanceof LastCrown)) {
       for (let i = 0; i < REMNANT_POOL; i++) this.remnantPool.push(this.makeRemnant());
@@ -250,6 +269,7 @@ export class EnemyManager {
   /** Remove and free every enemy-side object of the floor (rig templates stay with the AssetManager). */
   dispose() {
     const sc = this.g.scene;
+    this.reinforcements?.dispose(); this.reinforcements = null;
     for (const e of [...this.enemies, ...this.remnants, ...this.remnantPool, ...this.pastEchoPool]) { sc.remove(e.root); e.dispose(); }
     for (const st of this.statues) { sc.remove(st); disposeClone(st); }
     for (const im of this.imprints) { sc.remove(im.obj); disposeClone(im.obj); }
@@ -298,6 +318,31 @@ export class EnemyManager {
       });
     }
     for (const m of lvl.markersOf('enemy')) this.spawnEnemy(m);
+    this.adoptStrandedArchers();
+  }
+
+  /**
+   * Session 14: a perched archer of a LATER wave of one fight that stands inside ANOTHER fight's arena of its memory
+   * (outside its own) joins that arena's fight. Archers never wake before their own wave, so it used to stand on its
+   * gallery doing nothing while she fought right under it — Floor 1's two Great Hall gallery archers (E13's wave 2)
+   * over the east gallery (E7) and the west gallery (E9), which she crosses in the Past long before the Last Muster.
+   * Logged in spawnFixes.
+   */
+  private adoptStrandedArchers() {
+    const head = new THREE.Vector3();
+    for (const e of this.enemies) {
+      if (!e.isRanged || !e.opts.perch || e.wave <= 1) continue;
+      const own = this.encounters.get(e.encounter)!;
+      head.copy(e.home).setY(e.home.y + 0.9);
+      if (own.box.containsPoint(head)) continue;
+      const host = [...this.encounters.values()].find((x) => x !== own && !x.finale && !x.bossFight && (x.state === 'BOTH' || x.state === e.owner) && x.box.containsPoint(head));
+      if (!host) continue;
+      own.enemies.splice(own.enemies.indexOf(e), 1);
+      host.enemies.push(e);
+      this.spawnFixes.push(`${e.arch.id} #${e.id} of ${e.encounter} wave ${e.wave} stands in ${host.id}'s arena → joins ${host.id} (wave 1)`);
+      e.encounter = host.id;
+      e.wave = 1;
+    }
   }
 
   /** Past-placed monsters replaced by their living counterpart (see PAST_COUNTERPART); tests expect none on F1/F2 */
@@ -769,6 +814,7 @@ export class EnemyManager {
       }
       e.updateReaction(g.realDt);
       e.update(dt, ctx);
+      if (e.appearT >= 0) e.updateAppear(dt);
       this.presentEnemy(e, dt);
       if (e.root.visible) e.updateBounds();
       active++;
@@ -877,6 +923,7 @@ export class EnemyManager {
     this.g.perf.mark(`encounter ${enc.id} (${enc.enemies.filter((e) => e.wave <= 1).length})`);
     enc.triggered = true;
     enc.wave = 1;
+    enc.waveAt = this.g.t;
     for (const e of enc.enemies) if (e.wave <= 1) e.activate();
     this.bestiary(enc.enemies.filter((e) => e.wave <= 1));
     this.g.signals.emit('encounter:start', { id: enc.id, boss: enc.bossFight || enc.finale, title: enc.title,
@@ -927,6 +974,15 @@ export class EnemyManager {
     if ((enc.finale || enc.bossFight) && this.boss && enc.enemies.includes(this.boss)) {
       const f = this.boss.hp / this.boss.arch.hp;
       advance = (enc.wave === 1 && f < 0.65) || (enc.wave === 2 && f < 0.35);
+      // the next rank kneels where she can see it: it does not wait on the boss's HP for ever
+      const st = this.g.time.state;
+      const next = enc.enemies.filter((e) => e.wave === enc.wave + 1 && e.alive && e.state === 'dormant' && (e.owner === st || e.owner === 'BOTH'));
+      if (!advance && next.length) {
+        const since = this.g.t - (enc.waveAt ?? this.g.t);
+        const rank = enc.enemies.filter((e) => e !== this.boss && e.wave === enc.wave && e.alive && !e.opts.perch && (e.owner === st || e.owner === 'BOTH'));
+        if (!rank.length) enc.rankDownAt = enc.rankDownAt ?? this.g.t; else enc.rankDownAt = undefined;
+        advance = since > KNEEL_RELEASE.after || (enc.rankDownAt !== undefined && this.g.t - enc.rankDownAt > KNEEL_RELEASE.cleared);
+      }
     } else {
       // perched archers never hold back the reinforcements (E3: the 2 balcony archers kept the tent guards
       // standing idle forever once the yard guards were down); a wave of archers only waits for its ground fight
@@ -936,6 +992,8 @@ export class EnemyManager {
     }
     if (advance) {
       enc.wave++;
+      enc.waveAt = this.g.t;
+      enc.rankDownAt = undefined;
       this.g.perf.mark(`wave ${enc.id}.${enc.wave}`);
       for (const e of enc.enemies) if (e.wave === enc.wave) e.activate();
       this.bestiary(enc.enemies.filter((e) => e.wave === enc.wave));
@@ -1199,13 +1257,35 @@ export class EnemyManager {
     this.onKill(e, false, true);
   }
 
+  /** the Last Crown's fight is on (her adds heal more: KILL_HEAL_CROWN_FIGHT) */
+  get crownFight() { return this.boss instanceof LastCrown && this.boss.triggered && this.boss.alive; }
+
+  /** Health a kill gives back (session 14): by danger tier (EnemyTypes KILL_TIER / KILL_HEAL), see there. */
+  killHeal(e: Enemy) {
+    let h = KILL_HEAL[KILL_TIER[e.arch.id] ?? 'normal'];
+    if (this.crownFight && e !== this.boss) h = Math.max(KILL_HEAL_CROWN_MIN, h * KILL_HEAL_CROWN_FIGHT);
+    if (e.reinforced) h *= KILL_HEAL_REINFORCED;
+    return Math.round(h);
+  }
+
   onKill(e: Enemy, voidDeath = false, finisher = false) {
     this.killCount++;
     const pl = this.g.player;
-    if (pl.alive) pl.hp = Math.min(pl.maxHp, pl.hp + (e.arch.boss ? 80 : e.arch.reward >= 70 ? 30 : 12));
+    if (pl.alive) {
+      const heal = Math.min(this.killHeal(e), pl.maxHp - pl.hp);
+      if (heal > 0) {
+        pl.hp += heal;
+        this.g.hud.heal(heal);
+        this.g.fx.healFrom(e.center.clone(), pl, heal);
+      }
+      this.healLog.push({ arch: e.arch.id, heal: this.killHeal(e), got: Math.max(0, heal) });
+      if (this.healLog.length > 40) this.healLog.shift();
+    }
     if (e.hasSlot) { this.releaseSlot(e); e.hasSlot = false; }
-    this.g.time.gain(e.arch.reward, 'kill');
-    this.g.fx.resonanceFrom(e.center.clone(), this.g.player, e.arch.reward);
+    // memory-return reinforcements give back less (their rewards must not make shifting a farm)
+    const reward = Math.round(e.arch.reward * (e.reinforced ? KILL_HEAL_REINFORCED : 1));
+    this.g.time.gain(reward, 'kill');
+    this.g.fx.resonanceFrom(e.center.clone(), this.g.player, reward);
     this.g.audio.release(e.center.clone());
     if (voidDeath) this.g.hud.prompt('Cast into the void.', 2);
     this.g.signals.emit('kill', { arch: e.arch.id, boss: !!e.arch.boss, ranged: e.isRanged, voidDeath, execution: finisher || this.g.player.attack?.id === 'EXECUTE', finisher });
@@ -1304,6 +1384,84 @@ export class EnemyManager {
     }
   }
 
+  // ------------------------------------------------------------------ revived Echoes (session 14)
+  /** a fallen body of this kind exists on the floor (the rig is loaded: the floor built one) */
+  canRevive(kind: ArchetypeId) { return this.enemies.some((e) => e.arch.id === kind); }
+
+  /**
+   * Finished bodies of these kinds — destroyed, faded, and whose own fight is over (never a boss, never one caught in
+   * a finisher) — nearest to `near` first. Bodies of memory `st` first, then the other memory's.
+   */
+  fallen(kinds: ArchetypeId[], near: THREE.Vector3, st: TimeState): Enemy[] {
+    return this.enemies.filter((e) => {
+      if (e.alive || !e.removed || e.arch.boss || !kinds.includes(e.arch.id) || e instanceof LastCrown) return false;
+      const enc = this.encounters.get(e.encounter);
+      return !enc || enc.cleared;
+    }).sort((a, b) => ((a.owner === st || a.owner === 'BOTH') ? 0 : 1) - ((b.owner === st || b.owner === 'BOTH') ? 0 : 1) || a.home.distanceTo(near) - b.home.distanceTo(near));
+  }
+
+  /** walkable points (this memory's nav grid) on a ring rMin..rMax round `c`, at least `clear` m from the hero */
+  walkableAround(c: THREE.Vector3, st: TimeState, rMin: number, rMax: number, clear: number): THREE.Vector3[] {
+    const nav = this.nav, w = this.g.level.collision, p = this.g.player.pos, out: THREE.Vector3[] = [];
+    if (!nav) return out;
+    nav.use(st, this.g.level.flags);
+    for (let k = 0; k < 24 && out.length < 8; k++) {
+      const a = (k / 24) * Math.PI * 2 + Math.random() * 0.2, r = rMin + Math.random() * (rMax - rMin);
+      const q = nav.nearestWalkable(c.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), 2.5);
+      if (!q || Math.abs(q.y - c.y) > 2.5 || q.distanceTo(p) < clear || w.inVoid(q.clone().setY(q.y - 0.3), st)) continue;
+      if (out.some((x) => x.distanceTo(q) < 1.6)) continue;
+      out.push(q.clone());
+    }
+    return out;
+  }
+
+  /**
+   * Bring a fallen Echo of this floor back into the fight `encId` in memory `st` (at its own spot, or at `at`): it is
+   * reset, woken — a riser rises, a kneeler stands — and fades in out of the castle's memory. The floor's own bodies are
+   * reused, so nothing is cloned or compiled mid-game (they were drawn in the floor's GPU warm-up).
+   */
+  revive(e: Enemy, st: TimeState, at: THREE.Vector3 | null, encId: string, opts: { reinforced?: boolean } = {}) {
+    e.origEncounter = e.origEncounter ?? e.encounter;
+    e.reset();
+    if (at) { e.place(at); e.pos.copy(at); }
+    e.owner = st;
+    e.encounter = encId;
+    e.wave = 1;
+    e.reinforced = !!opts.reinforced;
+    e.navReset();
+    e.lastHitBy = -1;
+    e.activate();
+    e.appear(e.state === 'rise' ? 0.45 : 0.75);
+    this.g.fx.shiftBurst(e.pos.clone(), st);
+    return e;
+  }
+
+  /** End every revived group whose id starts with `prefix` (the Last Crown's fall takes her adds with her). */
+  endGroups(prefix: string) {
+    const st = this.g.time.state;
+    for (const enc of this.encounters.values()) {
+      if (!enc.reinforce || !enc.id.startsWith(prefix) || enc.cleared) continue;
+      for (const e of enc.enemies) {
+        if (!e.alive) continue;
+        if (e.hasSlot) { this.releaseSlot(e); e.hasSlot = false; }
+        if ((e.owner === st || e.owner === 'BOTH') && e.root.visible) e.die(); else e.vanish();
+      }
+      enc.cleared = true;
+    }
+  }
+
+  /** A revived group as one fight of its own (finishers, the score and the "fight over" line treat it like any). */
+  openGroup(id: string, st: TimeState, center: THREE.Vector3, list: { e: Enemy; at: THREE.Vector3 | null }[], opts: { reinforced?: boolean } = {}) {
+    const box = new THREE.Box3().setFromCenterAndSize(center.clone(), new THREE.Vector3(34, 14, 34));
+    const enc: Encounter = { id, state: st, box, enemies: [], triggered: true, cleared: false, wave: 1, optional: true, finale: false,
+      tutorial: false, bossFight: false, surge: false, reinforce: true };
+    this.encounters.set(id, enc);
+    for (const { e, at } of list) { this.revive(e, st, at, id, opts); enc.enemies.push(e); }
+    this.g.perf.mark(`reinforce ${id} (${list.length})`);
+    this.g.signals.emit('encounter:start', { id, boss: false, kinds: [...new Set(enc.enemies.map((e) => e.arch.id))], count: enc.enemies.length });
+    return enc;
+  }
+
   /** Boss adds: pooled remnants rising around `near` (on footing, never in a hole). */
   summonRemnants(n: number, near: THREE.Vector3) {
     const g = this.g, st = g.time.state;
@@ -1390,6 +1548,15 @@ export class EnemyManager {
   // ------------------------------------------------------------------ checkpoint reset
   resetUncleared() {
     this.g.setArenaLock(false);
+    // a revived group that was still fighting when she fell is gone again (its bodies wait, fallen, for next time)
+    for (const enc of [...this.encounters.values()]) {
+      if (!enc.reinforce) continue;
+      for (const e of enc.enemies) {
+        if (e.alive) { if (e.hasSlot) { this.releaseSlot(e); e.hasSlot = false; } e.vanish(); }
+        if (e.encounter === enc.id) { e.encounter = e.origEncounter ?? e.encounter; e.reinforced = false; }
+      }
+      this.encounters.delete(enc.id);
+    }
     for (const enc of this.encounters.values()) {
       if (enc.cleared) continue;
       enc.triggered = false;

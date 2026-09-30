@@ -16,6 +16,9 @@ import { ATMO_UNIFORMS } from '../vfx/Atmosphere';
  *   a faint ring on the floor while their objective is active.
  */
 
+/** the shift ring's colour: the SHIFT seal's azure (style.css .t-shift), in both memories */
+export const SHIFT_RING_BLUE = 0x6cc2ff;
+
 /** skills the tutorials wait for (kept for the whole run: floors transition in place) */
 export interface Learned { moved: number; looked: number; hits: number; guarded: boolean; dodged: boolean; shifted: boolean; sigil: boolean; resonance: boolean; heavy: boolean;
   /** floor rewards performed at least once (their unlock tip stays until then) */
@@ -51,7 +54,7 @@ export class Objectives {
     }));
     this.ringMat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
-      uniforms: { uTime: ATMO_UNIFORMS.uAtmoTime, uOpacity: { value: 0 }, uColor: { value: new THREE.Color(0x7cc8ff) } },
+      uniforms: { uTime: ATMO_UNIFORMS.uAtmoTime, uOpacity: { value: 0 }, uColor: { value: new THREE.Color(SHIFT_RING_BLUE) } },
       vertexShader: 'varying vec2 vP; void main() { vP = position.xz / 1.2; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: `uniform float uTime; uniform float uOpacity; uniform vec3 uColor; varying vec2 vP;
 void main() {
@@ -187,7 +190,9 @@ void main() {
       const d = this.ringAt.distanceTo(g.player.pos);
       if (d < 30 && !g.enemies.inCombat) want = d < 1.2 ? 0.45 : 0.9;
       this.ring.position.copy(this.ringAt).setY(this.ringAt.y + 0.06);
-      (this.ringMat.uniforms.uColor.value as THREE.Color).setHex(g.time.state === 'PAST' ? 0x7cc8ff : 0xffb060);
+      // session 14: always the SHIFT seal's azure — "blue = shift here" (the tutorial says "the blue ring"; gold is
+      // reserved for the route markers, game/Guidance.ts). It was amber in the Present, where the first shift happens.
+      (this.ringMat.uniforms.uColor.value as THREE.Color).setHex(SHIFT_RING_BLUE);
     }
     const u = this.ringMat.uniforms.uOpacity;
     u.value += (want - u.value) * Math.min(1, dt * 3);
@@ -226,7 +231,7 @@ void main() {
       if (!g.time.unlocked) { title = null; }
       else if (g.time.charge < 100) text = 'You need a full segment of Resonance. Destroy Echoes to gather it — your blood absorbs what they release.';
       else if (inLane) {
-        text = touch ? 'Stand still and HOLD SHIFT until the castle turns. The gate stood open in its memory.' : 'Stand still and HOLD R until the castle turns. The gate stood open in its memory.';
+        text = touch ? 'Stand in the blue ring and HOLD SHIFT until the castle turns. The gate stood open in its memory.' : 'Stand in the blue ring and HOLD R until the castle turns. The gate stood open in its memory.';
         btn = 'shift';
       } else text = 'Your blood can force the castle into another memory of itself. Go back to the rusted gate.';
     } else if (teach === 'shiftback' && g.time.state === 'PAST' && g.time.unlocked && this.zone('-1,24,-26,-4,-1,5', g.player.pos) && g.enemies.isCleared('E3')) {
@@ -246,7 +251,7 @@ void main() {
       if (past && this.zone('19.9,22.7,11.8,27,0.6,7', p)) text = 'The whole stair stands in this memory. Climb it to the landing above.';
       else if (past) text = "The stair's gate is locked in this memory. Shift back, climb the rubble to the old landing, and shift there.";
       else if (!pad) text = 'The stair has fallen in this memory — the rubble still climbs to where its landing stood. Climb it.';
-      else if (g.time.charge < 100) text = "A shift needs a full segment of Resonance: destroy Echoes, or wait — the castle's pull slowly returns.";
+      else if (g.time.charge < 100) text = "A shift needs a full segment of Resonance: destroy Echoes, or wait a few moments — the castle's pull returns.";
       else { text = touch ? 'Hold SHIFT here: in the Past the stair above still stands.' : 'Hold R here: in the Past the stair above still stands.'; btn = 'shift'; }
     }
     if (this.hitsAtStart === null && teach === 'combat') this.hitsAtStart = L.hits;

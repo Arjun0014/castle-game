@@ -261,6 +261,29 @@ export class HUD {
     }
   }
 
+  /**
+   * Health from a kill (session 14): the bar glows as it refills and a small "+N" rises beside it, so the reward is
+   * seen, not only felt. Restarting the animation needs a reflow — only on a kill, never per frame.
+   */
+  private healT = 0;
+  heal(amount: number) {
+    const bar = this.hpFill.parentElement as HTMLElement;
+    bar.classList.remove('healed');
+    void bar.offsetWidth;
+    bar.classList.add('healed');
+    let tag = bar.querySelector('.hp-gain') as HTMLElement | null;
+    if (!tag) { tag = document.createElement('span'); tag.className = 'hp-gain'; bar.appendChild(tag); }
+    const now = performance.now();
+    // kills in quick succession add up in one tag
+    const prev = now - this.healT < 900 ? Number(tag.dataset.n || 0) : 0;
+    this.healT = now;
+    tag.dataset.n = String(prev + amount);
+    tag.textContent = '+' + (prev + amount);
+    tag.classList.remove('on');
+    void tag.offsetWidth;
+    tag.classList.add('on');
+  }
+
   /** `trickle`: the passive refill is running (the filling segment shimmers softly) */
   setCharge(charge: number, perShift: number, state: TimeState, trickle = false) {
     const col = state === 'PAST' ? '#f0a54a' : '#7fc4ff';

@@ -1,3 +1,4 @@
+import { AUTHOR } from '../data/credits';
 import * as THREE from 'three';
 import { Input } from './Input';
 import { Level, type Marker } from '../levels/Level';
@@ -1319,6 +1320,12 @@ export class Game {
       this.hud.endEl.classList.add('final');
       const ps = this.hud.endEl.querySelectorAll('p');
       ps[ps.length - 1].textContent = 'Caer Veyr is only stone now — and stone can fall. The Uncrowned walks down through the one castle that remains.';
+      if (!this.hud.endEl.querySelector('.end-by')) {
+        const by = document.createElement('p');
+        by.className = 'end-by';
+        by.textContent = `A game by ${AUTHOR} · made with Claude Opus 5.5 and Blender`;
+        this.hud.endEl.appendChild(by);
+      }
     }
     const sub = this.hud.endEl.querySelector('.end-sub') as HTMLElement;
     sub.textContent = `Time ${Math.floor(secs / 60)}m ${Math.floor(secs % 60)}s · Echoes released ${this.enemies.killCount} · Shifts ${this.time.shiftCount} · Deaths ${this.deaths}`;

@@ -285,6 +285,14 @@ export class Effects {
     }
   }
   resonance(player: Player, amount: number) { void player; void amount; }
+  /** Health from a kill (session 14): a short stream of blood-gold motes from the body into her. */
+  healFrom(at: THREE.Vector3, player: Player, amount: number) {
+    const n = Math.min(22, 5 + amount / 6);
+    for (let i = 0; i < n; i++) {
+      const v = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.8 + 0.6, Math.random() - 0.5).multiplyScalar(2.6);
+      this.particles.push({ p: at.clone(), v, life: 1.1, max: 1.1, color: new THREE.Color(i % 3 ? 0xff5a48 : 0xffc070), size: 0.075, grav: 0, target: player.root });
+    }
+  }
 
   afterimage(player: Player) {
     player.model.traverse((o) => {
