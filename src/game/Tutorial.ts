@@ -16,7 +16,10 @@ import { PER_SHIFT } from '../time/TimeSystem';
  * stair: climb the Present's rubble to the old landing → shift there → climb the Past's stair → kneel at its sigil.
  *
  * Action lessons never time out: their card stays while the lesson is relevant, steps aside in a fight, and comes
- * back where it applies. Cards for the time shift say what is missing when it cannot happen yet (Resonance, the right
+ * back where it applies — except the COMBAT lessons (session 14): what to press is highlighted (touch: the button pulses
+ * with a gold ring, a tapping finger and TAP / HOLD; desktop: a glowing key chip on the card), and after two misses — a
+ * swing that hit nothing, a blow taken while learning to guard, a plain block while learning to parry, or ~6.5 s without
+ * trying — the card says MOVING ON and the next lesson begins (nobody is held on a skill they cannot find). Cards for the time shift say what is missing when it cannot happen yet (Resonance, the right
  * place, the right memory). While the two Hollows of E1 are the teachers they cannot die and wait their turn
  * (Enemy.tutorialPassive / minHp) and the hero cannot fall below a third of her health; brief slow motion gives time
  * to read and react (a near-freeze until the first strike, slow blows while learning to guard and parry).
@@ -44,7 +47,16 @@ interface Lesson {
   tick?: (dt: number) => void;
   /** a lesson with no action: complete after this many seconds on screen */
   read?: number;
+  /** a combat lesson (session 14): misses are counted and two of them move on (see Tutorial.practise) */
+  practice?: 'light' | 'heavy' | 'combo' | 'guard' | 'parry' | 'dodge';
+  /** what to press, shown as a key chip on the card (desktop) */
+  key?: string;
+  /** the touch button's tag while it is taught */
+  press?: 'TAP' | 'HOLD';
 }
+
+/** combat lessons: misses before the tutorial moves on, seconds (after the card has been read) without trying = a miss */
+export const PRACTICE = { misses: 2, idle: 6.5, readFirst: 2.5, moveOn: 1.1 };
 
 /** attacks only reachable by chaining (the second+ blow of a combo, the route-B cuts, heavy endings) */
 const CHAINED = new Set(['L3', 'L4', 'L5', 'B2', 'B3', 'B4', 'F1', 'F1c', 'F2', 'F3', 'F4', 'F5', 'H2', 'H3', 'RIPOSTE']);
@@ -118,6 +130,7 @@ export class Tutorial {
       },
       {
         id: 'light', title: 'LIGHT ATTACK', kbm: 'Left-click to strike. Land three blows.', touch: 'Tap ATTACK to strike — your blade finds the nearest foe. Land three blows.', btn: 'light',
+        practice: 'light', key: 'LEFT CLICK', press: 'TAP',
         done: () => this.hitsBy.light >= 3, skip: () => !!e1()?.cleared,
         enter: () => this.teachers(true),
         tick: () => {
@@ -128,15 +141,18 @@ export class Tutorial {
       },
       {
         id: 'heavy', title: 'HEAVY ATTACK', kbm: 'Right-click for a heavy blow — slower, but it staggers and breaks a raised guard.', touch: 'Tap HEAVY for a heavy blow — slower, but it staggers and breaks a raised guard.', btn: 'heavy',
+        practice: 'heavy', key: 'RIGHT CLICK', press: 'TAP',
         done: () => this.hitsBy.heavy >= 1, skip: () => !!e1()?.cleared,
       },
       {
         id: 'combo', title: 'COMBO', kbm: 'Keep striking as each blow lands — the cuts flow into a chain of up to five. End a chain with a heavy blow for a finisher.',
         touch: 'Keep tapping ATTACK as each blow lands — the cuts flow into a chain of up to five. End a chain with HEAVY for a finisher.', btn: 'light',
+        practice: 'combo', key: 'LEFT CLICK · AGAIN · AGAIN', press: 'TAP',
         done: () => this.hitsBy.chained >= 1, skip: () => !!e1()?.cleared,
       },
       {
         id: 'guard', title: 'GUARD', kbm: 'The Echo will strike now. Hold Q to raise your guard against blows from the front.', touch: 'The Echo will strike now. Hold GUARD to raise your sword against blows from the front.', btn: 'block',
+        practice: 'guard', key: 'HOLD  Q', press: 'HOLD',
         done: () => this.blocks + this.parries >= 1, skip: () => !!e1()?.cleared,
         enter: () => { this.teachers(true, 1); this.guardTries = 0; },
         tick: () => this.slowBlows(0.28, false),
@@ -144,13 +160,14 @@ export class Tutorial {
       {
         id: 'parry', title: 'PARRY', kbm: 'Tap Q just as the blow lands — not before. A parry staggers the Echo and feeds your Resonance; strike at once for a riposte.',
         touch: 'Tap GUARD just as the blow lands — not before. A parry staggers the Echo and feeds your Resonance; strike at once for a riposte.', btn: 'block',
-        done: () => this.parries >= 1 || this.guardTries >= 5 || this.t > 40, skip: () => !!e1()?.cleared,
+        practice: 'parry', key: 'TAP  Q  AS IT LANDS', press: 'TAP',
+        done: () => this.parries >= 1 || this.t > 40, skip: () => !!e1()?.cleared,
         enter: () => { this.guardTries = 0; },
         tick: () => this.slowBlows(0.3, true),
       },
       {
-        id: 'dodge', title: 'DODGE', kbm: 'Tap Shift to slip out of a blow — toward where you are moving.',
-        done: () => this.dodged || this.t > 12, skip: () => touch() || !!e1()?.cleared,
+        id: 'dodge', title: 'DODGE', kbm: 'Tap Shift to slip out of a blow — toward where you are moving.', practice: 'dodge', key: 'TAP  SHIFT',
+        done: () => this.dodged, skip: () => touch() || !!e1()?.cleared,
         enter: () => { this.dodged = false; },
       },
       {
@@ -369,11 +386,15 @@ export class Tutorial {
     this.cue = '';
     // overtaken by the player (a different order, a skipped fight): move on without ceremony
     while (L && this.flashT <= 0 && this.t > 0.2 && L.skip?.()) { this.next(); L = this.lessons[this.i]; }
-    if (L && this.flashT <= 0) {
+    if (L && this.flashT <= 0 && this.moveOnT <= 0) {
       L.tick?.(dt);
       if (L.done() && this.t >= (L.read ?? 0) * 0.5) { this.flashT = 0.7; g.hud.lessonDone(); g.audio.ui('select'); }
+      else if (L.practice) this.practise(L, dt, hits);
     }
     if (this.flashT > 0 && (this.flashT -= dt) <= 0) { this.next(); L = this.lessons[this.i]; }
+    // two misses: say so for a moment, then the next lesson (no gold "done" flash — it was not done)
+    if (this.moveOnT > 0) { this.cue = 'MOVING ON'; if ((this.moveOnT -= dt) <= 0) { this.next(); L = this.lessons[this.i]; this.cue = ''; } }
+    this.prevState = p.state;
     if (!L) { this.dispose(); return; }
 
     // slow motion (eased; a beat overrides)
@@ -389,13 +410,70 @@ export class Tutorial {
     if (show) this.shownT += dt;
     const pick = (v?: Text) => (typeof v === 'function' ? v() : v);
     const text = (Platform.isTouch && pick(L.touch)) || pick(L.kbm) || '';
-    g.hud.tutorial(show ? L.title : null, text, this.cue);
+    // what to press: a key chip on the card (desktop) / the button's tag (touch)
+    const teaching = show && this.flashT <= 0 && this.moveOnT <= 0;
+    g.hud.tutorial(show ? L.title : null, text, this.cue, !Platform.isTouch && teaching ? L.key ?? '' : '');
     const btn = typeof L.btn === 'function' ? L.btn() : L.btn;
-    g.touch?.highlight(show && this.flashT <= 0 ? (btn ?? null) : null);
+    g.touch?.highlight(teaching ? (btn ?? null) : null, L.press);
   }
+
+  // ------------------------------------------------------------------ combat lessons: misses (session 14)
+  /** misses in this lesson, seconds since the player last tried, the attack in flight and its hits, the chain */
+  private misses = 0;
+  private idleT = 0;
+  private moveOnT = 0;
+  private curAtk: object | null = null;
+  private atkHits = 0;
+  private offT = 0;
+  private chainTried = false;
+  private prevState = '';
+  /** tests: the misses of the lessons so far [lesson, why] */
+  missLog: [string, string][] = [];
+
+  /**
+   * One frame of a combat lesson that is not done yet: count what went wrong. Nothing counts until the card has been on
+   * screen long enough to read (PRACTICE.readFirst), during a finisher, or while the card is stepped aside.
+   */
+  private practise(L: Lesson, dt: number, hits: number) {
+    const g = this.g, p = g.player, kind = L.practice!;
+    if (!p.alive || g.finisher.active || (L.when && !L.when()) || this.shownT < PRACTICE.readFirst) return;
+    const miss = (why: string) => {
+      this.misses++;
+      this.idleT = 0;
+      this.missLog.push([L.id, why]);
+      if (this.misses >= PRACTICE.misses) { this.moveOnT = PRACTICE.moveOn; g.audio.ui('move'); }
+    };
+    // the attack in flight: a swing that ends without touching anything is a miss (light / heavy lessons)
+    const atk = p.state === 'attack' ? p.attack : null;
+    if (atk !== this.curAtk) {
+      const prev = this.curAtk as { kind?: string } | null;
+      if (prev && this.atkHits === 0) {
+        if (kind === 'light' && prev.kind === 'light') miss('a light swing that hit nothing');
+        if (kind === 'heavy' && (prev.kind === 'heavy' || prev.kind === 'finisher')) miss('a heavy swing that hit nothing');
+      }
+      this.curAtk = atk; this.atkHits = 0;
+      if (atk) { this.idleT = 0; this.chainTried = true; }
+    }
+    if (atk) this.atkHits += hits;
+    // the combo: a chain that has come to rest (0.8 s without a blow) without a chained cut is a miss
+    this.offT = atk ? 0 : this.offT + dt;
+    if (kind === 'combo' && this.chainTried && this.offT > 0.8) { this.chainTried = false; miss('a chain that stopped at its first cut'); }
+    // guard / parry / dodge: a blow that lands on her is a miss; a plain block while learning to parry is one too
+    const tookHit = p.state === 'hit' && this.prevState !== 'hit';
+    if ((kind === 'guard' || kind === 'parry' || kind === 'dodge') && tookHit) miss('took the blow');
+    if (kind === 'parry' && this.blocks > this.blocksSeen) miss('a block, not a parry');
+    this.blocksSeen = this.blocks;
+    if (p.state === 'block' || p.state === 'dodge') this.idleT = 0;
+    // not trying at all
+    this.idleT += dt;
+    if (this.idleT > PRACTICE.idle) miss('did not try');
+  }
+  private blocksSeen = 0;
 
   private next() {
     this.i++;
+    this.misses = 0; this.idleT = 0; this.moveOnT = 0; this.curAtk = null; this.atkHits = 0; this.offT = 0; this.chainTried = false;
+    this.blocksSeen = this.blocks;
     while (this.i < this.lessons.length && this.lessons[this.i].skip?.()) this.i++;
     this.t = 0;
     this.shownT = 0;

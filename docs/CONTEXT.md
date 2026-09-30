@@ -939,6 +939,15 @@ parchment-and-iron RECALL seal, no glow / pulse, smaller name, tether and ring (
 **The LOOK ring** (follow-up): the lower-right camera pocket shows a permanent dashed ring like the stick's (`.t-look-hint`,
 ⌀108 u, 48–55 px clear of Attack / Heavy / Guard at 375×812; `#touch.looking` while a look finger is down). Verified muted:
 a drag inside it turns the camera; the ring goes solid during the drag and back after.
+**Guided combat lessons: highlight + move on** (follow-up, `game/Tutorial.ts` `PRACTICE`, lesson `practice / key / press`):
+light, heavy, combo, guard, parry and dodge show what to press — touch: the button pulses with a gold ring, a TAP / HOLD tag
+and a tapping finger (`TouchControls.highlight(action, tag)`, `.t-btn.teach::after / .teach-tag`); desktop: a glowing key chip
+on the card (`HUD.tutorial(…, key)`, `#hud .tutorial kbd`: LEFT CLICK, RIGHT CLICK, HOLD Q, TAP Q AS IT LANDS, TAP SHIFT).
+After 2 misses (a swing that hit nothing; a blow taken while learning to guard / parry / dodge; a plain block in the parry
+lesson; a chain that stopped at its first cut; 6.5 s without trying — counted only once the card has been up 2.5 s) the card
+says MOVING ON for 1.1 s and the next lesson begins (no gold ✓). The parry's old 5-try fallback is gone (40 s kept as a
+safety). Verified muted: tutorial probe touch 23/23 and desktop 24/24 lessons; a player who never presses anything moves
+from light to finish (light/heavy/combo by 'did not try', guard/parry by 'took the blow'); screenshots of both highlights.
 
 **4. Passive Resonance** (`TimeSystem.PASSIVE`): 7/s (was 1.6), resumes 2.5 s after a shift / 2 s after combat, eases
 in over 1 s, cap one shift (100) — kills stay the fast source and the only way to bank a second shift. Measured

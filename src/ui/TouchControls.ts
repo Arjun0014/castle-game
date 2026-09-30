@@ -261,8 +261,18 @@ export class TouchControls {
   }
 
   /** Pulse one button (tutorial: the first shift, the first guard ...); null clears. */
-  highlight(action: Action | null) {
-    for (const [a, el] of this.buttons) el.classList.toggle('teach', a === action);
+  /**
+   * Pulse one button (tutorial: the first strike, the guard …); null clears. Session 14: `tag` (TAP / HOLD) shows over
+   * it, a gold ring pulses round it and a finger taps it — the new player sees exactly which button to press.
+   */
+  highlight(action: Action | null, tag?: 'TAP' | 'HOLD') {
+    for (const [a, el] of this.buttons) {
+      const on = a === action;
+      el.classList.toggle('teach', on);
+      el.classList.toggle('teach-tag', on && !!tag && a !== 'shift');
+      const em = el.querySelector('em');
+      if (em) em.textContent = on && tag ? tag : 'HOLD';
+    }
   }
   /** Teach a HOLD move on a button (the unlock tip): its HOLD tag shows and the rim breathes; null clears. */
   holdHint(action: Action | null) {

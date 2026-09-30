@@ -258,6 +258,12 @@ html.view-wide .mm-choices { grid-template-columns: 1fr 1fr; }
 #hud .tutorial em { display: none; margin-top: 6px; font: 600 12px/1 'EB Garamond', Georgia, serif; font-style: normal; letter-spacing: 0.4em; margin-right: -0.4em; color: #ffe2a0;
   text-shadow: 0 0 10px rgba(255,190,90,0.9); animation: tut-cue 0.7s ease-in-out infinite alternate; }
 #hud .tutorial.cue em { display: block; }
+/* session 14: what to press in a Guided combat lesson (desktop): a glowing key chip under the text */
+#hud .tutorial kbd { display: none; margin: 7px auto 0; width: fit-content; padding: 3px 11px 4px; font: 600 11px/1.2 'EB Garamond', Georgia, serif; letter-spacing: 0.22em;
+  color: #fff0cc; border: 1px solid rgba(255,214,140,0.9); border-bottom-width: 2px; border-radius: 4px; background: rgba(60,36,14,0.55); white-space: pre;
+  box-shadow: 0 0 12px rgba(255,190,90,0.45); animation: tut-key 1.3s ease-in-out infinite; }
+#hud .tutorial.keyed kbd { display: block; }
+@keyframes tut-key { 0%, 100% { box-shadow: 0 0 6px rgba(255,190,90,0.3); } 50% { box-shadow: 0 0 18px rgba(255,200,110,0.85); } }
 @keyframes tut-cue { from { opacity: 0.55; transform: scale(0.97); } to { opacity: 1; transform: scale(1.03); } }
 #hud .tutorial.done { animation: tut-done 0.8s ease-out; }
 @keyframes tut-done { 0% { border-color: rgba(255,226,160,1); box-shadow: 0 0 0 1px rgba(255,226,160,0.6), 0 0 34px rgba(255,190,90,0.75); }

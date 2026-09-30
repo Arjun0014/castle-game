@@ -57,7 +57,7 @@ export class HUD {
       <div class="channel"><div class="channel-track"><div class="channel-fill"></div></div><div class="channel-text">SHIFTING</div></div>
       <div class="objective"><i>◆</i><span></span></div>
       <div class="subtitle"><span></span></div>
-      <div class="tutorial"><b></b><span></span><em></em></div>
+      <div class="tutorial"><b></b><span></span><em></em><kbd></kbd></div>
       <div class="gift"><small>THE CASTLE ANSWERS YOUR BLOOD</small><b></b><span class="gift-key"></span></div>
       <div class="gift-tip"><b></b><span></span></div>
       <div class="prompt"></div>
@@ -175,8 +175,8 @@ export class HUD {
   private objectiveText: string | null = null;
   private tutorialKey = '';
   private noticeTimer = 0;
-  private notice: { title: string; text: string; cue?: string } | null = null;
-  private persist: { title: string; text: string; cue?: string } | null = null;
+  private notice: { title: string; text: string; cue?: string; key?: string } | null = null;
+  private persist: { title: string; text: string; cue?: string; key?: string } | null = null;
 
   /** The current objective (one short line, top-left). `fresh` = a new objective replaced the old one. */
   objective(text: string | null, fresh = false) {
@@ -193,8 +193,9 @@ export class HUD {
    * Persistent tutorial card (set every frame by the objective system; null hides it). A timed notice
    * (see notice()) takes precedence while it runs.
    */
-  tutorial(title: string | null, text = '', cue = '') {
-    this.persist = title ? { title, text, cue } : null;
+  /** `key`: what to press, as a glowing key chip under the text (Guided combat lessons, desktop) */
+  tutorial(title: string | null, text = '', cue = '', key = '') {
+    this.persist = title ? { title, text, cue, key } : null;
     this.renderTutorial();
   }
   /** Guided tutorial: the lesson was performed — the card flashes gold before the next one. */
@@ -215,7 +216,7 @@ export class HUD {
   }
   private renderTutorial() {
     const c = this.notice ?? this.persist;
-    const key = c ? c.title + '|' + c.text + '|' + (c.cue ?? '') : '';
+    const key = c ? c.title + '|' + c.text + '|' + (c.cue ?? '') + '|' + (c.key ?? '') : '';
     if (key === this.tutorialKey) return;
     this.tutorialKey = key;
     const el = this.tutorialEl;
@@ -224,6 +225,8 @@ export class HUD {
     (el.children[1] as HTMLElement).textContent = c.text;
     (el.children[2] as HTMLElement).textContent = c.cue ?? '';
     el.classList.toggle('cue', !!c.cue);
+    (el.children[3] as HTMLElement).textContent = c.key ?? '';
+    el.classList.toggle('keyed', !!c.key);
     el.classList.add('on');
   }
 
