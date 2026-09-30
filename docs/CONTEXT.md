@@ -31,7 +31,12 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 **Game title:** ECHOES OF CAER VEYR (session 13; displayed on the title screen, boot card, tab title, credits and the final
 ending card). "The castle remembers" stays the world's creed and a recurring phrase (dialogue, loading labels, the
 respawn card, the opening film and the Remotion trailer) — it is no longer the game's name.
-**Current implementation priority:** session 14 = onboarding clarity, combat flow, Floor 3 polish and audio (§10 Session 14):
+**Current implementation priority:** session 15 = MAIN MENU LIFE, ACHIEVEMENTS and the LORE EXPERIENCE (§10 Session 15):
+the title heroine turned toward the player with a menu-idle director (the new Mixamo clips + unused Great Sword idles,
+a procedural glance), 26 achievements (toasts in play, a panel, localStorage), and the narrated 12-page chronicle
+(swipe / keys / auto-advance, Eleven v4 narration in the user's "Cthulu female" voice carried to the paid account as an
+IVC), the title menu in three tiers, the audited itch ZIP. Next: the real-phone / ears checks in §8 Session 15.
+Session 14 = onboarding clarity, combat flow, Floor 3 polish and audio (§10 Session 14):
 the Remotion opening film, the score from the loading card, the wordmark, credits (a game by AJ_Insanity), the world-anchored
 touch button, faster passive Resonance, health from kills, memory-return reinforcements, the Last Crown's add waves and
 red/gold chamber, her hidden reveal, guaranteed mini-boss finishers, route guidance in the world, the idle-enemy fixes.
@@ -293,6 +298,18 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 - Runtime (`tools/build_music.py`): Ogg Opus 160 kbps 48 kHz — `public/assets/music/canopy_00..09.ogg` (12 s segments with
   0.08 s shared overlap, 2.5 MB) and `ritual.ogg` (1.2 MB); `src/data/musicManifest.json`.
 
+## Hero menu clips + the lore pages (session 15)
+
+- `assets/characters/hero/` gained 4 loose Mixamo FBX on the same 65-bone rig (user, 2026-09-30): `Angry.fbx` (19.2 s restless
+  wait), `Arm Stretching.fbx` (8.9 s), `Taunt.fbx` (2.8 s two-handed sway), `Martelo 2.fbx` (1.3 s capoeira kick — unused).
+  Roles in `tools/blender/hero_clip_map.json` `menuClips` / `unusedMenu`; built into `public/assets/characters/hero_menu.glb`
+  with Great Sword idles (2)-(5) (§10 Session 15).
+- `assets/Echoes_of_Caer_Veyr_All_12_Pages/Page_01..12.webp` (user, local source, not committed): the illustrated lore book,
+  1024×1536 RGB WebP, 371–466 KB, printed folios 01–12 = the story order. Byte copies in `public/assets/lore/`.
+- ElevenLabs narrator for the book: `JSIqdqOB9ZIcrBFOti5d` "Cthulu female - v4 narrator (IVC)" on `ELEVENLABS_API_KEY_2`,
+  cloned from `VhuTJN7jTXadMoTbfY1r` "Cthulu female" (`ELEVENLABS_API_KEY`); `tools/lore/voice.json`. Take + ledger:
+  `assets/audio/lore/`.
+
 ## Tooling verified
 
 - Node v22.14.0, npm 10.9.2, Python 3.13.1 (+ Pillow 11.1, numpy 2.2), ffmpeg.
@@ -466,6 +483,10 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **Mini-boss finishers (s14)** | DONE, VERIFIED (all 8 bodies on F1–F3: one kill, one clear, tier heal, camera never inside geometry) | `combat/Finishers.ts` `MINI_FINISH`, rotated staging, `stand` fallback, `sees()` |
 | **Route guidance (s14)** | DONE, VERIFIED (F1 85 marks, 0 without floor; F2 legs incl. after FR1; Guided + Minimal) | `game/RouteGuide.ts`, `data/guidance.ts`, `Objectives.met/activeTime` |
 | **Idle enemies (s14)** | DONE, VERIFIED (E13 from the hatch, E9 archer after the G5 shift, E7 blind archers) | `EnemyManager.adoptStrandedArchers`, `KNEEL_RELEASE`, `Enemy.perchThink/findPerchSpot`, blind ground archers advance |
+| **Title heroine (s15)** | DONE, VERIFIED (probe + screenshots portrait / wide / 720×1280; not seen on a phone) | `character/MenuIdle.ts`, `hero_menu.glb` (7 clips), faces the player (3/4), actions + stance changes + glance; `dev/menuProbe.js` |
+| **Achievements (s15)** | DONE, VERIFIED (27/27 unit, a real finisher unlock + toast in a fight, reload) | `data/achievements.ts` (26), `game/Achievements.ts`, `ui/AchievementToast.ts`, panel on the title + pause menu; `dev/achProbe.js` |
+| **Lore book (s15)** | DONE, VERIFIED (flows + memory window, silent-score duck; NOT heard by a human) | `ui/LoreBook.ts`, 12 pages + 12 narrations (Eleven v4, 391 s), `data/loreManifest.json`, `tools/lore/*` |
+| **itch ZIP audit (s15)** | DONE, VERIFIED | `tools/audit_itch.py` runs in `npm run package:itch`; extracted ZIP played at 720×1280 under an itch-style sub-path |
 | **Enemy audit (s10)** | DONE, VERIFIED (`dev/auditProbe.js`, all floors) | 4 blind perched archers relocated at load (`checkPerches`), perched archers no longer slide down ramps, bats' swoop counter leak fixed, blind flyer spawns moved (`checkFlyers`), F3 respawn crash fixed; slot rotation fair in every big fight |
 
 ---
@@ -520,6 +541,15 @@ Runtime (`src/`):
   shaft dust, smoke wisps. Per-state presets `ATMO`; lighting presets `ENV` in `Game.ts` (Present: low hemi,
   near-vertical shadowing moon so light falls through roof holes, low-angle shadowless `fill`, hero light).
 - `vfx/Fire.ts` — all `fire` markers as one instanced procedural flame shader per state.
+- Session 15: `character/MenuIdle.ts` (the title heroine's director + glance), `AnimController.addClips / removeClips`,
+  `Game.menuIdle / loadMenuPack / menuPause`, asset `glb:hero-menu` (scope `menu`), `tools/blender/build_hero_menu.py` →
+  `hero_menu.glb` + `data/heroMenuAnimations.json`; `data/achievements.ts`, `game/Achievements.ts`, `ui/AchievementToast.ts`
+  (+ `ICONS`), `ui/achievements.css`, `MainMenu achievementsHTML / wireAchievements / tally`, `PauseMenu` Achievements,
+  `AudioFX.achievement / scoreInMute`, `Music.duck(on, level, release) / duckLevel`, signals `hit / parry / floor:arrive /
+  floor:leave`; `ui/LoreBook.ts` + `ui/lore.css`, `data/loreManifest.json`; tools `tools/lore/{el,clone_voice,voice_ab,
+  gen_lore,qa_lore,qa_pages}.mjs`, `tools/lore/{build_lore,voice_stats,line_stats}.py`, `tools/lore/{narration,voice,
+  selection}.json`, `tools/audit_itch.py`, `tools/eol_check.py` (keep each file's CRLF/LF), `tools/edit_eol.py`. Scripts:
+  `npm run assets:lore`, `assets:heromenu` (run Blender directly), `audit:itch`. Dev: `dev/menuProbe.js`, `dev/achProbe.js`.
 - Session 14: `game/RouteGuide.ts` + `data/guidance.ts` (route guidance legs per floor), `enemies/Reinforcements.ts`
   (`REINFORCE` rules), `EnemyManager.revive / fallen / openGroup / walkableAround / endGroups / killHeal / crownFight /
   adoptStrandedArchers`, `Encounter.reinforce / waveAt / rankDownAt`, `KNEEL_RELEASE`, `Enemy.appear / updateAppear /
@@ -662,6 +692,13 @@ A parry staggers the attacker and grants +12 resonance.
   `T.ready(); await T.run()` → every lesson), `dev/auditProbe.js` (`A.ready(); await A.floor()` → problems per
   encounter), `dev/f3Probe.js` (`?floor=3&input=kbm`: `F.gates()`, `await F.route()`), `dev/bossBot.js` (`?at=lastcrown`:
   `bb.setup(); bb.fight(240, false)`). Browser-pane JS calls time out after 45 s: run long loops detached and poll.
+- **Session 15:** `?ach` persists achievements in an automated / dev-warp session (else memory only); dev `?patience=N`
+  shortens the title secret to N s; dev **`?mute&scoretest`** loads and runs the title score silently (master 0) so music
+  continuity / ducking can be measured without sound. Title: `const M = await import('/dev/menuProbe.js'); await M.ready();
+  M.run(120); M.all(); M.pose('menu_inspect', 1.9, 'player'); M.face()` (frames driven by the probe; `window.__menuShot`
+  overrides the shot). Achievements: `const A = await import('/dev/achProbe.js'); await A.unit(); A.state()`; `__ach`,
+  `__toast.shown`. Lore: `__lore.debug()` (page, narration time, line, image / audio / PCM windows, duck, log), `__lore.go(n,
+  how)`, `__lore.togglePause()`. The hidden pane freezes CSS transitions: take a second screenshot to see a settled frame.
 - **Session 14 — ALWAYS `?mute` when Claude tests the game (the user's request).** The Claude browser pane is not
   webdriver and allows autoplay, so an unmuted URL plays the full mix out loud. Every probe URL takes `?mute`; the score
   itself can only be checked unmuted — do that only if the user asks, and close the tab afterwards.
@@ -697,6 +734,20 @@ A parry staggers the attacker and grants +12 resonance.
 ---
 
 # 8. Next Concrete Tasks
+
+**Session 15 follow-ups — need the user's real phone / ears (do these first):**
+1. **The narration by ear** (the first thing to hear): the clone vs the original "Cthulu female" timbre, the whispers under
+   the score, the pacing (0.75 s between lines, 1.7 s between pages), the duck (0.5) — `DUCK / AUTO_BEAT / START_DELAY`
+   in `ui/LoreBook.ts`, `LINE_PAUSE / LAST_PAUSE` in `tools/lore/build_lore.py`. A retake of one page:
+   `node tools/lore/gen_lore.mjs pages <take> <n>` (then wire it in build_lore — only whole-book takes are cut today).
+2. **Swipe feel on a phone**: turn threshold (16 % / 0.42 px/ms), the edge resistance, a tap for the clean view, the dots'
+   size (13–18 px wide), memory on an older phone (4 decoded pages).
+3. **The title heroine on a phone**: framing between the name and the three-tier menu (portrait shot in `Game.menuFrame`),
+   the face light, the action cadence (7–13 s home), whether the glance reads.
+4. **The achievement toast in real fights**: placement (13 / 20.5 / 29 % of the height), the chime's level (0.11), whether
+   25 finishers / 30 parries / 40 shifts / 150 Echoes are reached in one or two playthroughs.
+5. On itch: upload `build/caer-veyr-itch.zip` (HTML, "This file will be played in the browser", viewport 720×1280,
+   Mobile friendly · portrait, Fullscreen button on); check the first tap starts the score and the chronicle speaks.
 
 **Session 14 follow-ups — need the user's real phone / ears / eyes (do these first):**
 1. **The menu score** on a real phone and on itch.io: does it start under the loading card (autoplay) or on the first
@@ -900,6 +951,197 @@ then generation + `Audio.voice(id)` hook.
 ---
 
 # 10. Latest Verified Session
+
+### Session 15 (2026-09-30) — the living title screen, achievements, the narrated lore book
+
+Commits (Arjun0014/castle-game main, as Arjun0014): `6e661a9` code + assets · this CONTEXT commit (only this session's hunks; session
+12's uncommitted hunk of this file stays in the working tree as before). Untouched and uncommitted as before:
+`remotion-intro/`, `THE_CASTLE_REMEMBERS_LORE.md`, `docs/ELEVENLABS_NOTES.md`, `assets/music/*.mp3`, and the user's source
+pages `assets/Echoes_of_Caer_Veyr_All_12_Pages/` (their byte copies ship in `public/assets/lore/`).
+
+**1. The title heroine faces the player and is alive** (`character/MenuIdle.ts`, `Game.menuScene / menuFrame /
+loadMenuPack / menuPause`, `AnimController.addClips / removeClips`).
+- *Facing and shot.* The camera stands where it always did (on the gate's side of her, looking past her at the rusted
+  gate); she is turned round toward it: `root.rotation.y = yaw + π + side + face` (portrait `face` −0.38 rad, wide
+  −0.45 → measured 26–28° off the lens: a three-quarter view). Portrait shot `dist 3.95, h 1.25, look 2.2, ty 0.45`
+  (her head clears the tagline, the raised blade crosses the gap in CAER VEYR, feet above the menu); wide `dist 4.1,
+  h 1.35, look 5, ty 1.15, lat −2.6` (she stands in the gate arch, right half). Her hero light moves to the camera's
+  side ×1.35 for the title (a soft key on her face; the moon is behind her). Play restores `root.rotation.y = yaw`.
+- *Clips inspected first* (`tools/blender/inspect_pack.py` → `build/analysis/menu/inspect.json` + `sheet_0..2.png`, and
+  16-frame front close-ups): the 4 new FBX in `assets/characters/hero/` — **Angry** (19.2 s: sword low → arms crossed with
+  the blade on her shoulder → leaning on the planted blade, hand on hip, weight shifts; a real step, one ankle lifts
+  0.33 m), **Arm Stretching** (8.9 s: sword arm across the chest, one calm overhead swing, shoulder roll), **Taunt**
+  (2.8 s: two-handed high guard swaying), **Martelo 2** (1.3 s capoeira high roundhouse kick — **not used**: a big
+  flashy attack; `hero_clip_map.json unusedMenu`) — plus every hero idle and the unused Great Sword idles (2)–(5), which
+  turned out to be exactly the sword inspection / blade-raise / at-ease-and-look-round moves. All stand in place (root
+  travel ≤ 1 cm, yaw ≤ 0.3°).
+- *The menu pack*: `tools/blender/build_hero_menu.py` (run Blender directly: `blender --background --factory-startup
+  --python tools/blender/build_hero_menu.py`; `npm run assets:heromenu` hits cmd.exe quoting like the other Blender
+  scripts) → `public/assets/characters/hero_menu.glb` (1.44 MB, armature + 7 clips, no mesh; the same export options as
+  hero.glb so tracks bind to its 65 bones by name) + `src/data/heroMenuAnimations.json`. Root policy "loop" (the tiny
+  first→last hips drift removed linearly; the hips' own sway kept, so feet stay planted). Asset key `glb:hero-menu`,
+  scope `menu`: acquired when the title shows (`main.ts` → `game.loadMenuPack()`), released + clips uncached when play
+  begins (`menuScene(false)`). Gameplay's hero.glb is unchanged.
+- *Selected* (`MenuIdle.ts` `MENU_HOME / MENU_MOVES`, weights): home loops `idle_alert` (hero.glb, breathing guard) and
+  `menu_stance_2h` (GS idle (2), two-handed breathing guard); actions `menu_inspect` 1.25 (GS idle (3), the blade raised
+  upright, looked along), `menu_vigil` 1.0 (GS idle (4), blade close before her face), `menu_ease` 1.1 (GS idle (5),
+  sword lowered at ease, a look round), `idle_flourish_a` 0.9 (calm swing), `idle_flourish_b` 0.75 (slow twirl),
+  `menu_stretch` 0.8 (Arm Stretching), `menu_restless` 0.6 (Angry), `menu_ready` 0.3 (Taunt).
+- *Director*: first beat 4–6 s after the title opens, then 7–13 s at home between actions; 22 % of beats are a stance
+  change instead (base cross-fade over ~1.5 s: `baseResponse` 1.6 during the title, 12 restored after); an action fades
+  in over 0.8 s (1.0 for the long ones) and hands back 0.9 s before its end; never one of the last three. Between actions
+  a procedural glance (neck 40 % / head 60 %, applied after the mixer from the head's real facing): at the player
+  (weight 3), free (2), left/right 38° (1 each), up at the towers (0.6); holds 1.4–5 s; clamps yaw 42°, up 16°, down
+  10°; eased; off while an action plays (the clips carry their own head motion). No locomotion, no attacks.
+- *While the chronicle is open* the castle behind it stops drawing (`menuPause`), then carries on.
+- *Verified* (`dev/menuProbe.js`, frames driven by the probe — the hidden pane has no rAF): `run(150)` → 11 events (8
+  actions, 3 stance changes, 13–17 s apart), 0 bad frames; `all()` every clip every 0.25 s → hips scale 0.0100 always,
+  no NaN, ankles 0.157–0.161 m (planted; `menu_restless` 0.331 is its real step), hips drift ≤ 0.24 m; screenshots
+  portrait 375×812 and wide 1280×720 (inspect / vigil / guard, facing the viewer); production: New Game → facing 0 offset,
+  `baseResponse` 12, no overlay left, `menu_*` clips removed, `glb:hero-menu` released, 0 console errors.
+
+**2. Achievements** (`data/achievements.ts`, `game/Achievements.ts`, `ui/AchievementToast.ts`, `ui/achievements.css`,
+`MainMenu achievementsHTML / wireAchievements`, pause menu entry, `AudioFX.achievement()`). 26 deeds in six groups, five
+cumulative. New gameplay signals (`game/Signals.ts`): `hit {attack, serial, index}` (EnemyManager, each blow that
+connects), `parry` (Game onBlock), `floor:arrive {id, deaths}` (Game.start), `floor:leave {id, next, deaths}` (Game.finish).
+| id | Name | Trigger |
+|---|---|---|
+| floor1 | Inheritance | `floor:arrive` id ≥ 2 |
+| floor2 | Complicity | `floor:arrive` id 3 (the King's lift) |
+| ending | The Crownheart Is Silent (hidden) | `boss:dead last_crown` or `floor:leave` id 3 with no next |
+| gate_warden | The Warden Falls | `kill` arch gate_warden |
+| untouched | Untouched | the Warden killed with no HP drop since `boss:start gate_warden` (polled 10×/s; a death resets) |
+| goblin_king · widow_mother (hidden) · kingsguard · maw | Gutter Crown · The Weeping Mother · Oath Unsworn · The Mouth Beneath | `kill` of that arch |
+| parry · parries | Turned Aside · The Unbroken Guard | `parry` (1 · 30) |
+| five_cuts | Five Cuts | `hit` L1→L2→L3→L4→L5 in order, each within 2.5 s, one chain |
+| finisher · finishers | The Last Blow · Headsman of Veyr | `finisher` (1 · 25) |
+| execution | No Mercy in Memory | `kill` with execution and not a finisher |
+| crownbreaker | Crownbreaker | 3 kills within 1.8 s of `ability crownbreaker release` |
+| whirlwind | The Whirlwind | 4 kills between `ability whirlwind start` and 0.8 s after its end |
+| released | Released | 150 kills (cumulative, all runs) |
+| first_shift · shifts | Which Memory Will Answer · Two Memories, One Stone | `shift` (1 · 40) |
+| shift_kill | Between Two Breaths | a kill ≤ 3 s after a shift |
+| unremembered | Unremembered | `floor:leave` with the same death count as `floor:arrive` |
+| queen_letter | The Queen's Letter (hidden) | `trace` T3 on Floor 2 |
+| traces | What the Stones Confessed | 20 distinct traces (`TRACE_TOTAL` F1 12 · F2 5 · F3 3, keyed `floor:tid`) |
+| chronicle | The Chronicle of Caer Veyr | all 12 lore pages shown |
+| patience | Patience of Stone (secret) | the title left alone and visible for 180 s (not while the book / film / a hidden tab) |
+- *Persistence*: localStorage `caer-veyr:achievements:v1` = `{v:1, unlocked{id: time}, counters{kills, finishers, parries,
+  shifts}, traces[], lore[]}`, try/catch (blocked storage plays on). Memory only in automation (`?mute`, autopilot,
+  webdriver) and on dev floor starts, unless `?ach` (tests). The panel's "Forget every deed" asks twice.
+- *Toast*: a gilt lozenge seal with the deed's device, "Achievement", the name, the line; slides in, a sheen crosses it,
+  holds 4.9 s, queued, `pointer-events: none` (never takes a tap, never pauses). Portrait: under the bars / boss bar
+  (13 % of the height), 20.5 % while a subtitle shows, 29 % while a Guided card shows; wide: top-right; on the title
+  3 %; over the chronicle below its header. Chime: a soft synthesized bell (A5/E6/A6 + A4, 1–2.6 s decays, 0.11 × effects
+  level) + a breath of the Resonance sample.
+- *Panel*: a ring with the count, each group with its tally, unlocked rows (crimson seal, "Remembered <date>"), locked
+  (lock badge), hidden ones show only a hint (the secret shows "A Secret" + an eye), progress bars for the counters. The
+  Achievements entry on the title shows a small tally (e.g. 2 / 26).
+- *Verified*: `dev/achProbe.js unit()` **27/27** through the real signal bus incl. the negatives (a kill 3.2 s after a
+  shift, a broken chain, 2 Crownbreaker kills, a wounded Warden fight, a death on the floor, a finisher that is not an
+  execution, duplicate trace / page); a real Gate Warden finisher on `?at=warden` (`S.mini`) unlocked The Last Blow +
+  The Warden Falls with the toast shown mid-fight (game not paused), not Untouched (the probe set HP 60); persisted across
+  a reload (`?ach`); the patience secret after 6 visible seconds with `?patience=6`; panel screenshots (groups, locks,
+  hints, progress 7/30, 1/25, 12/150).
+
+**3. The chronicle — the Lore book** (`ui/LoreBook.ts`, `ui/lore.css`, `tools/lore/*`, `public/assets/lore/*`,
+`data/loreManifest.json`).
+- *Page order*: the 12 WebP pages (`Page_01..12.webp`, 1024×1536) carry printed folios 01–12 matching their names, and
+  read as one story in that order: 01 Before the First Crown · 02 The Blood That Opened Stone · 03 A Kingdom Built on
+  Memory · 04 The Last Days of Veyr · 05 The Price of Forever · 06 A House Divided · 07 The Sundering · 08 Those Who Could
+  Not Leave · 09 The Uncrowned · 10 Which Memory Will Answer? · 11 What the Stones Confessed · 12 The Last Crown.
+- *The book*: full-screen over the title; the page in a thin gilt frame at the largest 2:3 that fits (JS fit), the ground
+  its own colours blurred far out + a warm vignette; header: close · "The Chronicle of Caer Veyr" + the page title ·
+  folio `04 / 12`; the spoken line under the page (fades per cue); bar: pause/resume · 12 lozenge dots (seen / current,
+  tap to jump) with the page's narration hairline · CC (= the game's Subtitles setting). Swipe (finger follows, 0.28
+  resistance at the ends, turn at 16 % of the width or a 0.42 px/ms flick; a vertical drag is ignored), mouse drag,
+  arrows beside the page (desktop), ←/→ A/D PgUp/PgDn Home/End, Space/K/P pause, C subtitles, Esc/Backspace close,
+  wheel/trackpad flick; a tap on the page = the clean view (artwork alone). A fast second swipe lands the sliding page at
+  once. After page 12: "Here the chronicle of Caer Veyr ends." + From the beginning / Return.
+- *Auto / manual*: a page's narration starts 0.35 s after it has turned in (0.9 s after opening); when it ends, a 1.7 s
+  beat, then the next page turns in by itself. Any manual change stops the narration at once (0.22 s fade; a token
+  cancels any pending start — never two narrations), plays the new page from its beginning (backwards too) and restarts
+  the auto timing; a manual change also lifts a pause. Pause keeps the position, resume continues from it.
+- *Music*: the title score is never restarted; each narration ducks it to 0.5 (`Music.duck(on, level, release)` gained a
+  level and release; 1.2 s release between pages); narration plays on the voice bus (the Voice slider).
+- *Memory*: images decoded for pages p−1 … p+2 only (`Image.decode`, ~6.3 MB each decoded), narration bytes for the same
+  window, PCM only for the current and next page; leaving pages are released (src cleared, buffers dropped); closing the
+  book drops everything. 24×36 blurred JPEG placeholders (~1 KB each) are inline in the manifest (instant first paint +
+  the ambient ground). No resizing was needed (the WebPs are 371–466 KB). No audio (locked context, failed decode) → a
+  silent clock keeps subtitles and auto-advance going.
+- *Verified* (dev `?mute&scoretest` = the score loaded and running silently — master 0): opened from the menu with the
+  score at 28.5 s (explore), duck 1 → 0.5 within 1 s of the first word; page 1 end → "ended p1", the score rose 0.5 →
+  0.82 in the beat → "p1->p2 auto" → page 2 narration from 0.0, duck 0.5 again; window at p2 = images 1–4, PCM 2–3; dot
+  jump p2→p5 stopped p2 and started p5 from 0 (images 4–7, PCM 5–6); swipe back p5→p4 replayed p4 from 0; pause held
+  the time (0.44 s), resume continued from 0.4; synthetic touch swipes (left → next, right → previous, slow small drag →
+  snap back, short fast flick → next), keys (→ ← End, → at 12 stays), the prev arrow, Space, C; all 12 pages → The
+  Chronicle of Caer Veyr (toast); closed with Esc: the score still exploring, never restarted, duck recovering. JS heap
+  229 → 233 MB across all 12 pages; at page 12 only 2 images + 1 PCM held, 3 `<img>` in the DOM. Screenshots: phone
+  375×812, 720×1280, wide 1280×720.
+
+**4. The narration** (`tools/lore/narration.json` = the source: one subtitle cue per line, `[tag]` = a v4 direction
+spoken only, `{Display|spoken}` = the subtitle spelling | the respelling).
+- *Narrator.* The user's voice "Cthulu female" (`VhuTJN7jTXadMoTbfY1r`, designed with `eleven_ttv_v3`: "very low
+  contralto … immeasurably old") lives only on `ELEVENLABS_API_KEY` (free tier, 129 credits left); the paid key
+  `ELEVENLABS_API_KEY_2` (Starter) cannot see it (400 voice_not_found). ElevenLabs' v4 page says designed voices "may not
+  be as performative" on v4 while Instant Voice Clones are captured "more faithfully", so the voice was carried to the
+  paid account as an **IVC: "Cthulu female - v4 narrator (IVC)", voice_id `JSIqdqOB9ZIcrBFOti5d`** (`tools/lore/
+  clone_voice.mjs`, `tools/lore/voice.json`), trained on four of the original voice's own v3 generations downloaded free
+  from the free account's history (65 + 61 + 16 + 74 s = 216 s, one style; `build/lore/clone_src`, not committed).
+  A/B on v4, same line, same settings (`tools/lore/voice_ab.mjs`): original F0 140.4 Hz / centroid 1384 Hz, clone 136.8 Hz
+  / 1391 Hz (0.45 semitone, 0.5 %); 24-band spectral shape 3.0 dB apart (both 4–6 dB from the v3 history: v4 itself
+  shifts the timbre a little).
+- *Guidance applied* (elevenlabs.io docs, fetched this session): `eleven_v4`, Stability + Similarity only (no style /
+  speed / SSML), tags placed right before the words they colour and written as voice qualities (`[low, reverent
+  narration]`, `[whispering]`, `[hushed, urgent]`, `[slowly, with restrained awe]`, `[quiet dread]`, `[rising dread]`,
+  `[heavy, final]`, `[sorrowful]`, `[measured]`, `[grave, restrained]`, `[low, ominous]`, `[slowly, with weight]`), 0–3
+  per page, pauses from ellipses and dashes, names respelled (Vair, Kair Vair, Vaylor).
+- *Settings*: `eleven_v4`, stability 0.5 (0.3 sounded the same on the test lines), similarity 0.75, seed 7,
+  `mp3_44100_128` (192 kbps needs Creator), `/with-timestamps`. Test takes first (`gen_lore.mjs test`): 6 lines ×
+  stability 0.5 / 0.3; page-1 pacing tests (paragraph breaks, a lead "[slow, measured, ancient narration]": 131 → 125 wpm —
+  v4 barely slows for tags, so the cadence is made in the build instead).
+- *The take*: **`b1` = all 12 pages in ONE request** (one performance arc; 5,098 characters, 363.4 s, rendered in 130 s).
+  Scribe: 805 words, 97.9 %, the 17 edits all name spellings ("Verre" for the respelled Vair, "Aldrin"), no tag read
+  aloud; per-line F0 136–192 Hz with a steady ~120 Hz floor on every page (no drift over six minutes); whispers verified
+  as whispers (periodicity 0.24–0.27, ~12 dB under the voice). Credits: ~6,850 characters in all on key 2 (tests + book;
+  v4 = 1 credit/char; the subscription counter lags), ~25.3k left, resets 2026-10-30. Ledger: `assets/audio/lore/ledger.json`.
+- *Build* (`python tools/lore/build_lore.py` = `npm run assets:lore`): pages and lines cut on Scribe's word timings of the
+  take aligned word by word to the script (the TTS character alignment drifted 2–3 s around pages 5/6 — page 6's first
+  sentence would have ended page 5 — so it is only a fallback), refined on the envelope; the pause after each line opened
+  to ≥ 0.75 s (≥ 1.1 s before a page's last line), 0.2 s lead-in, 0.6 s tail — the voice is never time-stretched; a gentle
+  compressor (−26 dB, 2.2:1) so whispers survive the score, two-pass loudnorm −18 LUFS; Opus 64 kbps mono 48 kHz. 391 s,
+  28–37 s a page, 3.4 MB. `node tools/lore/qa_pages.mjs`: every page holds exactly its own words; the remaining flags
+  are the names' spellings and Scribe folding a pause into "Should".
+- *The twelve narrations* (as subtitled; the spoken text with tags is `tools/lore/narration.json`):
+  - **01 · Before the First Crown** — Before Veyr had a name… before any crown was forged, or any king was laid in stone… something slept beneath the mountain. And it remembered. It kept the shape of stone. The hollow of every chamber. The weight of everything that came near it — and it let nothing go. Centuries later, the founders of House Vaelor broke through into the dark… and found it waiting. They called it the Crownheart.
+  - **02 · The Blood That Opened Stone** — The first rulers did not understand what they had found. They learned only this… it answered to blood. So they gave it theirs. Before the ancient ring, the first king opened his palm… and the stone drank. Doors that were never built for human hands swung open. Hidden chambers breathed again. Preserved memories obeyed. And a promise became a belief… and the belief became law. The castle remembers its rightful king.
+  - **03 · A Kingdom Built on Memory** — Caer Veyr rose above the Crownheart. Walls became towers. Towers became halls. And generations passed beneath its banners. Every coronation deepened the binding. Every royal rite drew the castle closer to the blood. House Vaelor believed it owned the Crownheart's memory… It never understood… that the Crownheart was learning House Vaelor.
+  - **04 · The Last Days of Veyr** — Under King Aldren Vaelor, a long war came home at last. The fires of the siege burned from one horizon to the other. Behind the gates, the people of Veyr crowded into the halls… and waited for the end. But the king did not wait. By candlelight, deep in the royal archives, he searched the records of his fathers… and he found a possibility. The whole of Caer Veyr… held forever, at one chosen moment.
+  - **05 · The Price of Forever** — But the Crownheart could not hold so much without living resonance. It needed lives, bound into its memory… thousands of them. Aldren looked upon the people sheltering inside his walls… and he chose them. To him, losing the kingdom was a greater crime than sacrificing those who lived in it. The deepest chambers were sealed. Guards turned to face inward. Servants vanished in the night… and the work began.
+  - **06 · A House Divided** — Some at court learned what the king intended… and tried to stop him. And Caer Veyr turned against itself — soldiers of Veyr cutting down soldiers of Veyr, beneath the same banners. In the chaos, a child was taken from the castle. Royal blood, never acknowledged… never marked… never bound by the rites. A servants' door. A hand in the dark. The moon over the walls. That forgotten branch of House Vaelor would endure… long after the ruin.
+  - **07 · The Sundering** — At the height of the siege, Aldren descended to the Crownheart and began the ritual. The bells of Caer Veyr rang out… and the ritual was interrupted. The Crownheart failed to hold one moment. The ancient ring broke apart, and its memory tore in two — the castle as it stood before the catastrophe… and the ruin it would become, generations later. Two remembered states, locked in the same stone. This was the Sundering.
+  - **08 · Those Who Could Not Leave** — Generations passed. The road to Caer Veyr vanished beneath the forest, and ordinary life abandoned it. But not everything left. Thousands of human imprints remained within the Crownheart… the Echoes. Some still remember who they were. Others keep watch at doors that no longer matter… repeating an order, long after its meaning died. And sometimes, in windows that fell centuries ago… a torch is burning.
+  - **09 · The Uncrowned** — The child who escaped did not die. Her line went on, far from Veyr — a worn crest, a half-forgotten name, a warning about a castle no one should enter. And from that unbound line came a woman… with a claim to the ruin. Vaelor blood, without the completed binding. Connected to the castle… yet not imprisoned by it. She came to reclaim a stolen inheritance. She was the Uncrowned.
+  - **10 · Which Memory Will Answer?** — Inside, the Echoes rose against her. And when they fell, they released the resonance trapped within them… and her blood could gather it. With that power, she could force the castle to choose… and another memory would answer. Rubble gathered itself back into walls. Torches burned where only moonlight had been. She did not travel through history. The castle changed… around her.
+  - **11 · What the Stones Confessed** — But the castle's two memories did not agree. A door that stood sealed in the Past… lay broken outward in the Present. The wounds were in the wrong places. The stones told a different history. The people of Caer Veyr had not been defending their king. They had been trying to escape him. The siege was real. But the catastrophe… was Aldren's.
+  - **12 · The Last Crown** — Aldren did not die in the Sundering. He remained… fused with the Crownheart, until king, castle and memory could no longer be told apart. The Last Crown. He still believes Veyr can be saved. And her unbound blood… might finish his ritual. She had come to claim her inheritance. Now she had to ask… should this inheritance survive at all?
+- *Canon note*: the book (the user's pages) states Aldren's guilt and the Last Crown outright; the narration follows it and
+  keeps the Queen unnamed ("a hand in the dark") — her rescue stays Floor 2's T3 revelation.
+
+**5. The title menu, three tiers** (`ui/MainMenu.ts`, `ui/menu.css`): Continue / New Game (the way in, as before) · Lore
+and Achievements (a pair with their devices, the tally) · Controls · Settings · Credits (a quiet row). ↑/↓ move by row,
+←/→ along a row. Keys are ignored under the chronicle (`lore-on`). The pause menu gained Achievements.
+
+**Tests (session 15):** tsc; `npm run build`; **`dev/regression.js` 49/49 PASS** (portrait touch, F1 → F2 → F3; a first
+run had one miss in "F1 E3 no stalls with a moving hero" — a guard strafing at 6.4 m — which passed on the re-run: the
+stochastic stall check, nothing this session touched); `dev/menuProbe.js` run / all; `dev/achProbe.js` unit 27/27 +
+the real Warden finisher + reload; the lore flows above; production preview (:4174) title → chronicle → New Game (0
+errors); **`npm run package:itch`** → `build/caer-veyr-itch.zip` **134.1 MB, 572 files, 163.5 MB unpacked**, audited by
+`tools/audit_itch.py` (index.html at the root, forward-slash names, relative URLs, no .env / keys / source packs / dev
+files / maps, itch limits) — then the ZIP itself extracted under `/html/123456/` (itch's layout, `itch-sim`) at
+720×1280: title, the chronicle narrating, a Guided New Game with the touch HUD, 0 failed requests, 0 console errors.
+Always `?mute` (the user's rule); the score was only ever measured silently (`?scoretest`).
+**Needs the user:** §8 Session 15.
 
 ### Session 14 (2026-09-30) — onboarding clarity, combat flow, Floor 3 polish, audio
 
