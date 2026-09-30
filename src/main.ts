@@ -3,7 +3,7 @@ import { AutoPilot } from './game/AutoPilot';
 import { FLOORS, takeCarry } from './levels/Floors';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { MainMenu, PauseMenu } from './ui/MainMenu';
-import { Platform } from './platform/Platform';
+import { Platform, lockPointer } from './platform/Platform';
 import { applyDevStart, devFloor } from './game/DevStart';
 import { Settings } from './game/Settings';
 import { Save, type Guidance, type SaveData } from './game/Save';
@@ -84,13 +84,36 @@ async function loadIntro() {
 }
 
 // ------------------------------------------------------------------ boot → title screen
+/**
+ * The title score (session 14): "The Last Canopy Sleeps" plays from the loading card on — at once if the browser allows
+ * sound without a gesture (autoplay: a site the player has used, an itch.io page they clicked into), otherwise on the very
+ * first touch, click or key anywhere. It then never restarts: the film fades it out (its position kept) and play fades
+ * it back in from there (Music.start / stop).
+ */
+let filmOn = false;
+const startScore = () => {
+  if (automated || filmOn || game.started) return;
+  game.audio.unlock();
+  game.audio.music?.start(3.5);
+};
+game.onMusicReady = startScore;
+const firstGesture = () => {
+  startScore();
+  if (game.audio.running && game.audio.music && game.audio.music.mode !== 'off') {
+    for (const ev of GESTURES) window.removeEventListener(ev, firstGesture, true);
+  }
+};
+// (Chrome counts keydown / mousedown / pointerup / touchend as activation — not a touch's pointerdown; iOS wants touchend)
+const GESTURES = ['pointerdown', 'pointerup', 'mousedown', 'touchend', 'keydown', 'click'] as const;
+if (!automated) for (const ev of GESTURES) window.addEventListener(ev, firstGesture, { capture: true, passive: true });
+
 const menu = quick ? null : new MainMenu(stage, {
   settings, save,
   onNewGame: (g) => newGame(g),
   onContinue: () => { if (save) void continueGame(save); },
   sound: (k) => game.audio.ui(k),
-  // the first touch of the title screen unlocks the sound: the exploration score rises under the menu
-  onGesture: () => { game.audio.unlock(); game.audio.music?.start(4); },
+  // a gesture on the title screen: sound is allowed now (the score was waiting for it, or is already playing)
+  onGesture: () => startScore(),
 });
 
 loader.showInitial(floor);
@@ -140,18 +163,21 @@ function newGame(guidance: Guidance) {
   menu?.hide();
   if (intro && !introPlayed) {
     introPlayed = true;
+    filmOn = true;
     game.menuScene(false);
-    // the film has its own score: the menu's music steps aside (and resumes where it was when play begins)
-    game.audio.music?.stop(0.5);
+    // the film has its own score: the title's music fades out under its first seconds (position kept) and play
+    // brings it back in from there — never a restart
+    game.audio.music?.stop(1.6);
     intro.play((gesture) => {
+      filmOn = false;
       begin(guidance);
       // a skip is a user gesture: take the pointer now; after the film ends by itself the first click takes it
-      if (gesture && !Platform.isTouch) game.renderer.domElement.requestPointerLock?.();
+      if (gesture && !Platform.isTouch) lockPointer(game.renderer.domElement);
     });
     return;
   }
   begin(guidance);
-  if (!Platform.isTouch) game.renderer.domElement.requestPointerLock?.();
+  if (!Platform.isTouch) lockPointer(game.renderer.domElement);
 }
 
 /** Continue: the saved floor's chapter card (real loading), then a key/tap to enter (pointer lock, sound). */
@@ -177,7 +203,7 @@ async function resumeContinue(s: SaveData) {
     playTimeBefore = s.playTime;
     loader.ready(def.readyText);
     await loader.waitForGesture();
-    if (!Platform.isTouch) game.renderer.domElement.requestPointerLock?.();
+    if (!Platform.isTouch) lockPointer(game.renderer.domElement);
     loader.hide();
     game.audio.init();
     game.start();
@@ -234,7 +260,7 @@ const pause = new PauseMenu(game.hud.pauseEl, settings, (k) => game.audio.ui(k))
 const resume = () => {
   if (!game.paused || Platform.rotateBlocked) return;
   game.togglePause(false);
-  if (!Platform.isTouch) game.renderer.domElement.requestPointerLock?.();
+  if (!Platform.isTouch) lockPointer(game.renderer.domElement);
 };
 pause.onResume = resume;
 pause.onQuit = () => location.reload();

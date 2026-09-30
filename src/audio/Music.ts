@@ -174,7 +174,8 @@ export class Music {
   private duckGain: GainNode;
   private explore: SegmentStream;
   private combatGain: GainNode;
-  private combatBuf: AudioBuffer;
+  /** the combat cue (decoded during the floor's loading; null until then — fights keep the exploration score) */
+  private combatBuf: AudioBuffer | null;
   private combatSrc: { src: AudioBufferSourceNode; t0: number; offset: number } | null = null;
   /** where the exploration score was when it last stopped (resumed from here) */
   exploreAt = CANOPY_A;
@@ -188,7 +189,7 @@ export class Music {
   /** transitions for tests: [audio time, what] */
   log: [number, string][] = [];
 
-  constructor(private ctx: AudioContext, dest: AudioNode, exploreBytes: ArrayBuffer[], combat: AudioBuffer) {
+  constructor(private ctx: AudioContext, dest: AudioNode, exploreBytes: ArrayBuffer[], combat: AudioBuffer | null) {
     this.bus = ctx.createGain();
     this.duckGain = ctx.createGain();
     this.bus.connect(this.duckGain).connect(dest);
@@ -198,7 +199,17 @@ export class Music {
     this.combatGain.gain.value = 0;
     this.combatGain.connect(this.bus);
     (window as unknown as { __music?: Music }).__music = this;
+    // Session 14: the exploration stream schedules its segments on its own timer. It used to be ticked only by the
+    // game's frame, so under the loading card and the title screen (no game loop) it fell silent after its first
+    // 12 s segment. Four times a second is plenty for its 8 s decode / 1.2 s scheduling look-ahead.
+    this.timer = window.setInterval(() => { if (this.ctx.state === 'running') this.explore.tick(this.ctx.currentTime); }, 250);
   }
+  private timer = 0;
+  /** stop the scheduler (the page is going away) */
+  dispose() { window.clearInterval(this.timer); this.stop(0.05); }
+
+  /** the combat cue arrived (Game.loadFloor): fights take it from now on */
+  setCombat(buf: AudioBuffer) { this.combatBuf = buf; }
 
   private note(what: string) { this.log.push([+this.ctx.currentTime.toFixed(2), what]); if (this.log.length > 60) this.log.shift(); }
 
@@ -265,6 +276,7 @@ export class Music {
   }
 
   private enterCombat(t: number) {
+    if (!this.combatBuf) return;
     this.mode = 'combat';
     this.fadeOutExplore(t, 1.1);
     // a fresh fight opens with the cue's intro; one that flares up soon after the last continues from its next phrase
@@ -353,7 +365,7 @@ export class Music {
       mode: this.mode, explorePos: this.explore.position(t), exploreKept: +this.exploreAt.toFixed(2),
       combatPos: this.combatSrc ? +this.combatPos(t).toFixed(2) : null,
       exploreGain: +this.explore.out.gain.value.toFixed(3), combatGain: +this.combatGain.gain.value.toFixed(3),
-      duck: +this.duckGain.gain.value.toFixed(3), decodedMB: +((this.explore.residentBytes() + this.combatBuf.length * this.combatBuf.numberOfChannels * 4) / 1e6).toFixed(1),
+      duck: +this.duckGain.gain.value.toFixed(3), decodedMB: +((this.explore.residentBytes() + (this.combatBuf ? this.combatBuf.length * this.combatBuf.numberOfChannels * 4 : 0)) / 1e6).toFixed(1),
     };
   }
 }

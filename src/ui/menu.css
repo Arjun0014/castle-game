@@ -80,14 +80,44 @@ html.menu-on #hud, html.menu-on #touch { visibility: hidden; }
 .mm-shade { position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(180deg, rgba(5,3,3,0.8) 0%, rgba(5,3,3,0.3) 30%, rgba(5,3,3,0.08) 48%, rgba(5,3,3,0.55) 70%, rgba(4,2,2,0.9) 100%),
     radial-gradient(ellipse 90% 70% at 50% 50%, transparent 35%, rgba(0,0,0,0.6) 100%); }
-.mm-head { position: absolute; left: 0; right: 0; top: calc(var(--sat) + 7cqh); display: flex; flex-direction: column; align-items: center; text-align: center; transition: opacity 0.5s, filter 0.5s; }
+.mm-head { position: absolute; isolation: isolate; left: 0; right: 0; top: calc(var(--sat) + 7cqh); display: flex; flex-direction: column; align-items: center; text-align: center; transition: opacity 0.5s, filter 0.5s; }
 .mm-crest { width: clamp(46px, 13cqw, 76px); aspect-ratio: 1; margin-bottom: 1.4cqh; opacity: 0.95; filter: drop-shadow(0 0 12px rgba(200,60,40,0.35)); }
 .mm-crest .sg-track, .mm-crest .sg-prog, .pm-crest .sg-track, .pm-crest .sg-prog { display: none; }
-.mm-title { margin: 0; font-family: 'Cormorant Garamond', 'EB Garamond', Georgia, serif; font-weight: 600; line-height: 1.02; display: flex; flex-direction: column; align-items: center; }
-.mm-title span { display: block; font-size: clamp(30px, 11.4cqw, 92px); letter-spacing: 0.16em; margin-right: -0.16em;
-  color: #e8cf94; background: linear-gradient(180deg, #fff1cc 8%, #deb970 52%, #8a6630 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 26px rgba(230,150,80,0.25)) drop-shadow(0 3px 3px rgba(0,0,0,0.95)); }
-.mm-title span + span { font-size: clamp(34px, 12.6cqw, 102px); }
+.mm-title { margin: 0; display: flex; flex-direction: column; align-items: center; position: relative; }
+/*
+ * The wordmark (session 14). A clear hierarchy — a quiet, widely tracked "ECHOES OF" between hairlines over the name
+ * itself, CAER VEYR, in Cormorant Garamond Bold with its two capitals raised — and a metal that looks struck, not
+ * printed: polished gold with a dark horizon through the waist of the letters, fine grain, a thin dark engraved edge,
+ * a close shadow that seats it on the scene, a soft shade behind it, and only a faint ember warmth (the Crownheart) —
+ * never a neon glow. Every 11 s a slow band of light passes across the name.
+ */
+.mm-head::before { content: ''; position: absolute; left: 50%; top: 40%; width: min(120%, 660px); height: 82%; transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(3,2,2,0.6) 0%, rgba(3,2,2,0.3) 55%, transparent 100%); pointer-events: none; z-index: -1; }
+.mm-t-over { display: flex; align-items: center; gap: 0.9em; margin-bottom: 0.7cqh;
+  font: 500 clamp(11px, 3.5cqw, 21px)/1 'EB Garamond', Georgia, serif; letter-spacing: 0.62em; text-transform: uppercase; color: #cfb27b;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.95), 0 0 14px rgba(0,0,0,0.6); }
+.mm-t-over b { font-weight: 500; margin-right: -0.62em; }
+.mm-t-over i { display: block; width: clamp(18px, 8cqw, 64px); height: 1px; background: linear-gradient(90deg, transparent, rgba(214,178,110,0.8)); }
+.mm-t-over i:last-child { background: linear-gradient(270deg, transparent, rgba(214,178,110,0.8)); }
+.mm-t-main { position: relative; display: block; white-space: nowrap; font-family: 'Cormorant Garamond', 'EB Garamond', Georgia, serif; font-weight: 700;
+  font-size: clamp(44px, 15.4cqw, 132px); line-height: 1; letter-spacing: 0.05em; margin-right: -0.05em; text-transform: uppercase; padding: 0.06em 0.03em 0.1em;
+  font-kerning: normal;
+  /* struck gold: a bright crown, a dark horizon at the waist, a warm reflected underside; grain over the metal */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.22 0 0 0 0 0.14 0 0 0 0 0.05 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #fff7df 0%, #f7dea0 20%, #dcb163 43%, #6c481b 50.5%, #8e6327 54%, #c79950 72%, #edcd8b 90%, #b98d47 100%);
+  background-size: 140px 140px, 100% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: #e3c282;
+  -webkit-text-stroke: 0.03em rgba(46,26,8,0.6);
+  filter: drop-shadow(0 0.025em 0 rgba(0,0,0,0.92)) drop-shadow(0 0.07em 0.06em rgba(0,0,0,0.7)) drop-shadow(0 0 0.34em rgba(236,118,56,0.18)); }
+.mm-t-main em { font-style: normal; font-size: 1.17em; line-height: 0; }
+/* the passing light: the same letters over the name, a narrow bright band sliding across them now and then */
+.mm-t-shine { position: absolute; inset: 0; padding: inherit; pointer-events: none; -webkit-text-stroke: 0;
+  background: linear-gradient(104deg, transparent 43%, rgba(255,248,226,0.95) 50%, transparent 57%) no-repeat;
+  background-size: 260% 100%; background-position: 135% 0; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  mix-blend-mode: screen; opacity: 0.55; animation: mm-sheen 11s cubic-bezier(.45,.05,.4,1) 2.4s infinite; }
+@keyframes mm-sheen { 0% { background-position: 135% 0; } 17% { background-position: -35% 0; } 100% { background-position: -35% 0; } }
+@media (prefers-reduced-motion: reduce) { .mm-t-shine { animation: none; opacity: 0; } }
 .mm-rule { display: flex; align-items: center; gap: 0.9em; margin: 2.2cqh 0 1.4cqh; color: var(--gold); font-size: 9px; }
 .mm-rule i { display: block; width: clamp(40px, 16cqw, 120px); height: 1px; background: linear-gradient(90deg, transparent, rgba(216,179,106,0.75)); }
 .mm-rule i:last-child { background: linear-gradient(270deg, transparent, rgba(216,179,106,0.75)); }
@@ -117,8 +147,10 @@ html.view-wide .mm-shade { background: linear-gradient(90deg, rgba(4,2,2,0.9) 0%
   linear-gradient(180deg, rgba(4,2,2,0.5) 0%, transparent 25%, transparent 70%, rgba(4,2,2,0.7) 100%); }
 html.view-wide .mm-head { left: 7cqw; right: auto; top: 13cqh; align-items: flex-start; text-align: left; }
 html.view-wide .mm-title { align-items: flex-start; }
-html.view-wide .mm-title span { font-size: clamp(34px, 5.4cqw, 86px); }
-html.view-wide .mm-title span + span { font-size: clamp(38px, 6cqw, 96px); }
+html.view-wide .mm-t-main { font-size: clamp(46px, 6.6cqw, 118px); }
+html.view-wide .mm-t-over { font-size: clamp(11px, 1.35cqw, 20px); }
+html.view-wide .mm-t-over i:first-child { display: none; }
+html.view-wide .mm-head::before { left: 36%; width: 135%; }
 html.view-wide .mm-crest { width: clamp(46px, 5cqw, 72px); }
 html.view-wide .mm-rule i:first-child { display: none; }
 html.view-wide .mm-tag { padding: 0; font-size: clamp(13px, 1.3cqw, 18px); }

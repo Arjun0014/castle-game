@@ -167,11 +167,24 @@ class PlatformImpl {
   private lastBuzz = 0;
   haptic(ms: number) {
     if (this.inputMode !== 'touch' || !('vibrate' in navigator)) return;
+    // before the first tap Chrome refuses (and logs) every vibrate call: nothing to feel yet anyway
+    if ((navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation?.hasBeenActive === false) return;
     const now = performance.now();
     if (now - this.lastBuzz < 45) return;
     this.lastBuzz = now;
     try { navigator.vibrate(Math.round(ms)); } catch { /* ignore */ }
   }
+}
+
+/**
+ * Pointer lock, asked politely: requestPointerLock() returns a promise in current browsers and rejects outside a
+ * gesture or in an embedded frame that may not lock — an unhandled rejection otherwise (the first click locks).
+ */
+export function lockPointer(el: HTMLElement) {
+  try {
+    const r = el.requestPointerLock?.() as unknown as Promise<void> | undefined;
+    if (r && typeof r.catch === 'function') r.catch(() => undefined);
+  } catch { /* not allowed here */ }
 }
 
 export const Platform = new PlatformImpl();

@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { Action, Input } from '../game/Input';
 import { Platform } from '../platform/Platform';
 
@@ -141,13 +142,27 @@ export class TouchControls {
       <div class="t-stick"><div class="t-knob"></div></div>
       <div class="t-cluster">${BUTTONS.map((b) => `<div class="t-btn ${b.cls}" data-a="${b.action}">${face(b)}${svg(b.icon)}<span>${b.label}</span><em>HOLD</em></div>`).join('')}</div>
       <div class="t-look-hint">${svg('look')}<span>LOOK</span></div>
-      <div class="t-interact t-btn" data-a="interact"><b></b><span></span></div>
+      <div class="t-cta" aria-live="polite">
+        <div class="t-cta-line"></div>
+        <div class="t-cta-dot"><i></i></div>
+        <div class="t-cta-group">
+          <div class="t-cta-btn t-btn" data-a="interact" role="button"><i class="t-cta-ring"></i><i class="t-cta-ripple"></i><b></b></div>
+          <div class="t-cta-name"></div>
+          <div class="t-cta-teach"><span class="t-cta-finger"></span><p>Tap here to use it — anything you can use shows this button.</p></div>
+        </div>
+      </div>
       <div class="t-pause" role="button" aria-label="Pause">${svg('pause')}</div>`;
     stage.appendChild(root);
     this.root = root;
     this.stickBase = root.querySelector('.t-stick') as HTMLElement;
     this.stickKnob = root.querySelector('.t-knob') as HTMLElement;
-    this.interactEl = root.querySelector('.t-interact') as HTMLElement;
+    this.interactEl = root.querySelector('.t-cta-btn') as HTMLElement;
+    this.cta = root.querySelector('.t-cta') as HTMLElement;
+    this.ctaGroup = root.querySelector('.t-cta-group') as HTMLElement;
+    this.ctaLine = root.querySelector('.t-cta-line') as HTMLElement;
+    this.ctaDot = root.querySelector('.t-cta-dot') as HTMLElement;
+    this.ctaName = root.querySelector('.t-cta-name') as HTMLElement;
+    this.ctaVerb = this.interactEl.querySelector('b') as HTMLElement;
     this.lookHint = root.querySelector('.t-look-hint') as HTMLElement;
     try { this.lookLearned = localStorage.getItem(LOOK_KEY) === '1'; } catch { /* storage unavailable */ }
     this.lookHint.classList.toggle('gone', this.lookLearned);
@@ -168,6 +183,7 @@ export class TouchControls {
   }
 
   private layout() {
+    this.W = this.root.clientWidth || Platform.width; this.H = this.root.clientHeight || Platform.height;
     this.radius = Math.max(46, Math.min(72, Platform.width * 0.14));
     this.root.style.setProperty('--tu', String(Math.max(0.82, Math.min(1.3, Platform.width / 400))));
   }
@@ -176,17 +192,68 @@ export class TouchControls {
   private lookLearned = false;
   private lookPx = 0;
 
+  // ------------------------------------------------------------------ the contextual button (session 14)
+  private cta: HTMLElement; private ctaGroup: HTMLElement; private ctaLine: HTMLElement; private ctaDot: HTMLElement;
+  private ctaName: HTMLElement; private ctaVerb: HTMLElement;
+  private W = 400; private H = 800;
+  private ctaPos = { x: -1, y: -1 };
+  private ctaOn = false;
   /**
-   * Contextual interact pill: `title` names the thing ("Blood Sigil"), `text` the action ("Activate
-   * Checkpoint"); `disabled` shows it greyed (a sigil still recovering) and taps do nothing.
+   * The contextual button: a big seal over the thing itself (a Blood Sigil, a memory, the lift), labelled with what
+   * a tap does — ACTIVATE, RENEW, INSPECT, DESCEND — and its name under it; `disabled` greys it (WAIT: enemies near) and
+   * taps do nothing. It used to be a text pill in the middle of the screen that new players read as a message.
    */
-  setInteract(text: string | null, title = '', disabled = false) {
-    this.interactEl.classList.toggle('on', !!text);
-    this.interactEl.classList.toggle('off', !!text && disabled);
-    if (text) {
-      (this.interactEl.children[0] as HTMLElement).textContent = title;
-      (this.interactEl.children[1] as HTMLElement).textContent = text;
+  setInteract(text: string | null, title = '', disabled = false, verb = '') {
+    const on = !!text;
+    if (on && !this.ctaOn) this.ctaPos.x = -1;         // it appears where the thing is, not sliding in from before
+    this.ctaOn = on;
+    this.cta.classList.toggle('on', on);
+    this.interactEl.classList.toggle('on', on);
+    this.interactEl.classList.toggle('off', on && disabled);
+    this.cta.classList.toggle('off', on && disabled);
+    if (on) {
+      this.ctaVerb.textContent = (verb || text!.split(' ')[0]).toUpperCase();
+      this.ctaName.textContent = disabled ? `${title} · ${text}` : title;
+    } else this.teach(false);
+  }
+
+  /** the one-time lesson on the first Blood Sigil: a finger taps the button, one line says what it is */
+  teach(on: boolean) { this.cta.classList.toggle('teach', on); }
+
+  private _v = new THREE.Vector3();
+  /**
+   * Per frame while the button shows: stand it just above the thing's place on screen (kept out of the top bars and
+   * the thumbs' arcs), a gold tether down to a pulsing ring on the thing itself. Off screen: it waits mid-frame with the
+   * tether pointing the way. Transforms only (compositor), eased so it never jitters with the camera.
+   */
+  placeInteract(at: THREE.Vector3 | null, camera: THREE.Camera, dt: number) {
+    if (!this.ctaOn) return;
+    const W = this.W, H = this.H;
+    let ax = W * 0.5, ay = H * 0.5, seen = false;
+    if (at) {
+      const v = this._v.copy(at).project(camera);
+      if (v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15) { ax = (v.x + 1) * 0.5 * W; ay = (1 - v.y) * 0.5 * H; seen = true; }
+      else { const s = v.z >= 1 ? -1 : 1; ax = W * 0.5 + Math.sign(v.x * s || 1) * W * 0.4; ay = H * 0.42; }
     }
+    // the button: ~1 button above the thing, inside the free band of the portrait frame
+    const u = W / 400;
+    const tx = THREE.MathUtils.clamp(ax, W * 0.2, W * 0.8);
+    const ty = THREE.MathUtils.clamp(ay - 96 * u, H * 0.2, H * 0.5);
+    const k = this.ctaPos.x < 0 ? 1 : 1 - Math.exp(-dt * 12);
+    this.ctaPos.x += (tx - this.ctaPos.x) * k;
+    this.ctaPos.y += (ty - this.ctaPos.y) * k;
+    const x = this.ctaPos.x, y = this.ctaPos.y;
+    this.ctaGroup.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+    const dx = ax - x, dy = ay - y, len = Math.hypot(dx, dy);
+    const r = 44 * u;
+    const show = len > r + 8;
+    this.ctaLine.style.opacity = show ? '' : '0';
+    if (show) {
+      this.ctaLine.style.width = `${(len - r - (seen ? 10 * u : 0)).toFixed(1)}px`;
+      this.ctaLine.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${Math.atan2(dy, dx).toFixed(3)}rad) translateX(${r.toFixed(1)}px)`;
+    }
+    this.ctaDot.style.opacity = seen && show ? '' : '0';
+    this.ctaDot.style.transform = `translate(${ax.toFixed(1)}px, ${ay.toFixed(1)}px)`;
   }
 
   /** Pulse one button (tutorial: the first shift, the first guard ...); null clears. */

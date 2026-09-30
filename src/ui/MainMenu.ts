@@ -4,6 +4,7 @@ import type { Settings, SettingsData } from '../game/Settings';
 import type { Guidance, SaveData } from '../game/Save';
 import { sigilSVG } from './LoadingScreen';
 import './menu.css';
+import '@fontsource/cormorant-garamond/latin-700.css';
 
 /**
  * The title screen (session 10): the game's name over the loaded castle (a slow shot of the gate, Game.menuScene),
@@ -35,7 +36,7 @@ const KBM: [string, string][] = [
 const TOUCH: [string, string][] = [
   ['Move', 'Left thumb — push to the rim to sprint'], ['Look', 'Drag anywhere else'], ['Light attack', 'ATTACK'], ['Heavy attack', 'HEAVY'],
   ['Guard / parry', 'Hold GUARD — tap it as a blow lands'], ['Shield bash', 'GUARD + ATTACK'], ['Kick', 'GUARD + HEAVY'], ['Jump', 'JUMP'],
-  ['Time shift', 'Hold the blue SHIFT seal'], ['Crouch', 'Automatic under low ceilings'], ['Interact', 'Tap the card that appears'], ['Pause', 'Top-right seal'],
+  ['Time shift', 'Hold the blue SHIFT seal'], ['Crouch', 'Automatic under low ceilings'], ['Interact', 'Tap the red button that appears over it'], ['Pause', 'Top-right seal'],
 ];
 const COMBAT_NOTES: [string, string][] = [
   ['Chain', 'Keep striking as each blow lands — up to five cuts'],
@@ -140,7 +141,10 @@ export class MainMenu {
       <div class="mm-shade"></div>
       <div class="mm-head">
         <div class="mm-crest">${sigilSVG('mm')}</div>
-        <h1 class="mm-title" aria-label="Echoes of Caer Veyr"><span>ECHOES OF</span><span>CAER VEYR</span></h1>
+        <h1 class="mm-title" aria-label="Echoes of Caer Veyr">
+          <span class="mm-t-over" aria-hidden="true"><i></i><b>Echoes of</b><i></i></span>
+          <span class="mm-t-main" aria-hidden="true"><em>C</em>aer <em>V</em>eyr<span class="mm-t-shine"><em>C</em>aer <em>V</em>eyr</span></span>
+        </h1>
         <div class="mm-rule"><i></i><b>◆</b><i></i></div>
         <div class="mm-tag">The castle remembers · a keep torn between two memories</div>
       </div>

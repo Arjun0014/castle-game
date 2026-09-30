@@ -72,7 +72,8 @@ export const OBJECTIVES: Record<number, ObjectiveDef[]> = {
     { id: 'f2_loft', text: 'Enter the Crown Loft above the antechamber', done: ['zone:-12,12,62,78,13.5,17', 'flag:FR1'], at: [0, 58, 14], shiftAt: [0, 58, 14] },
     { id: 'f2_crown', text: 'Bring down the Crown Chandelier', done: ['flag:FR1'], at: [-10.8, 70, 15],
       hints: [{ after: 45, line: 'hint_f2_crown' }] },
-    { id: 'f2_door', text: "Reach the King's door across the antechamber", done: ['zone:-12,12,79.5,95,7,11'], at: [0, 72, 8.3],
+    // session 14: the loft-edge shift (G6) gets its blue ring — in the Past, where she stands when the Crown falls
+    { id: 'f2_door', text: "Reach the King's door across the antechamber", done: ['zone:-12,12,79.5,95,7,11'], at: [0, 72, 8.3], shiftAt: [-10.7, 74.2, 14], shiftFrom: 'PAST',
       hints: [{ after: 50, line: 'hint_f2_bridge' }] },
     { id: 'f2_captain', text: 'Defeat the Kingsguard Captain', done: ['cleared:E10'] },
     { id: 'f2_conduit', text: 'Climb the conduit stair', done: ['zone:18,30,90.67,100,23.5,27', 'exit'], at: [16, 85, 8], shiftAt: [16, 85, 8],

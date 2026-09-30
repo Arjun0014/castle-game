@@ -218,16 +218,43 @@ html.input-touch #touch { display: block; }
 .t-look-hint span { font-size: calc(7 * var(--u)); letter-spacing: 0.18em; color: rgba(236,224,198,0.5); margin-top: calc(2 * var(--u)); }
 .t-look-hint.gone { opacity: 0; }
 #touch.sticking .t-look-hint { opacity: 0.35; }
-/* contextual interaction: a named card above the thumbs ("BLOOD SIGIL / Activate Checkpoint") */
-.t-interact { left: 50%; right: auto; bottom: calc(var(--sab) + 400 * var(--u)); transform: translateX(-50%); width: auto; height: auto; min-height: calc(50 * var(--u));
-  border-radius: calc(8 * var(--u)); padding: calc(6 * var(--u)) calc(20 * var(--u)) calc(7 * var(--u)); display: none; flex-direction: column; gap: 1px;
-  border: 1.5px solid rgba(216,179,106,0.75); background: linear-gradient(180deg, rgba(40,20,16,0.86), rgba(12,8,8,0.9)); filter: none; }
-.t-interact.on { display: flex; }
-.t-interact.off { opacity: 0.55; border-color: rgba(160,150,140,0.5); }
-.t-interact.down { transform: translateX(-50%) scale(0.95); }
-.t-interact b { position: static; font-size: calc(8.5 * var(--u)); letter-spacing: 0.24em; color: rgba(226,120,110,0.95); font-weight: 500; }
-.t-interact b:empty { display: none; }
-.t-interact span { position: static; font-size: calc(13.5 * var(--u)); letter-spacing: 0.06em; color: #f4e8cf; white-space: nowrap; font-weight: 500; }
+/* ---- the contextual button (session 14): a seal over the thing itself, tethered to it; teaches itself once */
+.t-cta { position: absolute; inset: 0; pointer-events: none; display: none; z-index: 3; }
+.t-cta.on { display: block; }
+.t-cta-group { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.t-cta-btn.t-btn { position: absolute; left: calc(-44 * var(--u)); top: calc(-44 * var(--u)); right: auto; bottom: auto; width: calc(88 * var(--u)); height: calc(88 * var(--u));
+  border-radius: 50%; display: flex; align-items: center; justify-content: center; pointer-events: auto; transform: none; filter: none;
+  background: radial-gradient(circle at 50% 38%, #b3322a 0%, #7d1712 55%, #3e0907 100%);
+  border: calc(3 * var(--u)) solid #e3c27a; box-shadow: 0 0 0 calc(1.5 * var(--u)) rgba(40,14,6,0.9), inset 0 0 0 calc(2 * var(--u)) rgba(255,220,160,0.25), 0 calc(4 * var(--u)) calc(14 * var(--u)) rgba(0,0,0,0.7), 0 0 calc(26 * var(--u)) rgba(255,90,60,0.45);
+  animation: cta-breathe 1.6s ease-in-out infinite; }
+.t-cta-btn b { position: static; font: 600 calc(12.5 * var(--u))/1 'EB Garamond', Georgia, serif; letter-spacing: 0.12em; color: #fff3d6; text-shadow: 0 1px 2px rgba(0,0,0,0.9); margin-right: -0.12em; }
+.t-cta-btn .t-cta-ring { position: absolute; inset: calc(-10 * var(--u)); border-radius: 50%; border: calc(1.5 * var(--u)) solid rgba(255,214,150,0.55); animation: cta-ring 1.6s ease-in-out infinite; }
+.t-cta-btn .t-cta-ripple { position: absolute; inset: 0; border-radius: 50%; border: calc(2 * var(--u)) solid rgba(255,200,140,0.9); animation: cta-ripple 1.6s ease-out infinite; }
+.t-cta-btn.down { transform: scale(0.93); }
+.t-cta.off .t-cta-btn { background: radial-gradient(circle at 50% 38%, #4a4038 0%, #2a2420 100%); border-color: rgba(170,160,145,0.6); box-shadow: 0 calc(4 * var(--u)) calc(14 * var(--u)) rgba(0,0,0,0.7); animation: none; }
+.t-cta.off .t-cta-ring, .t-cta.off .t-cta-ripple { display: none; }
+.t-cta.off .t-cta-btn b { color: #cfc6b6; }
+.t-cta-name { position: absolute; left: 0; top: calc(52 * var(--u)); transform: translateX(-50%); white-space: nowrap; font: 500 calc(9 * var(--u))/1.2 'EB Garamond', Georgia, serif;
+  letter-spacing: 0.26em; color: #f0d9a6; text-shadow: 0 1px 3px #000, 0 0 10px rgba(0,0,0,0.8); padding: calc(3 * var(--u)) calc(9 * var(--u)); background: rgba(10,6,5,0.55); border-radius: calc(4 * var(--u)); }
+.t-cta-line { position: absolute; left: 0; top: 0; height: calc(1.5 * var(--u)); width: 0; transform-origin: 0 50%; will-change: transform;
+  background: repeating-linear-gradient(90deg, rgba(240,205,140,0.9) 0 calc(6 * var(--u)), transparent calc(6 * var(--u)) calc(10 * var(--u))); filter: drop-shadow(0 0 3px rgba(0,0,0,0.9)); }
+.t-cta-dot { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.t-cta-dot i { position: absolute; left: calc(-11 * var(--u)); top: calc(-11 * var(--u)); width: calc(22 * var(--u)); height: calc(22 * var(--u)); border-radius: 50%;
+  border: calc(2 * var(--u)) solid rgba(255,214,150,0.95); box-shadow: 0 0 calc(10 * var(--u)) rgba(255,150,90,0.8); animation: cta-dot 1.6s ease-out infinite; }
+/* the lesson (first Blood Sigil): a finger taps the seal; one line under it */
+.t-cta-teach { position: absolute; left: 0; top: calc(78 * var(--u)); transform: translateX(-50%); width: calc(230 * var(--u)); display: none; text-align: center; }
+.t-cta.teach .t-cta-teach { display: block; }
+.t-cta-teach p { margin: 0; padding: calc(7 * var(--u)) calc(11 * var(--u)); font: 500 calc(11.5 * var(--u))/1.35 'EB Garamond', Georgia, serif; color: #f6ead0; letter-spacing: 0.02em;
+  background: rgba(14,8,6,0.86); border: 1px solid rgba(227,194,122,0.7); border-radius: calc(6 * var(--u)); box-shadow: 0 calc(3 * var(--u)) calc(12 * var(--u)) rgba(0,0,0,0.6); }
+.t-cta-finger { position: absolute; left: calc(124 * var(--u)); top: calc(-66 * var(--u)); width: calc(26 * var(--u)); height: calc(34 * var(--u)); pointer-events: none;
+  background: no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 34'%3E%3Cpath d='M9 2.5a2.5 2.5 0 0 1 5 0v11l1.6-.9a2.3 2.3 0 0 1 3 .9l.3.6 1.4-.6a2.2 2.2 0 0 1 2.9 1.3l.3.9.8-.2a2.1 2.1 0 0 1 2.5 2V24c0 5-3.4 9-8.4 9h-2.2c-3.1 0-5.4-1.6-7-4.3L2 20.4a2.3 2.3 0 0 1 3.5-2.9L9 21z' fill='%23fff3d6' stroke='%23201008' stroke-width='1.3'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.8)); animation: cta-tap 1.6s ease-in-out infinite; }
+.cine .t-cta, #touch.cine .t-cta { display: none; }
+@keyframes cta-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes cta-ring { 0%, 100% { opacity: 0.35; transform: scale(0.96); } 50% { opacity: 0.9; transform: scale(1.04); } }
+@keyframes cta-ripple { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.7); } }
+@keyframes cta-dot { 0% { opacity: 1; transform: scale(0.6); } 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes cta-tap { 0%, 100% { transform: translate(0, 0) rotate(-12deg); } 45% { transform: translate(-2px, 10px) rotate(-12deg) scale(0.94); } 55% { transform: translate(-2px, 10px) rotate(-12deg) scale(0.94); } }
 .t-pause { position: absolute; top: calc(var(--sat) + 1.6cqh); right: calc(var(--sar) + 3cqw); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(8,6,5,0.45); border: 1px solid rgba(216,179,106,0.35); }
 .t-pause svg.t-glyph { width: 52%; height: 52%; margin: 0; }
 .t-stick-home { position: absolute; left: calc(var(--sal) + 34 * var(--u)); bottom: calc(var(--sab) + 58 * var(--u)); width: calc(116 * var(--u)); height: calc(116 * var(--u)); border-radius: 50%;

@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { TimeState } from '../levels/Materials';
 import { Platform } from '../platform/Platform';
 
@@ -33,8 +34,12 @@ export class HUD {
   endEl: HTMLElement;
   reticle: HTMLElement;
   private threatEls: HTMLElement[] = [];
-  /** touch HUD hook: contextual interact pill */
-  onInteractText?: (text: string | null, title: string, disabled: boolean) => void;
+  /** touch HUD hook: the contextual button (TouchControls.setInteract) */
+  onInteractText?: (text: string | null, title: string, disabled: boolean, verb: string) => void;
+  /** where the thing to interact with is (world): the touch button stands over it (TouchControls.placeInteract) */
+  interactAt: THREE.Vector3 | null = null;
+  /** that thing is a Blood Sigil (the first one teaches the button) */
+  interactKind = '';
   private promptTimer = 0;
   private messageTimer = 0;
   private denyTimer = 0;
@@ -326,8 +331,12 @@ export class HUD {
    * (Activate Checkpoint). Keyboard shows the E key; the touch HUD mirrors it on its tappable pill.
    * `disabled` = visible but unavailable right now (e.g. a sigil recovering), shown greyed without a key.
    */
-  interact(text: string | null, title = '', disabled = false) {
-    const key = text ? `${title}|${text}|${disabled}` : '';
+  interact(text: string | null, title = '', disabled = false, opts: { at?: THREE.Vector3; verb?: string; kind?: string } = {}) {
+    if (text && opts.at) (this.interactAt ??= new THREE.Vector3()).copy(opts.at);
+    else if (!text) this.interactAt = null;
+    this.interactKind = text ? opts.kind ?? '' : '';
+    const verb = opts.verb ?? (text ? text.split(' ')[0] : '');
+    const key = text ? `${title}|${text}|${disabled}|${verb}` : '';
     if (key === this.interactKey) return;
     this.interactKey = key;
     if (text) {
@@ -335,7 +344,7 @@ export class HUD {
       this.interactEl.classList.add('on');
       this.interactEl.classList.toggle('off', disabled);
     } else this.interactEl.classList.remove('on');
-    this.onInteractText?.(text, title, disabled);
+    this.onInteractText?.(text, title, disabled, verb);
   }
 
   message(title: string, sub = '', seconds = 3.5) {

@@ -55,6 +55,7 @@ export class Checkpoints {
     }
   }
 
+  private _at = new THREE.Vector3();
   cooldownLeft(cid: string) { return Math.max(0, (this.readyAt.get(cid) ?? -1) - this.g.t); }
 
   update(dt: number) {
@@ -81,11 +82,14 @@ export class Checkpoints {
       const cid = this.near.m.name;
       // a sigil that was just used shows no card at all (the recovery ring on the floor carries its state);
       // pressing Interact on it anyway gets a brief note (interact())
+      const at = this._at.copy(this.near.m.pos).setY(this.near.m.pos.y + 1.1);
       if (this.cooldownLeft(cid) > 0) g.hud.interact(null);
-      else if (g.enemies.engagedNear(p, SIGIL_SAFE)) g.hud.interact('Enemies are near', 'BLOOD SIGIL', true);
-      else g.hud.interact(this.save?.cid === cid ? 'Renew Checkpoint' : 'Activate Checkpoint', 'BLOOD SIGIL');
+      else if (g.enemies.engagedNear(p, SIGIL_SAFE)) g.hud.interact('Enemies are near', 'BLOOD SIGIL', true, { at, verb: 'WAIT', kind: 'sigil' });
+      else if (this.save?.cid === cid) g.hud.interact('Renew Checkpoint', 'BLOOD SIGIL', false, { at, verb: 'RENEW', kind: 'sigil' });
+      else g.hud.interact('Activate Checkpoint', 'BLOOD SIGIL', false, { at, verb: 'ACTIVATE', kind: 'sigil' });
     } else if (this.near?.kind === 'trace') {
-      g.hud.interact(this.readTraces.has(this.near.m.name) ? 'Remember' : 'Examine', 'MEMORY');
+      const read = this.readTraces.has(this.near.m.name);
+      g.hud.interact(read ? 'Remember' : 'Examine', 'MEMORY', false, { at: this.near.m.pos, verb: read ? 'RECALL' : 'INSPECT', kind: 'trace' });
     } else g.hud.interact(null);
     // beacon states
     for (const m of this.sigils) {

@@ -166,7 +166,7 @@ export class Tutorial {
       },
       {
         id: 'sigil', title: 'BLOOD SIGIL', kbm: 'Kneel at the Blood Sigil: press E on it. Sigils are checkpoints — fall, and you wake at the last one you knelt at.',
-        touch: 'Kneel at the Blood Sigil: step onto it and tap ACTIVATE CHECKPOINT. Sigils are checkpoints — fall, and you wake at the last one you knelt at.',
+        touch: 'Kneel at the Blood Sigil: walk onto it and tap the red ACTIVATE button that appears over it. Sigils are checkpoints — fall, and you wake at the last one you knelt at.',
         done: () => this.g.checkpoints.activated.has('CP1'),
         enter: () => this.g.hud.teachBar(false),
       },
@@ -234,7 +234,7 @@ export class Tutorial {
       },
       {
         id: 'cp3', title: 'BLOOD SIGIL', kbm: 'Kneel at the sigil on the landing (E). The castle will remember you here — above the stair you needed both memories to climb.',
-        touch: 'Kneel at the sigil on the landing: tap ACTIVATE CHECKPOINT. The castle will remember you here — above the stair you needed both memories to climb.',
+        touch: 'Kneel at the sigil on the landing: tap ACTIVATE over it. The castle will remember you here — above the stair you needed both memories to climb.',
         when: () => atTop(),
         done: () => cp3(),
         skip: () => beyondStair() && !atTop(),

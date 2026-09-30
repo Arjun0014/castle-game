@@ -121,7 +121,7 @@ export class Lift {
     if (this.t < 0) {
       const was = this.near;
       this.near = this.onDeck() && p.alive && !p.scripted;
-      if (this.near) g.hud.interact('Descend to the Crownheart', "THE KING'S LIFT", g.enemies.engagedNear(p.pos, 14));
+      if (this.near) g.hud.interact('Descend to the Crownheart', "THE KING'S LIFT", g.enemies.engagedNear(p.pos, 14), { at: p.pos.clone().setY(p.pos.y + 1.9), verb: 'DESCEND', kind: 'lift' });
       else if (was) g.hud.interact(null);
       return;
     }

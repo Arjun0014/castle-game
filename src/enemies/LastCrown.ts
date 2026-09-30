@@ -60,6 +60,8 @@ const ADD_FALLBACK: Record<TimeState, ArchetypeId[]> = {
   PAST: ['guard', 'muster', 'remnant_guard', 'archer', 'royal_warden'],
 };
 const ADD_CAP = 5;
+/** HP fractions at which the Crownheart bleeds (vfx/Crownheart.wound) */
+const WOUND_MARKS = [0.9, 0.75, 0.55, 0.42, 0.2, 0.1];
 const MID2_AFTER = 20;
 const LATE_EVERY = 24;
 const LATE_MAX = 2;
@@ -98,6 +100,7 @@ export class LastCrown extends Enemy {
   private lastWaveAt = -1e9;
   private lateCount = 0;
   private waveN = 0;
+  private woundIdx = 0;
   /** tests: every wave [time, wave, memory, kinds] */
   waveLog: [number, string, string, string[]][] = [];
   private deathT = 0;
@@ -210,6 +213,9 @@ export class LastCrown extends Enemy {
     this.updateBinding(dt);
     if (this.phase === 1 && !this.summoned80 && this.hp < this.arch.hp * 0.8) { this.summoned80 = true; this.callWave('first'); }
     this.paceWaves();
+    // her wounds reach the heart: each mark her HP crosses makes it bleed (the chamber flushes red)
+    const f = this.hp / this.arch.hp;
+    while (this.woundIdx < WOUND_MARKS.length && f < WOUND_MARKS[this.woundIdx]) { this.woundIdx++; this.g.heart?.wound(0.8 + 0.2 * (this.woundIdx / WOUND_MARKS.length)); }
     if (this.phase === 3 && Math.random() < dt * 20) {
       const a = Math.random() * Math.PI * 2, r = Math.random() * 12;
       this.g.fx.emit(this.lens.clone().add(new THREE.Vector3(Math.cos(a) * r, 0.1, Math.sin(a) * r)), new THREE.Vector3(0, 0.8 + Math.random(), 0), EMBER, 1.4, 0.06, -0.3, 0.3);
@@ -621,7 +627,7 @@ export class LastCrown extends Enemy {
     this.phase = 1; this.mode = 'idle'; this.t = 0; this.gap = 2.5; this.invuln = false; this.untargetable = false;
     this.wardUp = false; this.bindT = -1; this.slipT = -1; this.staggerT = 0; this.summoned80 = false; this.castId = '';
     this.nextWard = 14; this.nextSlip = 20; this.nextBind = 12;
-    this.wavesDone.clear(); this.lateCount = 0; this.lastWaveAt = -1e9; this.phaseAt = 0;
+    this.wavesDone.clear(); this.lateCount = 0; this.lastWaveAt = -1e9; this.phaseAt = 0; this.woundIdx = 0;
     this.spells.clearAll();
     this.g.heart?.setPhase(1);
     // a retry: out of sight again until the reveal replays

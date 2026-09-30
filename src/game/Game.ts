@@ -1,4 +1,5 @@
 import { AUTHOR } from '../data/credits';
+import { RouteGuide } from './RouteGuide';
 import * as THREE from 'three';
 import { Input } from './Input';
 import { Level, type Marker } from '../levels/Level';
@@ -127,6 +128,8 @@ export class Game {
   /** what the tutorials have seen the player do (kept across floors) */
   learned: Learned = { moved: 0, looked: 0, hits: 0, guarded: false, dodged: false, shifted: false, sigil: false, resonance: false, heavy: false, crownbreaker: false, whirlwind: false };
   objectives!: Objectives;
+  /** route guidance in the world (session 14): chevrons, beacons, the gap glow */
+  guide: RouteGuide | null = null;
   /** the heroine's voice + subtitles */
   dialogue: Dialogue;
   /** level prompt ids now taught by the persistent tutorials (Objectives) instead of a timed prompt */
@@ -187,7 +190,7 @@ export class Game {
     if (opts.stage) {
       this.touch = new TouchControls(opts.stage, this.input);
       this.touch.onPause = () => { if (this.started && !this.finished) this.togglePause(); };
-      this.hud.onInteractText = (t, title, off) => this.touch?.setInteract(t, title, off);
+      this.hud.onInteractText = (t, title, off, verb) => this.touch?.setInteract(t, title, off, verb);
     }
     this.input.autoCrouch = Platform.isTouch;
     const ca = new URLSearchParams(location.search).get('camassist');
@@ -291,9 +294,20 @@ export class Game {
    * Initial load: core resources (hero, shared sounds), the ambience beds (unless muted) and floor `id`,
    * under one byte-weighted progress bar. Returns once the floor is built and GPU-warmed.
    */
+  /** the title score is ready to play (main.ts starts it as soon as the browser allows sound) */
+  onMusicReady?: () => void;
   boot(id: number, sink: LoadSink): Promise<void> {
     if (this.floorOp) return this.floorOp;
     this.assets.audioCtx = this.audio.createContext();
+    // session 14: the title score first — its exploration track (2.5 MB) loads ahead of the floor so it can play under
+    // the loading card and the title screen (Music waits for the browser to allow sound: autoplay or a first gesture)
+    if (this.audio.ambienceEnabled) {
+      const m = this.assets.manager;
+      void m.acquire('music', ['music:explore']).then(() => {
+        if (!this.audio.music) this.audio.bindMusic(m.get('music:explore'), m.has('music:combat') ? m.get('music:combat') : null);
+        this.onMusicReady?.();
+      }).catch((err) => console.warn('[music] the score did not load:', err));
+    }
     const extra = [{ scope: 'core', keys: this.assets.coreKeys() }];
     if (this.audio.ambienceEnabled) {
       extra.push({ scope: 'ambience', keys: this.assets.ambienceKeys() });
@@ -398,7 +412,8 @@ export class Game {
     for (const k of [...this.assets.coreKeys(), ...this.assets.ambienceKeys(), ...keys]) {
       if (k.startsWith('snd:') && m.has(k) && !this.audio.isBound(k.slice(4))) this.audio.bind(k.slice(4), m.get<AudioBuffer[]>(k));
     }
-    if (!this.audio.music && m.has('music:explore') && m.has('music:combat')) this.audio.bindMusic(m.get('music:explore'), m.get('music:combat'));
+    if (!this.audio.music && m.has('music:explore')) this.audio.bindMusic(m.get('music:explore'), m.has('music:combat') ? m.get('music:combat') : null);
+    if (m.has('music:combat')) this.audio.music?.setCombat(m.get('music:combat'));
     const t1 = performance.now();
     sink(0.8, `${def.loadingText} — raising the walls`);
     await yieldFrame();
@@ -431,6 +446,7 @@ export class Game {
     this.enemies.build(rigs);
     this.checkpoints = new Checkpoints(this);
     this.objectives = new Objectives(this, this.learned);
+    this.guide = new RouteGuide(this);
     this.dialogue.attach(id);
     this.fractures = new Fractures(this);
     this.lifts = this.level.markersOf('lift').map((m) => new Lift(this, m));
@@ -492,6 +508,7 @@ export class Game {
     this.enemies.dispose();
     this.checkpoints.dispose();
     this.objectives.dispose();
+    this.guide?.dispose(); this.guide = null;
     this.level.dispose();
     this.mats.dispose();
     this.atmo.clearShafts();
@@ -554,7 +571,11 @@ export class Game {
       // the Last Crown's wards and bindings exist in one memory only: the hero's own shift breaks them
       for (const e of this.enemies.enemies) (e as { onPlayerShift?: () => void }).onPlayerShift?.();
     };
-    p.events.onInteract = () => this.lifts.some((l) => l.interact()) || this.checkpoints.interact();
+    p.events.onInteract = () => {
+      const used = this.lifts.some((l) => l.interact()) || this.checkpoints.interact();
+      if (used && this.hud.interactAt) this.learned.interactTap = true;
+      return used;
+    };
     p.events.onDeath = () => this.onPlayerDeath();
     p.events.onFootstep = (_pos, speed) => this.audio.footstep(this.time.state, speed, p.crouching);
     p.events.onDodge = () => this.audio.dodge();
@@ -754,17 +775,20 @@ export class Game {
     this.heartTinted = w > 0;
     const c = h!.color, e = h!.energy;
     const f = this.scene.fog as THREE.Fog;
-    // (THREE.Color works in linear light: small weights here are already clearly visible once tone-mapped; the
-    // chamber's crown lights carry most of the breathing, the ambient only leans)
-    this.hemi.color.copy(b.hemiSky).lerp(c, 0.16 * w);
-    this.hemi.groundColor.copy(b.hemiGround).lerp(c, 0.2 * w);
-    this.hemi.intensity = b.hemi * (1 + (0.26 * e - 0.11) * w);
-    this.fill.color.copy(b.fill).lerp(c, 0.3 * w);
-    this.fill.intensity = b.fillI * (1 + (0.36 * e - 0.13) * w);
-    this.playerLight.color.lerp(c, 0.45 * w);
-    this.playerLight.intensity = this.heroLight * (1 + (0.36 * e - 0.12) * w);
-    f.color.copy(b.fog).lerp(this._heartFog.copy(c).multiplyScalar(0.035), 0.5 * w);
-    this.renderer.toneMappingExposure = b.exposure * (1 + (0.045 * e - 0.018) * w);
+    // Session 14: the heart OWNS the chamber's light — the ambient, the fill, the key light, the fog and the hero's own
+    // light all take its colour (crimson ⇄ orange ⇄ gold with its mood) and swell with its energy, so the whole arena —
+    // walls, floor, mist, the heroine, the Crown's silhouette — reads RED, then GOLD, then red again
+    this.hemi.color.copy(b.hemiSky).lerp(c, 0.55 * w);
+    this.hemi.groundColor.copy(b.hemiGround).lerp(c, 0.62 * w);
+    this.hemi.intensity = b.hemi * (1 + (0.55 * e - 0.2) * w);
+    this.fill.color.copy(b.fill).lerp(c, 0.85 * w);
+    this.fill.intensity = b.fillI * (1 + (0.75 * e - 0.25) * w);
+    this.sun.color.copy(b.sun).lerp(c, 0.6 * w);
+    this.sun.intensity = b.sunI * (1 + (0.4 * e - 0.15) * w);
+    this.playerLight.color.lerp(c, 0.8 * w);
+    this.playerLight.intensity = this.heroLight * (1 + (0.6 * e - 0.15) * w);
+    f.color.copy(b.fog).lerp(this._heartFog.copy(c).multiplyScalar(0.07 + 0.05 * Math.min(1.5, e)), 0.85 * w);
+    this.renderer.toneMappingExposure = b.exposure * (1 + (0.09 * e - 0.035) * w);
   }
   private _heartFog = new THREE.Color();
 
@@ -1035,6 +1059,7 @@ export class Game {
     this.heart?.update(dt);
     this.embers?.update(dt);
     this.objectives.update(dt);
+    this.guide?.update(dt);
     this.tutorial?.update(this.realDt);
     this.dialogue.update(this.realDt);
     this.fractures.update(dt);
@@ -1111,6 +1136,11 @@ export class Game {
           lightOn: whirling, heavyOn: !!p.attack?.shock && p.state === 'attack',
         },
       });
+    }
+    if (this.touch && Platform.isTouch && this.hud.interactAt) {
+      // the first Blood Sigil teaches the button once (session 14): a finger taps it until she does
+      this.touch.teach(this.hud.interactKind === 'sigil' && !this.learned.interactTap);
+      this.touch.placeInteract(this.hud.interactAt, this.camera, this.realDt);
     }
     this.updateAbilityTip();
     if (this.debug) this.hud.debugEl.textContent = this.debugText();

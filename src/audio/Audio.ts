@@ -108,11 +108,13 @@ export class AudioFX {
 
   /** The adaptive score (audio/Music.ts): null in automation mute, and until its files are loaded. */
   music: Music | null = null;
-  bindMusic(explore: ArrayBuffer[], combat: AudioBuffer) {
+  bindMusic(explore: ArrayBuffer[], combat: AudioBuffer | null) {
     if (!this.ctx || this.music) return;
     this.music = new Music(this.ctx, this.master, explore, combat);
     this.music.setLevel(this.lv.score);
   }
+  /** the context is running (sound can be heard: autoplay allowed or a gesture unlocked it) */
+  get running() { return this.ctx?.state === 'running'; }
 
   /** Decoded buffers for a sound id (from the AssetManager). */
   bind(id: string, buffers: AudioBuffer[]) { this.buffers.set(id as SoundId, buffers); this.loaded = true; }

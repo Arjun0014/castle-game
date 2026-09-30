@@ -1,3 +1,4 @@
+import { lockPointer } from '../platform/Platform';
 /**
  * Semantic input: keyboard + mouse (pointer lock), the touch HUD (ui/TouchControls) and the virtual layer used
  * by the autopilot/test harness all drive the same actions. Gameplay reads actions only.
@@ -56,7 +57,7 @@ export class Input {
     });
     el.addEventListener('mousedown', (e) => {
       if (!this.locked) {
-        el.requestPointerLock?.();
+        lockPointer(el);
         return;
       }
       if (e.button === 0) this.press('light', 'mouse:0');

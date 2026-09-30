@@ -19,6 +19,14 @@ import { Platform } from '../platform/Platform';
  *   - the Last Crown's phases run it hotter and faster; her great casts make it SURGE (it draws in while she gathers,
  *     flares at the release); when she falls it convulses and shatters and the chamber goes dark.
  *
+ * Session 14 — the chamber's MOOD: on top of the beats the heart swings the whole arena slowly between deep crimson and
+ * hot gold (`mood`, 0..1): it dwells in the red, climbs through orange into gold for a few seconds, and sinks back —
+ * two incommensurate swells, so it never repeats like a colour cycle, faster as her phases rise (~19 s → ~11 s). The
+ * room follows it hard (Game.applyHeartTone: ambient, fill, key light, fog, the heroine's own light, the crown lights,
+ * her glow). Stronger changes: every heartbeat pushes it up the ramp; her great casts draw it DOWN into crimson while
+ * she gathers and flare it white-gold at the release; a phase break floods it gold; a wound (her HP crossing a mark,
+ * LastCrown) makes it BLEED — a hard red pulse that slowly lets go.
+ *
  * It never adds a light (a new light would recompile every lit program): it drives the level's own `crown` light specs.
  * Its materials are warmed with the floor (warmKit).
  */
@@ -126,6 +134,11 @@ export class Crownheart {
   private heat = 0;
   private heatWant = 0;
   private rate = 0.85;
+  /** the chamber's slow swing, 0 = crimson … 1 = gold (tests read it) */
+  mood = 0.3;
+  private moodT = 0;
+  /** a wound to the Crown: the heart bleeds red (1 → 0 over ~2.5 s) */
+  private bleed = 0;
   /** its lights: the one at the heart and every crown light of the chamber, with their authored values */
   private lights: { l: CrownLight; i: number; c: THREE.Color; w: number }[] = [];
   /** dying: seconds since the Last Crown fell (-1 = alive) */
@@ -192,6 +205,9 @@ export class Crownheart {
   /** a great cast lands / a phase breaks: a flare (0..1.5) that dies away over ~1.2 s */
   surge(k: number) { this.surgeT = Math.max(this.surgeT, k); this.chargeFor = 0; }
 
+  /** her HP crossed a mark (LastCrown): the heart bleeds — a hard red pulse and a double beat */
+  wound(k = 1) { this.bleed = Math.max(this.bleed, k); }
+
   /** she has fallen: it convulses, then breaks */
   shatter() { if (this.dying < 0) this.dying = 0; }
 
@@ -242,6 +258,14 @@ export class Crownheart {
     }
     // the slow tides of the whole crystal (two incommensurate swells: it never repeats exactly)
     const tide = 0.5 + 0.28 * Math.sin(this.t * 0.37) + 0.22 * Math.sin(this.t * 0.61 + 1.3);
+    // the chamber's mood: crimson ⇄ gold, dwelling at the ends (a smoothstep of two drifting swells)
+    this.moodT += dt * (this.phase >= 3 ? 0.09 : this.phase === 2 ? 0.07 : 0.053);
+    const swing = 0.5 + 0.5 * Math.sin(this.moodT * Math.PI * 2 + 0.9 * Math.sin(this.moodT * Math.PI * 2 * 0.37 + 1.1));
+    const sm = THREE.MathUtils.smoothstep(swing, 0.18, 0.82);
+    this.bleed = Math.max(0, this.bleed - dt * 0.4);
+    const wantMood = THREE.MathUtils.clamp(sm + this.heat * 0.6 + 0.5 * this.surgeT - 1.1 * this.bleed + Math.min(0, charge) * 1.6, 0, 1);
+    this.mood += (wantMood - this.mood) * Math.min(1, dt * (this.bleed > 0.5 || this.surgeT > 0.5 ? 6 : 1.4));
+    if (this.bleed > 0.6) beat = Math.max(beat, 0.8 * this.bleed);
     const u = this.uniforms;
     u.uTime.value = this.t;
     u.uBeat.value = beat;
@@ -257,20 +281,23 @@ export class Crownheart {
     this.bands.forEach((b, i) => { b.rotation.y += dt * (0.05 + i * 0.03) * (i % 2 ? -1 : 1); });
     // the light it gives: the crystal's mean heat on the same ramp (crimson in the troughs, amber / gold on the beats
     // and the surges), and its strength
-    this.energy = Math.max(0.05, (0.42 + 0.3 * tide + 0.55 * beat + build + 0.9 * surge + this.heat * 0.8 + Math.min(0, charge)) * flicker);
-    // troughs sit crimson, the tide carries it through orange, a beat on a high tide touches gold; surges go hot yellow
-    heartRamp(0.36 + 0.28 * tide + 0.42 * beat + this.heat + 0.35 * surge + Math.min(0, charge) * 0.5, this.color);
+    // brighter in its gold, darker and redder in its crimson; a wound flares it before it sinks
+    this.energy = Math.max(0.05, (0.3 + 0.4 * this.mood + 0.12 * tide + 0.45 * beat + build + 0.8 * surge + this.heat * 0.5 + 0.35 * this.bleed + Math.min(0, charge)) * flicker);
+    // the mood carries it from deep crimson (0.2) to hot gold (1.0); beats push it up the ramp, surges to white-gold, a
+    // wound drags it back into blood
+    // (gold stays gold: only a surge's flare runs on into white-gold — a white-hot room reads as washed out, not hot)
+    heartRamp(Math.min(1.02 + 0.2 * surge, 0.2 + 0.7 * this.mood + 0.05 * tide + 0.14 * beat + 0.4 * surge - 0.35 * this.bleed + Math.min(0, charge) * 0.4), this.color);
     this.haloMat.color.copy(this.color);
     this.haloMat.opacity = ((this.state === 'PAST' ? 0.35 : 0.5) + beat * 0.3 + surge * 0.3) * flicker;
     this.halo.quaternion.copy(this.g.camera.quaternion);
     for (const x of this.lights) {
-      x.l.intensity = x.i * THREE.MathUtils.lerp(1, 0.45 + 0.75 * this.energy, x.w);
-      x.l.color.copy(x.c).lerp(this.color, 0.75 * x.w);
+      x.l.intensity = x.i * THREE.MathUtils.lerp(1, 0.3 + 1.0 * this.energy, x.w);
+      x.l.color.copy(x.c).lerp(this.color, Math.min(1, 0.95 * x.w + 0.1));
     }
     // the Last Crown's glow takes the heart's colour (her silhouette is drawn by it)
     const boss = this.g.enemies?.boss;
     if (boss?.alive && boss.arch.id === 'last_crown') {
-      for (const m of boss.materials as THREE.MeshStandardMaterial[]) if (m.emissiveMap) m.emissive.copy(this.color).multiplyScalar(0.55 + 0.45 * this.energy);
+      for (const m of boss.materials as THREE.MeshStandardMaterial[]) if (m.emissiveMap) m.emissive.copy(this.color).multiplyScalar(0.5 + 0.65 * this.energy);
     }
     // embers peel off the crystal and rise, thicker on the beats and the surges
     this.emberAcc += dt * (4 + beat * 10 + surge * 30);

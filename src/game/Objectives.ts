@@ -22,7 +22,9 @@ export const SHIFT_RING_BLUE = 0x6cc2ff;
 /** skills the tutorials wait for (kept for the whole run: floors transition in place) */
 export interface Learned { moved: number; looked: number; hits: number; guarded: boolean; dodged: boolean; shifted: boolean; sigil: boolean; resonance: boolean; heavy: boolean;
   /** floor rewards performed at least once (their unlock tip stays until then) */
-  crownbreaker: boolean; whirlwind: boolean }
+  crownbreaker: boolean; whirlwind: boolean;
+  /** the contextual button has been used once (its lesson on the first Blood Sigil is over) */
+  interactTap?: boolean }
 
 export class Objectives {
   private list: ObjectiveDef[];
@@ -86,6 +88,9 @@ void main() {
     this.g.touch?.highlight(null);
   }
 
+  /** seconds the current objective has run while exploring (not fighting) */
+  get activeTime() { return this.activeT; }
+
   /** seconds until the current objective's next stuck hint (Infinity when none is due) */
   nextHintIn() {
     const h = this.current?.hints?.[this.hintIdx];
@@ -99,7 +104,8 @@ void main() {
     return bx >= x0 && bx <= x1 && by >= y0 && by <= y1 && bz >= z0 && bz <= z1;
   }
 
-  private met(c: string): boolean {
+  /** a condition string ('cleared:E5', 'flag:FR1', 'state:PAST', 'zone:…') holds now (also game/RouteGuide.ts) */
+  met(c: string): boolean {
     const g = this.g;
     const k = c.indexOf(':');
     const kind = k < 0 ? c : c.slice(0, k), v = k < 0 ? '' : c.slice(k + 1);
@@ -191,7 +197,7 @@ void main() {
       if (d < 30 && !g.enemies.inCombat) want = d < 1.2 ? 0.45 : 0.9;
       this.ring.position.copy(this.ringAt).setY(this.ringAt.y + 0.06);
       // session 14: always the SHIFT seal's azure — "blue = shift here" (the tutorial says "the blue ring"; gold is
-      // reserved for the route markers, game/Guidance.ts). It was amber in the Present, where the first shift happens.
+      // reserved for the route markers, game/RouteGuide.ts). It was amber in the Present, where the first shift happens.
       (this.ringMat.uniforms.uColor.value as THREE.Color).setHex(SHIFT_RING_BLUE);
     }
     const u = this.ringMat.uniforms.uOpacity;
@@ -223,7 +229,7 @@ void main() {
       const at = g.checkpoints.sigilPos(cur!.sigil!);
       if (at && at.distanceTo(g.player.pos) < 9) {
         title = 'BLOOD SIGIL';
-        text = touch ? 'Blood Sigils are checkpoints. Step onto it and tap ACTIVATE CHECKPOINT.' : 'Blood Sigils are checkpoints. Step onto it and press E to activate it.';
+        text = touch ? 'Blood Sigils are checkpoints. Walk onto it: an ACTIVATE button appears over it — tap it.' : 'Blood Sigils are checkpoints. Step onto it and press E to activate it.';
       }
     } else if (teach === 'shift' && !L.shifted) {
       const inLane = this.zone('-3.2,3.2,-46,-30.5,-1,4', g.player.pos);
