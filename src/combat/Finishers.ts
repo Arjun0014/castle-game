@@ -254,6 +254,12 @@ export class Finishers {
     }
     return true;
   }
+  /** nothing solid between the camera and a point of a body (the last 0.3 m is the body itself) */
+  private sees(cam: THREE.Vector3, at: THREE.Vector3) {
+    const d = at.clone().sub(cam), len = d.length();
+    const hit = this.g.level.collision.raycast(cam, d.normalize(), len, this.g.time.state);
+    return !hit || hit.distance > len - 0.3;
+  }
   private clearLane(from: THREE.Vector3, to: THREE.Vector3) {
     const w = this.g.level.collision, st = this.g.time.state;
     const d = to.clone().sub(from).setY(0);
@@ -347,6 +353,9 @@ export class Finishers {
         this.shot(t * DURATION[id], this.cam);
         const look = id === 'passing' ? this.cam.look : pivot;
         if (!this.shotClear(look, this.cam.pos, bodies)) { ok = false; break; }
+        // (session 14) and each of the two is seen, not only the space between them: a truss or a pillar beside the
+        // line to their midpoint hid the Gutter King's whole body from an orbiting shot
+        if (!this.sees(this.cam.pos, e.pos.clone().setY(e.pos.y + e.height * 0.6)) || !this.sees(this.cam.pos, this.heroTo.clone().setY(this.heroTo.y + 1.1))) { ok = false; break; }
       }
       if (ok) return null;
     }
@@ -430,8 +439,30 @@ export class Finishers {
     this.right.crossVectors(this.fwd, UP).normalize();
     this.heroTo.copy(p.pos);
     this.heroPath = (_t, out) => out.copy(this.heroTo);
+    this.camK = THREE.MathUtils.clamp(e.height / 1.95, 1, 1.45);
+    // its own shot where the room allows one: a low three-quarter view that slowly pushes in (either side, or from
+    // behind her); none clear → the gameplay camera stays (standCine false)
+    const mid = p.pos.clone().lerp(e.pos, 0.5), pivot = mid.clone().setY(mid.y + 1.15);
+    const bodies = this.others(e), k = this.camK;
+    this.standCine = false;
+    // (portrait first: over her shoulder, the two in depth rather than side by side; then wider three-quarter views)
+    for (const [side, back] of [[0.55, -2.3], [-0.55, -2.3], [1.2, -1.6], [-1.2, -1.6]] as const) {
+      const shot = (t: number, out: { pos: THREE.Vector3; look: THREE.Vector3 }) => {
+        const push = THREE.MathUtils.smoothstep(t, 0.1, 1.2) * 0.45;
+        out.pos.copy(mid).addScaledVector(this.right, side * (2.6 - push) * k).addScaledVector(this.fwd, back * (1.2 - push * 0.3) * k).addScaledVector(UP, 1.35 * k);
+        out.look.copy(mid).addScaledVector(UP, 1.05 * Math.max(1, e.arch.scale * 0.9));
+      };
+      let ok = true;
+      for (const t of [0, 0.7, 1.5]) {
+        shot(t, this.cam);
+        if (!this.shotClear(pivot, this.cam.pos, bodies) || !this.sees(this.cam.pos, e.pos.clone().setY(e.pos.y + e.height * 0.6)) || !this.sees(this.cam.pos, p.pos.clone().setY(p.pos.y + 1.1))) { ok = false; break; }
+      }
+      if (ok) { this.shot = shot; this.standCine = true; return; }
+    }
     this.shot = () => undefined;
   }
+  /** the in-place finisher found a clear camera of its own */
+  private standCine = false;
 
   // ------------------------------------------------------------------ playback
   private begin(id: FinisherId, e: Enemy) {
@@ -456,7 +487,7 @@ export class Finishers {
     this.heroFrom.copy(p.pos);
     p.beginScripted();
     p.yaw = Math.atan2(this.fwd.x, this.fwd.z);
-    if (id !== 'stand') { g.rig.cine = this.cam; this.shot(0, this.cam); }
+    if (id !== 'stand' || this.standCine) { g.rig.cine = this.cam; this.shot(0, this.cam); }
     g.hud.cinematic(true);
     g.touch?.cinematic(true);
     g.audio.play('blade_ring', { rate: 0.7, vol: 0.6 });
@@ -863,7 +894,7 @@ export class Finishers {
       if (b.until !== undefined) this.contactLog.push({ id: this.id!, at: b.at, t: +this.t.toFixed(3), gap: +this.lastGap.toFixed(3) });
       b.done = true; b.fn();
     }
-    if (this.id !== 'stand') this.shot(this.t, this.cam);
+    if (this.id !== 'stand' || this.standCine) this.shot(this.t, this.cam);
     if (this.t >= this.dur) this.end();
   }
 

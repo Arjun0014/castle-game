@@ -61,6 +61,8 @@ export async function mini(encId, arch, opts = {}) {
   // the others step aside (killed off) so the blow is hers alone; the body stands where it is
   for (const x of E.enemies) if (x !== e && x.alive) { x.die(); em.onKill(x); }
   step(2);
+  // opts.at: stage the fight somewhere else (blueprint coords of the foe), opts.from: the side she comes from
+  if (opts.at) { e.place(B(...opts.at)); e.pos.copy(B(...opts.at)); p.revive(B(...opts.at).add(new V(0, 0, 3)), 0); step(2); }
   const dir = e.pos.clone().sub(p.pos).setY(0);
   if (dir.lengthSq() < 0.01) dir.set(1, 0, 0);
   dir.normalize();

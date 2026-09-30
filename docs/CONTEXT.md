@@ -31,7 +31,12 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 **Game title:** ECHOES OF CAER VEYR (session 13; displayed on the title screen, boot card, tab title, credits and the final
 ending card). "The castle remembers" stays the world's creed and a recurring phrase (dialogue, loading labels, the
 respawn card, the opening film and the Remotion trailer) — it is no longer the game's name.
-**Current implementation priority:** session 13 = first-player experience + music + mobile performance (§10 Session 13):
+**Current implementation priority:** session 14 = onboarding clarity, combat flow, Floor 3 polish and audio (§10 Session 14):
+the Remotion opening film, the score from the loading card, the wordmark, credits (a game by AJ_Insanity), the world-anchored
+touch button, faster passive Resonance, health from kills, memory-return reinforcements, the Last Crown's add waves and
+red/gold chamber, her hidden reveal, guaranteed mini-boss finishers, route guidance in the world, the idle-enemy fixes.
+Next: the real-phone / human checks in §8 Session 14.
+Session 13 = first-player experience + music + mobile performance (§10 Session 13):
 the outer gate behind the spawn (the barbican), the new title, an adaptive score (exploration ↔ combat, position kept,
 voice ducking), the Guided tutorial extended through the crawl AND the armory's half stair (G3) to CP3, Minimal
 guidance through the same section, and the mobile frame-time investigation (no single regression found — the
@@ -448,6 +453,19 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **Adaptive score (s13)** | DONE, VERIFIED (headless Chrome, real AudioContext; NOT heard by a human) | `audio/Music.ts`, `tools/build_music.py` → `public/assets/music/*.ogg` + `data/musicManifest.json`; segment joins sample-clean (recorded vs source), 3 fight cycles, loops, ducking, title → film → game |
 | **Guided tutorial through G3 (s13)** | DONE, VERIFIED (`dev/tutorialProbe.js` desktop + touch: all 23 lessons incl. the wrong-memory detour; Minimal probe) | `game/Tutorial.ts`, `game/Objectives.ts` teach `halfstair`, `data/objectives.ts`. **Not played by a new human yet** |
 | **Mobile CPU fixes (s13)** | DONE, VERIFIED (numeric) | invisible Echoes skip the matrix pass, skinned Echoes frustum-culled, HUD writes only on change (compositor-only Resonance bar), audio automation only on change, title backdrop culls Echoes, monster sounds floor-scoped — §10 Session 13 |
+| **Opening film = Remotion cut (s14)** | DONE, VERIFIED (dev + production, desktop + phone) | `public/cinematic/intro_720.mp4` (byte copy of `remotion-intro/out/the-castle-remembers-intro-9x16-720p.mp4` by `tools/cinematic/ship_intro.py`), captions burned in; the Blender film (`opening_1080/720.mp4`, 58 MB) removed |
+| **Title score from the loading card (s14)** | DONE, VERIFIED (unmuted browser: autoplay path; film fade + resume) | `Game.boot` loads `music:explore` first, `Music` own 250 ms scheduler, `main.ts` first-gesture start; never restarts |
+| **Wordmark (s14)** | DONE, VERIFIED (portrait, desktop, wide) | `ui/MainMenu.ts` markup, `ui/menu.css` `.mm-t-*` |
+| **Credits (s14)** | DONE, VERIFIED (production) | `data/credits.ts` (`AUTHOR = 'AJ_Insanity'`, statement), final ending card line |
+| **Touch contextual button (s14)** | DONE, VERIFIED (emulated touch tap activates CP1; lesson once) | `ui/TouchControls.ts` `setInteract/placeInteract/teach`, `HUD.interact(…, {at, verb, kind})`, `style.css .t-cta*` |
+| **Passive Resonance 7/s (s14)** | DONE, VERIFIED (curve: empty → shift 17.3 s after a shift, 16.8 s after combat) | `time/TimeSystem.ts` `PASSIVE` |
+| **Health from kills (s14)** | DONE, VERIFIED (every F1 tier; reinforced ×0.6; Crown adds ×1.6) | `EnemyTypes` `KILL_TIER/KILL_HEAL`, `EnemyManager.killHeal/onKill`, `HUD.heal`, `Effects.healFrom` |
+| **Memory-return reinforcements (s14)** | DONE, VERIFIED (F1 E3 group of 4; spam test 0 extra groups; F2 Present group; reduced rewards) | `enemies/Reinforcements.ts`, `EnemyManager.revive/fallen/openGroup/walkableAround/endGroups` |
+| **Last Crown add waves + hidden until reveal (s14)** | DONE, VERIFIED (waves first/break2/mid2 with monsters; 10 kills healed 192 HP; never drawn before the reveal) | `enemies/LastCrown.ts` `ADD_WAVES/callWave/paceWaves/conceal` |
+| **Crownheart mood (s14)** | DONE, VERIFIED (screenshots: red phase / gold phase) | `vfx/Crownheart.ts` `mood/bleed/wound`, `Game.applyHeartTone`, `LastCrown` `WOUND_MARKS` |
+| **Mini-boss finishers (s14)** | DONE, VERIFIED (all 8 bodies on F1–F3: one kill, one clear, tier heal, camera never inside geometry) | `combat/Finishers.ts` `MINI_FINISH`, rotated staging, `stand` fallback, `sees()` |
+| **Route guidance (s14)** | DONE, VERIFIED (F1 85 marks, 0 without floor; F2 legs incl. after FR1; Guided + Minimal) | `game/RouteGuide.ts`, `data/guidance.ts`, `Objectives.met/activeTime` |
+| **Idle enemies (s14)** | DONE, VERIFIED (E13 from the hatch, E9 archer after the G5 shift, E7 blind archers) | `EnemyManager.adoptStrandedArchers`, `KNEEL_RELEASE`, `Enemy.perchThink/findPerchSpot`, blind ground archers advance |
 | **Enemy audit (s10)** | DONE, VERIFIED (`dev/auditProbe.js`, all floors) | 4 blind perched archers relocated at load (`checkPerches`), perched archers no longer slide down ramps, bats' swoop counter leak fixed, blind flyer spawns moved (`checkFlyers`), F3 respawn crash fixed; slot rotation fair in every big fight |
 
 ---
@@ -502,6 +520,15 @@ Runtime (`src/`):
   shaft dust, smoke wisps. Per-state presets `ATMO`; lighting presets `ENV` in `Game.ts` (Present: low hemi,
   near-vertical shadowing moon so light falls through roof holes, low-angle shadowless `fill`, hero light).
 - `vfx/Fire.ts` — all `fire` markers as one instanced procedural flame shader per state.
+- Session 14: `game/RouteGuide.ts` + `data/guidance.ts` (route guidance legs per floor), `enemies/Reinforcements.ts`
+  (`REINFORCE` rules), `EnemyManager.revive / fallen / openGroup / walkableAround / endGroups / killHeal / crownFight /
+  adoptStrandedArchers`, `Encounter.reinforce / waveAt / rankDownAt`, `KNEEL_RELEASE`, `Enemy.appear / updateAppear /
+  reinforced / origEncounter / perchThink / findPerchSpot`, `EnemyTypes KILL_TIER / KILL_HEAL*`, `LastCrown ADD_WAVES /
+  callWave / paceWaves / conceal / WOUND_MARKS`, `Crownheart mood / wound`, `Finishers MINI_FINISH / miniOrder / planStand /
+  sees`, `TimeSystem PASSIVE`, `TouchControls setInteract(verb) / placeInteract / teach`, `HUD.heal / interactAt /
+  interactKind`, `Effects.healFrom`, `Music` own scheduler + `setCombat`, `Game.onMusicReady`, `Platform.lockPointer`,
+  `data/credits.ts AUTHOR`, `tools/cinematic/ship_intro.py`. Dev: `dev/s14Probe.js` (heals, mini, minis, reinforce, spam,
+  crown, passive).
 - Session 13: `audio/Music.ts` (the adaptive score: `SegmentStream` for the exploration track, a looping buffer for the
   combat cue, the mode machine explore → combat → leaving → explore, `duck` / `setPaused` / `setLevel`, `__music.debug()`),
   `AudioFX.music` / `bindMusic`, Settings `score` (the Music slider), `GameAssets.registerMusic` / `musicKeys` (scope
@@ -634,6 +661,13 @@ A parry staggers the attacker and grants +12 resonance.
   `T.ready(); await T.run()` → every lesson), `dev/auditProbe.js` (`A.ready(); await A.floor()` → problems per
   encounter), `dev/f3Probe.js` (`?floor=3&input=kbm`: `F.gates()`, `await F.route()`), `dev/bossBot.js` (`?at=lastcrown`:
   `bb.setup(); bb.fight(240, false)`). Browser-pane JS calls time out after 45 s: run long loops detached and poll.
+- **Session 14 — ALWAYS `?mute` when Claude tests the game (the user's request).** The Claude browser pane is not
+  webdriver and allows autoplay, so an unmuted URL plays the full mix out loud. Every probe URL takes `?mute`; the score
+  itself can only be checked unmuted — do that only if the user asks, and close the tab afterwards.
+  `const S = await import('/dev/s14Probe.js'); await S.ready()` → `S.heals()`, `await S.mini('E13')`, `await S.minis()`,
+  `S.reinforce('E3')`, `S.spam('E3')`, `S.crown()` (`?at=lastcrown`), `S.passive()`; `mini(enc, arch, { stopAt, at })` stops
+  mid-finisher for a still. `__game.guide.active / opened / misses`, `__game.enemies.reinforcements.log`,
+  `boss.waveLog`, `__game.heart.mood`.
 - **Session 13:** `__music.debug()` (mode, exploration position + the kept position, combat position, gains, duck, decoded
   MB) and `__music.log` (every transition on the audio clock). Music is not loaded in automation mute (`?mute`,
   `?autopilot`, webdriver) — test it unmuted. The profiling harness used for the mobile investigation (headless Chrome
@@ -662,6 +696,23 @@ A parry staggers the attacker and grants +12 resonance.
 ---
 
 # 8. Next Concrete Tasks
+
+**Session 14 follow-ups — need the user's real phone / ears / eyes (do these first):**
+1. **The menu score** on a real phone and on itch.io: does it start under the loading card (autoplay) or on the first
+   tap without a hiccup; the film fade-out (1.6 s) and the return after the film (3 s rise from the kept position).
+2. **The touch button** (`.t-cta`): does a new player see and tap ACTIVATE on the first Blood Sigil without reading?
+   Size (88 u), its band on screen (20–50 % of the height), the lesson line, INSPECT on memories, DESCEND on the lift.
+3. **Route guidance** by a new player (Guided) to the half stair and on Floor 2's roofs: are the chevrons readable but
+   not gaudy on a phone, is the crawl's glow enough, is Minimal's essential set right? Tune in `data/guidance.ts`
+   (paths, beacons, `essential`) and `game/RouteGuide.ts` (chevron size 0.86 m, colour, flow, 1.5 m behind / ~20 m ahead).
+4. **Balance by hand:** passive Resonance 7/s (`TimeSystem.PASSIVE`), the kill heals (`EnemyTypes KILL_HEAL`: 8/18/40/110,
+   Crown ×1.6, reinforced ×0.6), the reinforcement rules (`Reinforcements.REINFORCE`), the Crown's waves (`LastCrown
+   ADD_WAVES`, cap 5, mid-phase-2 at 20 s, late every 24 s ×2) — is the Last Crown still the focus?
+5. **The Crownheart's mood** on a phone screen (red ⇄ gold swing ~19 s → ~11 s by phase; wound pulses) — too strong or
+   right? Weights in `Game.applyHeartTone`, the ramp in `Crownheart.update`.
+6. **Mini-boss finishers** in real fights (portrait framing per body; the in-place `stand` fallback's frequency). The
+   Maw's reeling stumble and the Weeping Mother's stab were checked in stills only.
+7. The Remotion film on a phone with sound (it was checked on the desktop pane; played muted here after the user asked).
 
 **Session 13 follow-ups — need the user's real phone / ears (do these first):**
 1. **Frame rate on the phone that used to run smoothly:** play Floor 1 from New Game (Guided) to the armory and one big
@@ -848,6 +899,158 @@ then generation + `Audio.voice(id)` hook.
 ---
 
 # 10. Latest Verified Session
+
+### Session 14 (2026-09-30) — onboarding clarity, combat flow, Floor 3 polish, audio
+
+Commits (Arjun0014/castle-game main, as Arjun0014): `a3d883f` (1/3) · `212328b` (2/3) · the 3/3 commit with this file
+(finisher camera + this CONTEXT). Untouched and uncommitted as before: `remotion-intro/` (session 12's project; its
+`out/` film is the source of the shipped intro), `THE_CASTLE_REMEMBERS_LORE.md`, `docs/ELEVENLABS_NOTES.md`, the source
+MP3s in `assets/music/`, and session 12's hunk of this file.
+
+**1. The opening film is the Remotion cut.** `python tools/cinematic/ship_intro.py` copies
+`remotion-intro/out/the-castle-remembers-intro-9x16-720p.mp4` byte for byte (sha256 checked; 720×1280, 30 fps, H.264
+High 3.1 + AAC, 60.05 s, moov first so it streams, 13.19 MB) to `public/cinematic/intro_720.mp4` and writes
+`src/data/opening.json` (`burnedInCaptions: true`, no DOM subtitles — the film carries its own). `ui/Intro.ts` picks the
+smallest encode covering the stage. The session-10 Blender film (`opening_1080/720.mp4`, 58 MB) is removed from
+`public/`; `tools/cinematic/post.py` would re-create it and overwrite `opening.json` — re-run `ship_intro.py` after it.
+itch zip: **124.5 MB / 547 files / 153 MB unpacked** (was 170 MB).
+
+**2. The menu score.** "The Last Canopy Sleeps" plays from the loading card: `Game.boot` acquires `music:explore`
+(2.5 MB) before the floor and binds `Music` with the combat cue null (`setCombat` when it arrives); `main.ts` starts it at
+once where the browser allows sound (autoplay: a used site, an itch page clicked into), else on the first `pointerdown /
+pointerup / mousedown / touchend / keydown / click` anywhere (capture listeners, removed once running). Bug fixed on the
+way: the exploration stream was only ticked by the game frame, so under the loading card / title it fell silent after its
+first 12 s segment — `Music` now schedules on its own 250 ms timer. New Game: the film fades it out over 1.6 s (position
+kept), play fades it back in over 3 s from there. Verified (unmuted pane, autoplay allowed): started 0.19 s into the
+loading card; segments kept playing on an idle title (14.7 → 34.7 s, segment 3 scheduled at 41 s); film at 52.9 s → kept
+53.5 → resumed "explore from 53.5" after Skip; production phone: kept 15.3 → resumed 15.3. Never restarted.
+
+**3. The touch button.** `HUD.interact(text, title, disabled, { at, verb, kind })` anchors it: a red seal ⌀88 u over the
+thing (ACTIVATE / RENEW / WAIT for a sigil, INSPECT / RECALL for a memory, DESCEND for the lift), its name under it, a
+dashed gold tether and a pulsing ring on the object, breathing + ripple; placed just above the object's screen point,
+clamped to 20–80 % width and 20–50 % height (clear of the bars and thumbs), eased (transforms only). Hidden when out of
+range / in a finisher. The first Blood Sigil teaches it once (a finger taps it + "Tap here to use it — anything you can
+use shows this button."), `learned.interactTap` ends it on the first use. Texts updated (Guided sigil lessons, Minimal
+card, Controls panel). Verified: a synthetic touch tap on the seal activated CP1 (HP 240), lesson off, button hidden.
+
+**4. Passive Resonance** (`TimeSystem.PASSIVE`): 7/s (was 1.6), resumes 2.5 s after a shift / 2 s after combat, eases
+in over 1 s, cap one shift (100) — kills stay the fast source and the only way to bank a second shift. Measured
+(`S.passive()`): empty → shift ready **17.3 s** after a shift, 16.8 s after a fight (was ≈ 66 s). Traversal reasoning:
+Floor 1's required shifts are ≥ ~15 m of walking apart and almost all have a fight between them (AutoPilot ROUTE), so a
+player walking to the next shift spot arrives charged; one guard kill (+40) is ≈ 6 s of passive. Texts now say "wait a
+few moments".
+
+**5. Health from kills** (`EnemyTypes KILL_TIER / KILL_HEAL`, PLAYER_HP 240): weak 8 (bat, widowling, remnant,
+remnant guard, goblin, wraith) · normal 18 (guard, muster, hollow, archer, echo archer) · elite 40 (royal / hollow warden,
+widow, crown brute) · mini-boss 110 (Gate Warden, Kingsguard, Gutter King, Weeping Mother, the Maw). In the Last Crown's
+fight her adds heal ×1.6 (min 16); reinforcements ×0.6 (and 60 % Resonance). Feedback: the HP bar glows, a "+N" rises
+beside it (summed within 0.9 s), blood-gold motes fly into her. Credited once in `onKill` (finishers included).
+
+**The Last Crown's add waves** (`LastCrown ADD_WAVES`, cap 5 standing in her memory): `first` at 80 % (Present: goblin,
+goblin, bat · Past: guard, remnant guard, muster), `break2` at the phase-2 break (crown brute, widowling ×2 · royal
+warden, muster ×2), `mid2` 20 s into phase 2 when ≤ 1 add stands (bat, goblin ×2, widowling · guard ×2, archer),
+`break3` (widow, goblin, remnant ×2 · royal warden, guard, muster), `late` every 24 s of phase 3 when ≤ 1 stands (×2).
+Bodies are the floor's own fallen (`EnemyManager.revive`, nothing loaded mid-fight; fallback = the pooled Remnants),
+risen at the ring's edge away from her and the hero; while 3+ stand her cast gap ×1.3; the heart charges, a line
+("The Crown calls up what the castle became."), a low shake. Her death ends every group (`endGroups('A')`); a respawn
+removes them. No finishers on her adds. Verified (`S.crown()`): first 14.3 s (goblin, goblin, bat), break2 31.3 s (crown
+brute, widowling, widowling), mid2 55 s (bat, goblin, goblin); 10 add kills healed 192 HP.
+
+**6. Route guidance in the world** (`game/RouteGuide.ts`, `data/guidance.ts`). Gold = the way, blue = shift here.
+Chevrons (0.86 m, every 1.45 m, snapped to the real floor of the leg's memory, a pulse flowing to the goal, lit only from
+1.5 m behind her to ~20 m ahead), a beacon (House Vaelor lozenge in a ring on the floor + a soft light column that steps
+back when she is near), a gap glow (warm light spilling out of a low opening), and — once, when a way opens after a
+fight — a card and a bright sweep running out along it. Guided: every leg at full strength; Minimal: `essential` legs at
+60 %, others after 28 s at the objective without a fight. Floor 1 legs to the half stair: the way in (passage → breach,
+beacon at the breach), CP1, back to the rusted gate, into the ward, back to the barracks ring (Past, after E3), into the
+barracks (Present, beacon at the door), **the first crawl** (after E5: chevrons into the gap, glyph before it, the gap
+glowing, "THE WAY ON — The vault has fallen — crawl through the low gap to the north"), the half stair (after E6).
+Floor 2 (the "goblin rooftop" is the Gutter King's range on the armory roof): **A** after E4 — round the fallen trusses
+and up the truss ramp to the ridge ("THE WAY IS OPEN"); **B** after the ridge wraiths (E6) — down past the rusted gate
+to the minstrels' tower ("DOWN FROM THE RIDGE"); **C** after FR1 (the Crown chandelier) — the loft edge in the Past with a
+new blue shift ring (G6, `f2_door shiftAt`), then the drop onto the wreck and across to the King's door ("THE WAY IS OPEN",
+said 3.9 s after FR1's own card). Legs whose floor only exists later (the wreck) are re-placed when they open. Verified:
+F1 85 marks / 0 without floor; F2 legs open in order incl. the FR1 drop (26 marks once the wreck exists); Minimal crawl at
+0.6; screenshots (passage, barracks beacon, crawl mouth, range).
+
+**7. The Crownheart owns the chamber's light** (`Crownheart.mood`, `Game.applyHeartTone`). A slow organic swing
+between deep crimson and saturated gold (two drifting swells through a smoothstep, dwelling at the ends; ~19 s phase 1,
+~14 s phase 2, ~11 s phase 3); heartbeats push it up the ramp, a great cast draws it DOWN into crimson and flares it at
+the release, a phase break floods it gold, and her HP crossing 90/75/55/42/20/10 % makes it BLEED (a hard red pulse that
+lets go over ~2.5 s). Gold is capped at the ramp's gold (white-gold only on surges — the first try washed the room out).
+The room follows hard: hemi 0.55/0.62 of its colour, fill 0.85, the key light 0.6, the hero's light 0.8, fog 0.85 toward a
+brighter tint, exposure ±9 %, crown lights 0.95, her glow 0.5–1.15. Verified by screenshots: red (#d52909, fog #430702)
+and gold (#ffbd4c, fog #593f15) phases.
+
+**8. The Last Crown is not there before her reveal**: she stays in the 'hidden' state (never drawn, no shadow, no aura,
+not a target) from load until `beginIntro`, and again after a checkpoint reset. Verified: at 31 m before the fight not
+drawn; never visible before the trigger; appears only descending from the heart.
+
+**9. The wordmark**: "ECHOES OF" small (EB Garamond 500, tracking 0.62 em) between hairlines over CAER VEYR in Cormorant
+Garamond Bold (now bundled) with the C and V raised 1.17×: struck gold (bright crown, a dark horizon at the waist,
+warm underside), fine SVG grain, a 0.03 em dark engraved edge, a close shadow + faint ember warmth, a soft shade behind
+the block, a light sweep every 11 s (off with reduced motion). Wide view left-aligned.
+
+**10. The ring**: the shift ring is always the SHIFT seal's azure (`SHIFT_RING_BLUE`, it was amber in the Present, where
+the first shift happens under "stand in the blue ring"); Minimal's card says "Stand in the blue ring". Blue = shift,
+gold = the way.
+
+**11. Enemies standing around.** Reproduced with scripted fights: E13 (the Gate Warden — Floor 1's first boss bar)
+arriving by the hatch: the wave-2 gallery archers woke, shot once, then stood 20 s+ blind; the kneeling ranks waited on
+the Warden's 65 / 35 % HP (a minute or more in a slow fight). E5 and E9 fights were already healthy. Fixes: a boss
+fight's next rank kneeling in plain sight rises after 20 s of its wave or 7 s after the rank before it has fallen
+(`KNEEL_RELEASE`; verified 19.5 s / 39 s with the Warden untouched, no soldier idle far); perched archers without a shot
+walk their perch (same floor height, ≤ 12 m from their post, never across a gap) to a spot that sees her, else pace it
+watching (`perchThink`); blind ground archers come to her along the grid (≤ 16 m from post) instead of idling; perched
+archers never take an A* route off their gallery.
+
+**12. The idle balcony archer** (after the second crawl, the west gallery before the loft stair, shifting to the Past at
+G5): it was **E13's wave-2 archer standing in E9's arena** — archers never wake before their own wave, so it waited for
+the Last Muster. `adoptStrandedArchers` (load time, logged in `spawnFixes`): a later-wave perched archer standing in
+another same-memory fight's box (outside its own) joins that fight at wave 1 — Floor 1's two gallery archers → E7 / E9
+(the only matches on all floors; F2/F3 audited). Verified: after the G5 shift it fires every ~3 s (4 arrows in 15 s).
+
+**13. Reinforcements on returning to a memory** (`enemies/Reinforcements.ts`, `REINFORCE`): an area = an encounter in
+one memory (never the tutorial, a boss / mini-boss arena or the finale). On a shift into memory M near (≤ 8 m) an area
+whose fight in M is over: needs ≥ 40 s since the clear, ≥ 6 s spent in the other memory, ≥ 100 s since this area's last
+group, ≥ 45 s since any group, < 2 groups in this area, no fight on her, then a 70 % roll (a quiet return retries after
+half the cooldown). A group is 2–4 (3 if the area had two kinds, +1 at 35 %), at most one elite, bosses as their rank and
+file; in the Past a monster kind becomes its human counterpart (F1/F2 Past never get one). Bodies = that area's own
+fallen, rising where they fell ≥ 6.5 m from her (risers rise, kneelers stand, others fade in over 0.75 s with a shift
+burst); short, the same kinds from elsewhere at walkable ring points. They fight as their own encounter (finishers, the
+score, dialogue); a respawn makes them vanish. Rewards ×0.6. Verified: F1 E3 → 3 guards + an archer rose and engaged in
+1.5 s; 10 shifts in 70 s → 0 extra groups ("area cooldown"); F2 Present group (hollow + echo archer); kills +11 HP /
+24 & 18 Resonance.
+
+**15. Mini-boss finishers** (`Finishers MINI_FINISH`): the Gate Warden, Kingsguard, Gutter King, Weeping Mother, the Maw
+and the elite Wardens (royal, hollow) and crown brutes (not the Crown's adds) always die in a finisher — no chance, no
+cooldown, any killing blow (Whirlwind / Crownbreaker included). Variant order per body (e.g. Warden headsman → frenzy →
+stab → passing; the Maw frenzy → passing; the Mother stab → passing), never the one just played first; staging tried from
+her side then ±45 / ±90 / ±135 / 180° round the body with a 4.8 m step (longer approach timed); camera pulled back by
+the body's height (×1–1.45); every sampled camera must now see BOTH bodies' chests (a truss hid the Gutter King); last
+resort the in-place `stand` cleave — its own over-the-shoulder shot if one is clear, else the gameplay camera. The Maw
+reels on its own death clip's stumble (Enemy.die now carries a running death clip on instead of restarting it). Verified
+(`S.minis()` F1–F3): hollow warden frenzy, royal warden headsman, Gate Warden frenzy/headsman, Weeping Mother stab,
+Gutter King frenzy/stand (corner), Kingsguard frenzy, the Maw frenzy, crown brute frenzy — each 1 kill signal, 1
+encounter clear, the tier heal, camera never inside geometry, control handed back. Stills: the Warden's headsman, the
+Maw's frenzy (portrait).
+
+**16. Credits**: "A game by AJ_Insanity"; the statement — everything made with Claude Opus 5.5 and Blender (code,
+systems, the castle and floors, props, level/puzzle design, combat, AI, lighting, shaders, menus, the film, the tools);
+the only outside assets are Sketchfab models, Adobe Mixamo characters/animation and Poly Haven textures (+ free CC0 sound
+libraries, still credited — they are in the game); music from ElevenLabs; voice, dialogue and narration AI generated.
+The final ending card reads "A game by AJ_Insanity · made with Claude Opus 5.5 and Blender".
+
+**Also:** `lockPointer()` swallows `requestPointerLock()` rejections; no vibrate before the first tap (both logged
+errors before).
+
+**Tests (session 14):** tsc; `npm run build`; `npm run package:itch` (124.5 MB, 547 files); **`dev/regression.js` 49/49
+PASS** (portrait touch, F1 → F2 → F3); **`dev/tutorialProbe.js` touch: all 23 lessons**; `dev/s14Probe.js` heals /
+minis (F1, F2, F3) / reinforce / spam / crown / passive; scripted repros of E13, E9, E5, E7 (above); guidance build
+reports (0 marks without floor on F1); production preview: desktop 1280×800 (title, credits), `?view=wide` (title),
+phone 375×812 touch (New Game → Guided → film → tap → Skip → MOVE, score resumed, route leg live) — **0 console errors**.
+Unmuted only for the score checks (the pane allows autoplay); the user then asked that Claude always test muted —
+§7 Testing hooks. **Needs the user:** §8 Session 14.
 
 ### Session 13 (2026-09-30) — first-player experience, the score, mobile performance
 
