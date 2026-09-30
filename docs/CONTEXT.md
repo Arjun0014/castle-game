@@ -606,8 +606,9 @@ Enter/Space, Esc (back), mouse and touch.
 **Touch (handhelds; `?input=touch`), session 8 layout** (centre and diameter in u = stage width/400, from the
 stage's bottom-right; `style.css` `.t-*`): ATTACK ⌀92 (60, 196) · JUMP ⌀76 (58, 302) · HEAVY ⌀70 (148, 166) ·
 GUARD ⌀66 (190, 74) · SHIFT lozenge ⌀54 (150, 276). **No Dodge button on touch** (desktop keeps Shift-tap dodge).
-The lower-right corner (≈ 105×140 u under Attack, right of Guard) is EMPTY for camera swipes (faint LOOK hint until
-~900 px dragged). Joystick zone = left 46 % × lower 58 % (floating, rim = sprint); drag anywhere else = camera.
+The lower-right corner (≈ 105×140 u under Attack, right of Guard) is EMPTY for camera swipes — session 14: a permanent
+dashed LOOK ring (⌀108 u, like the stick's ring on the left; solid and brighter while a finger turns the camera; its mark
+quietens after ~900 px of looking, the ring stays). Joystick zone = left 46 % × lower 58 % (floating, rim = sprint); drag anywhere else = camera.
 Buttons are heraldic SVG seals (aged-gold rim + device: battlements on Attack, rivets on Heavy, bead ring on Guard,
 arrow points on Jump; enamel field per role; Shift = azure lozenge). **Hold feedback:** Attack/Heavy show a gold arc
 filling over the 0.28 s hold threshold once their hold move is unlocked, solid while the Whirlwind spins (draining
@@ -935,6 +936,9 @@ card, Controls panel). Verified: a synthetic touch tap on the seal activated CP1
 **Read memories** (follow-up): once a memory trace has been read its prompt turns muted and smaller — touch: a 60 u
 parchment-and-iron RECALL seal, no glow / pulse, smaller name, tether and ring (`.t-cta.read`); desktop: the card at 11 px,
 62 % opacity, muted (`.interact.read`). `HUD.interact(…, { read })` from `Checkpoints`. Verified muted: 83 → 56 px, 13 → 11 px.
+**The LOOK ring** (follow-up): the lower-right camera pocket shows a permanent dashed ring like the stick's (`.t-look-hint`,
+⌀108 u, 48–55 px clear of Attack / Heavy / Guard at 375×812; `#touch.looking` while a look finger is down). Verified muted:
+a drag inside it turns the camera; the ring goes solid during the drag and back after.
 
 **4. Passive Resonance** (`TimeSystem.PASSIVE`): 7/s (was 1.6), resumes 2.5 s after a shift / 2 s after combat, eases
 in over 1 s, cap one shift (100) — kills stay the fast source and the only way to bank a second shift. Measured

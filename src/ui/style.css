@@ -215,14 +215,18 @@ html.input-touch #touch { display: block; }
 @keyframes t-teach-blue { 0%, 100% { filter: drop-shadow(0 3px 7px rgba(0,0,0,0.6)); } 50% { filter: drop-shadow(0 0 16px rgba(140,200,255,0.95)) brightness(1.2); } }
 .t-btn.teach-hold em { opacity: 1; transform: none; }
 .t-btn.teach-hold { animation: t-teach 1.8s ease-in-out infinite; }
-/* the free camera pocket (lower-right corner): a faint hint until the player has turned the camera a few times */
-.t-look-hint { position: absolute; right: calc(var(--sar) + 46 * var(--u)); bottom: calc(var(--sab) + 42 * var(--u)); width: calc(78 * var(--u)); height: calc(78 * var(--u));
-  border-radius: 50%; border: 1px dashed rgba(216,179,106,0.28); display: flex; flex-direction: column; align-items: center; justify-content: center;
-  pointer-events: none; opacity: 0.75; transition: opacity 1.2s; }
-.t-look-hint svg.t-glyph { width: 46%; height: 46%; opacity: 0.6; margin: 0; }
-.t-look-hint span { font-size: calc(7 * var(--u)); letter-spacing: 0.18em; color: rgba(236,224,198,0.5); margin-top: calc(2 * var(--u)); }
-.t-look-hint.gone { opacity: 0; }
-#touch.sticking .t-look-hint { opacity: 0.35; }
+/* the free camera pocket (lower-right corner): a permanent ring like the stick's on the left (session 14 — "this is
+   where you look around"), its LOOK mark inside; it brightens while a finger turns the camera, and the mark quietens
+   once she has looked around a few times (the ring stays). Only a sign: swipes pass straight through it. */
+.t-look-hint { position: absolute; right: calc(var(--sar) + 22 * var(--u)); bottom: calc(var(--sab) + 22 * var(--u)); width: calc(108 * var(--u)); height: calc(108 * var(--u));
+  border-radius: 50%; border: 1.5px dashed rgba(216,179,106,0.24); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  pointer-events: none; transition: border-color .2s, background-color .2s; background: radial-gradient(circle, rgba(20,16,12,0) 55%, rgba(20,16,12,0.16) 100%); }
+.t-look-hint svg.t-glyph { width: 34%; height: 34%; opacity: 0.55; margin: 0; transition: opacity .6s; }
+.t-look-hint span { font-size: calc(7.5 * var(--u)); letter-spacing: 0.2em; color: rgba(236,224,198,0.5); margin-top: calc(3 * var(--u)); transition: opacity .6s; }
+.t-look-hint.learned svg.t-glyph { opacity: 0.32; }
+.t-look-hint.learned span { opacity: 0.55; }
+#touch.looking .t-look-hint { border-color: rgba(236,200,130,0.6); border-style: solid; background-color: rgba(216,179,106,0.05); }
+#touch.looking .t-look-hint svg.t-glyph, #touch.looking .t-look-hint span { opacity: 0.9; }
 /* ---- the contextual button (session 14): a seal over the thing itself, tethered to it; teaches itself once */
 .t-cta { position: absolute; inset: 0; pointer-events: none; display: none; z-index: 3; }
 .t-cta.on { display: block; }

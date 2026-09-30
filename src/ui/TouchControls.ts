@@ -165,7 +165,7 @@ export class TouchControls {
     this.ctaVerb = this.interactEl.querySelector('b') as HTMLElement;
     this.lookHint = root.querySelector('.t-look-hint') as HTMLElement;
     try { this.lookLearned = localStorage.getItem(LOOK_KEY) === '1'; } catch { /* storage unavailable */ }
-    this.lookHint.classList.toggle('gone', this.lookLearned);
+    this.lookHint.classList.toggle('learned', this.lookLearned);
     root.querySelectorAll<HTMLElement>('.t-btn').forEach((el) => {
       this.buttons.set(el.dataset.a as Action, el);
       const prog = el.querySelector('.prog') as SVGElement | null;
@@ -345,6 +345,7 @@ export class TouchControls {
       return;
     }
     this.pointers.set(e.pointerId, { kind: 'look', x: e.clientX, y: e.clientY, t: e.timeStamp, v: 0 });
+    this.root.classList.add('looking');
   };
 
   private onMove = (e: PointerEvent) => {
@@ -370,7 +371,7 @@ export class TouchControls {
         this.lookPx += Math.abs(e.clientX - role.x) + Math.abs(e.clientY - role.y);
         if (this.lookPx > LOOK_LEARNED_PX) {
           this.lookLearned = true;
-          this.lookHint.classList.add('gone');
+          this.lookHint.classList.add('learned');
           try { localStorage.setItem(LOOK_KEY, '1'); } catch { /* storage unavailable */ }
         }
       }
@@ -423,6 +424,7 @@ export class TouchControls {
     this.pointers.delete(e.pointerId);
     this.input.releaseSource('touch:' + e.pointerId);
     if (role.kind === 'stick') this.endStick();
+    else if (role.kind === 'look' && ![...this.pointers.values()].some((r) => r.kind === 'look')) this.root.classList.remove('looking');
     else if (role.kind === 'button') { role.el.classList.remove('down'); for (const el of role.slid) el.classList.remove('down'); }
   };
 
@@ -443,6 +445,7 @@ export class TouchControls {
       if (role.kind === 'button') role.el.classList.remove('down');
     }
     this.pointers.clear();
+    this.root.classList.remove('looking');
     this.endStick();
   }
 }
