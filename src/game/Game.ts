@@ -190,7 +190,7 @@ export class Game {
     if (opts.stage) {
       this.touch = new TouchControls(opts.stage, this.input);
       this.touch.onPause = () => { if (this.started && !this.finished) this.togglePause(); };
-      this.hud.onInteractText = (t, title, off, verb) => this.touch?.setInteract(t, title, off, verb);
+      this.hud.onInteractText = (t, title, off, verb, read) => this.touch?.setInteract(t, title, off, verb, read);
     }
     this.input.autoCrouch = Platform.isTouch;
     const ca = new URLSearchParams(location.search).get('camassist');

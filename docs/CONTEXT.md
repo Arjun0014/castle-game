@@ -932,6 +932,9 @@ clamped to 20–80 % width and 20–50 % height (clear of the bars and thumbs), 
 range / in a finisher. The first Blood Sigil teaches it once (a finger taps it + "Tap here to use it — anything you can
 use shows this button."), `learned.interactTap` ends it on the first use. Texts updated (Guided sigil lessons, Minimal
 card, Controls panel). Verified: a synthetic touch tap on the seal activated CP1 (HP 240), lesson off, button hidden.
+**Read memories** (follow-up): once a memory trace has been read its prompt turns muted and smaller — touch: a 60 u
+parchment-and-iron RECALL seal, no glow / pulse, smaller name, tether and ring (`.t-cta.read`); desktop: the card at 11 px,
+62 % opacity, muted (`.interact.read`). `HUD.interact(…, { read })` from `Checkpoints`. Verified muted: 83 → 56 px, 13 → 11 px.
 
 **4. Passive Resonance** (`TimeSystem.PASSIVE`): 7/s (was 1.6), resumes 2.5 s after a shift / 2 s after combat, eases
 in over 1 s, cap one shift (100) — kills stay the fast source and the only way to bank a second shift. Measured

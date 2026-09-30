@@ -198,12 +198,13 @@ export class TouchControls {
   private W = 400; private H = 800;
   private ctaPos = { x: -1, y: -1 };
   private ctaOn = false;
+  private ctaRead = false;
   /**
    * The contextual button: a big seal over the thing itself (a Blood Sigil, a memory, the lift), labelled with what
    * a tap does — ACTIVATE, RENEW, INSPECT, DESCEND — and its name under it; `disabled` greys it (WAIT: enemies near) and
    * taps do nothing. It used to be a text pill in the middle of the screen that new players read as a message.
    */
-  setInteract(text: string | null, title = '', disabled = false, verb = '') {
+  setInteract(text: string | null, title = '', disabled = false, verb = '', read = false) {
     const on = !!text;
     if (on && !this.ctaOn) this.ctaPos.x = -1;         // it appears where the thing is, not sliding in from before
     this.ctaOn = on;
@@ -211,6 +212,9 @@ export class TouchControls {
     this.interactEl.classList.toggle('on', on);
     this.interactEl.classList.toggle('off', on && disabled);
     this.cta.classList.toggle('off', on && disabled);
+    // already read: a small, muted seal (the tether and the ring on the object follow its size)
+    this.ctaRead = on && read;
+    this.cta.classList.toggle('read', this.ctaRead);
     if (on) {
       this.ctaVerb.textContent = (verb || text!.split(' ')[0]).toUpperCase();
       this.ctaName.textContent = disabled ? `${title} · ${text}` : title;
@@ -238,14 +242,14 @@ export class TouchControls {
     // the button: ~1 button above the thing, inside the free band of the portrait frame
     const u = W / 400;
     const tx = THREE.MathUtils.clamp(ax, W * 0.2, W * 0.8);
-    const ty = THREE.MathUtils.clamp(ay - 96 * u, H * 0.2, H * 0.5);
+    const ty = THREE.MathUtils.clamp(ay - (this.ctaRead ? 72 : 96) * u, H * 0.2, H * 0.5);
     const k = this.ctaPos.x < 0 ? 1 : 1 - Math.exp(-dt * 12);
     this.ctaPos.x += (tx - this.ctaPos.x) * k;
     this.ctaPos.y += (ty - this.ctaPos.y) * k;
     const x = this.ctaPos.x, y = this.ctaPos.y;
     this.ctaGroup.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
     const dx = ax - x, dy = ay - y, len = Math.hypot(dx, dy);
-    const r = 44 * u;
+    const r = (this.ctaRead ? 30 : 44) * u;
     const show = len > r + 8;
     this.ctaLine.style.opacity = show ? '' : '0';
     if (show) {

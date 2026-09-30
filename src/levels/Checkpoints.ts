@@ -89,7 +89,7 @@ export class Checkpoints {
       else g.hud.interact('Activate Checkpoint', 'BLOOD SIGIL', false, { at, verb: 'ACTIVATE', kind: 'sigil' });
     } else if (this.near?.kind === 'trace') {
       const read = this.readTraces.has(this.near.m.name);
-      g.hud.interact(read ? 'Remember' : 'Examine', 'MEMORY', false, { at: this.near.m.pos, verb: read ? 'RECALL' : 'INSPECT', kind: 'trace' });
+      g.hud.interact(read ? 'Remember' : 'Examine', 'MEMORY', false, { at: this.near.m.pos, verb: read ? 'RECALL' : 'INSPECT', kind: 'trace', read });
     } else g.hud.interact(null);
     // beacon states
     for (const m of this.sigils) {

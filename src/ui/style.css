@@ -71,6 +71,10 @@ html.view-portrait #stage { box-shadow: 0 0 0 1px rgba(216,179,106,0.08), 0 0 60
   text-align: center; padding: 6px 18px 8px; background: linear-gradient(180deg, rgba(36,18,14,0.78), rgba(10,7,7,0.8)); border: 1px solid rgba(216,179,106,0.55); border-radius: 6px; }
 .interact.on { opacity: 1; }
 .interact.off { opacity: 0.6; border-color: rgba(160,150,140,0.45); }
+/* already read: smaller and muted (desktop card; the touch button: .t-cta.read) */
+.interact.on.read { opacity: 0.62; font-size: 12px; border-color: rgba(160,150,140,0.4); color: #cfc4b0; }
+.interact.read i { color: #a8998a; font-size: 9px; }
+.interact.read b { border-color: rgba(190,178,156,0.6); color: #cfc4b0; }
 .interact i { display: block; font-style: normal; font-size: 10px; letter-spacing: 4px; color: #e07a70; margin-bottom: 3px; }
 .interact b { display: inline-block; border: 1px solid #d8c9a8; border-radius: 3px; padding: 0 6px; margin-right: 8px; font-weight: normal; color: #f3e6c9; }
 .message { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-size: 22px; letter-spacing: 6px; color: var(--gold); text-shadow: 0 0 18px rgba(0,0,0,0.9); opacity: 0; transition: opacity .6s; text-align: center; }
@@ -146,6 +150,7 @@ html.view-portrait .message small { font-size: clamp(10px, 3.2cqw, 13px); letter
 html.view-portrait .prompt { bottom: calc(var(--sab) + 11cqh); max-width: 90cqw; width: max-content; font-size: clamp(11.5px, 3.5cqw, 15px); padding: 7px 12px; line-height: 1.45; }
 html.view-portrait .channel { top: 57cqh; width: 64cqw; }
 html.view-portrait .interact { top: 63cqh; font-size: 13px; }
+html.view-portrait .interact.on.read { font-size: 11px; }
 html.view-portrait .deny { top: 67cqh; width: 90cqw; font-size: clamp(11px, 3.5cqw, 14px); }
 html.view-portrait .end-card h1 { font-size: clamp(18px, 6.5cqw, 32px); letter-spacing: 0.3em; }
 html.view-portrait .end-card p { font-size: clamp(11px, 3.4cqw, 15px); }
@@ -234,6 +239,15 @@ html.input-touch #touch { display: block; }
 .t-cta.off .t-cta-btn { background: radial-gradient(circle at 50% 38%, #4a4038 0%, #2a2420 100%); border-color: rgba(170,160,145,0.6); box-shadow: 0 calc(4 * var(--u)) calc(14 * var(--u)) rgba(0,0,0,0.7); animation: none; }
 .t-cta.off .t-cta-ring, .t-cta.off .t-cta-ripple { display: none; }
 .t-cta.off .t-cta-btn b { color: #cfc6b6; }
+/* already read (a memory she has examined): smaller, muted parchment and iron, still — the unread ones stand out */
+.t-cta.read .t-cta-btn.t-btn { left: calc(-30 * var(--u)); top: calc(-30 * var(--u)); width: calc(60 * var(--u)); height: calc(60 * var(--u)); animation: none; opacity: 0.8;
+  background: radial-gradient(circle at 50% 38%, #5b4c40 0%, #3a2f27 60%, #211a15 100%); border: calc(2 * var(--u)) solid rgba(186,166,128,0.6);
+  box-shadow: 0 0 0 calc(1 * var(--u)) rgba(20,12,8,0.8), 0 calc(3 * var(--u)) calc(9 * var(--u)) rgba(0,0,0,0.6); }
+.t-cta.read .t-cta-ring, .t-cta.read .t-cta-ripple { display: none; }
+.t-cta.read .t-cta-btn b { font-size: calc(9.5 * var(--u)); letter-spacing: 0.1em; color: #d8ccb4; }
+.t-cta.read .t-cta-name { top: calc(36 * var(--u)); font-size: calc(7.5 * var(--u)); color: rgba(214,200,172,0.7); background: rgba(10,6,5,0.4); }
+.t-cta.read .t-cta-line { opacity: 0.45 !important; }
+.t-cta.read .t-cta-dot i { left: calc(-7 * var(--u)); top: calc(-7 * var(--u)); width: calc(14 * var(--u)); height: calc(14 * var(--u)); border-color: rgba(214,196,160,0.55); box-shadow: none; animation: none; }
 .t-cta-name { position: absolute; left: 0; top: calc(52 * var(--u)); transform: translateX(-50%); white-space: nowrap; font: 500 calc(9 * var(--u))/1.2 'EB Garamond', Georgia, serif;
   letter-spacing: 0.26em; color: #f0d9a6; text-shadow: 0 1px 3px #000, 0 0 10px rgba(0,0,0,0.8); padding: calc(3 * var(--u)) calc(9 * var(--u)); background: rgba(10,6,5,0.55); border-radius: calc(4 * var(--u)); }
 .t-cta-line { position: absolute; left: 0; top: 0; height: calc(1.5 * var(--u)); width: 0; transform-origin: 0 50%; will-change: transform;

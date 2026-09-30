@@ -35,7 +35,7 @@ export class HUD {
   reticle: HTMLElement;
   private threatEls: HTMLElement[] = [];
   /** touch HUD hook: the contextual button (TouchControls.setInteract) */
-  onInteractText?: (text: string | null, title: string, disabled: boolean, verb: string) => void;
+  onInteractText?: (text: string | null, title: string, disabled: boolean, verb: string, read: boolean) => void;
   /** where the thing to interact with is (world): the touch button stands over it (TouchControls.placeInteract) */
   interactAt: THREE.Vector3 | null = null;
   /** that thing is a Blood Sigil (the first one teaches the button) */
@@ -331,20 +331,26 @@ export class HUD {
    * (Activate Checkpoint). Keyboard shows the E key; the touch HUD mirrors it on its tappable pill.
    * `disabled` = visible but unavailable right now (e.g. a sigil recovering), shown greyed without a key.
    */
-  interact(text: string | null, title = '', disabled = false, opts: { at?: THREE.Vector3; verb?: string; kind?: string } = {}) {
+  /**
+   * `opts.read`: already read (a memory she has examined) — the card turns muted and smaller, so what is left to find
+   * stands out from what she has seen (the touch button follows: TouchControls .t-cta.read).
+   */
+  interact(text: string | null, title = '', disabled = false, opts: { at?: THREE.Vector3; verb?: string; kind?: string; read?: boolean } = {}) {
     if (text && opts.at) (this.interactAt ??= new THREE.Vector3()).copy(opts.at);
     else if (!text) this.interactAt = null;
     this.interactKind = text ? opts.kind ?? '' : '';
     const verb = opts.verb ?? (text ? text.split(' ')[0] : '');
-    const key = text ? `${title}|${text}|${disabled}|${verb}` : '';
+    const read = !!text && !!opts.read;
+    const key = text ? `${title}|${text}|${disabled}|${verb}|${read}` : '';
     if (key === this.interactKey) return;
     this.interactKey = key;
     if (text) {
       this.interactEl.innerHTML = (title ? `<i>${title}</i>` : '') + (disabled ? `<span>${text}</span>` : `<span><b>E</b>${text}</span>`);
       this.interactEl.classList.add('on');
       this.interactEl.classList.toggle('off', disabled);
-    } else this.interactEl.classList.remove('on');
-    this.onInteractText?.(text, title, disabled, verb);
+      this.interactEl.classList.toggle('read', read);
+    } else this.interactEl.classList.remove('on', 'read');
+    this.onInteractText?.(text, title, disabled, verb, read);
   }
 
   message(title: string, sub = '', seconds = 3.5) {
