@@ -89,7 +89,8 @@ const menu = quick ? null : new MainMenu(stage, {
   onNewGame: (g) => newGame(g),
   onContinue: () => { if (save) void continueGame(save); },
   sound: (k) => game.audio.ui(k),
-  onGesture: () => game.audio.unlock(),
+  // the first touch of the title screen unlocks the sound: the exploration score rises under the menu
+  onGesture: () => { game.audio.unlock(); game.audio.music?.start(4); },
 });
 
 loader.showInitial(floor);
@@ -140,6 +141,8 @@ function newGame(guidance: Guidance) {
   if (intro && !introPlayed) {
     introPlayed = true;
     game.menuScene(false);
+    // the film has its own score: the menu's music steps aside (and resumes where it was when play begins)
+    game.audio.music?.stop(0.5);
     intro.play((gesture) => {
       begin(guidance);
       // a skip is a user gesture: take the pointer now; after the film ends by itself the first click takes it
@@ -236,7 +239,7 @@ const resume = () => {
 pause.onResume = resume;
 pause.onQuit = () => location.reload();
 game.pauseBack = () => pause.back();
-game.onPause = (on) => { document.documentElement.classList.toggle('paused', on); if (!on) pause.reset(); };
+game.onPause = (on) => { document.documentElement.classList.toggle('paused', on); if (!on) pause.reset(); game.audio.music?.setPaused(on); };
 // a handheld turned sideways pauses behind the rotate overlay (turning back shows the pause menu)
 Platform.onChange(() => {
   if (Platform.rotateBlocked && game.started && !game.paused && !game.finished) game.togglePause(true);

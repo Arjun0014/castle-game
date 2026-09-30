@@ -93,6 +93,12 @@ export class Game {
   private envFrom: EnvPreset = ENV.PRESENT;
   private promptsShown = new Set<string>();
   private debug = false;
+  /**
+   * `?perf` (session 13): a compact live readout on any device — phones have no backquote key — refreshed twice a second
+   * (fps, frame / step / render / GPU ms as p50/p95 of the last 120 frames, draw calls, drawn Echoes, pixels, heap).
+   */
+  private perfHud = typeof location !== 'undefined' && new URLSearchParams(location.search).has('perf');
+  private perfHudT = 0;
   fps = 60;
   private fpsAcc = 0;
   private fpsN = 0;
@@ -123,7 +129,7 @@ export class Game {
   /** the heroine's voice + subtitles */
   dialogue: Dialogue;
   /** level prompt ids now taught by the persistent tutorials (Objectives) instead of a timed prompt */
-  private static TAUGHT_PROMPTS = new Set(['T_MOVE', 'T_COMBAT', 'T_SHIFT', 'T_CROUCH']);
+  private static TAUGHT_PROMPTS = new Set(['T_MOVE', 'T_COMBAT', 'T_SHIFT', 'T_CROUCH', 'T_ARMORY', 'T_HEIGHT']);
   /** gameplay announcements for objectives / dialogue / tutorials (see Signals.ts) */
   signals = new Signals();
   /** soft combat camera (touch) + attack magnetism (all inputs) */
@@ -173,6 +179,7 @@ export class Game {
     container.appendChild(this.renderer.domElement);
     this.input = new Input(this.renderer.domElement);
     this.hud = new HUD(hudRoot);
+    if (this.perfHud) this.hud.debugEl.classList.add('on', 'perf');
     this.rig = new CameraRig(this.camera);
     this.rig.setProfile(Platform.view);
     this.fogShift = this.rig.profile.distance - 4.4;
@@ -287,7 +294,11 @@ export class Game {
     if (this.floorOp) return this.floorOp;
     this.assets.audioCtx = this.audio.createContext();
     const extra = [{ scope: 'core', keys: this.assets.coreKeys() }];
-    if (this.audio.ambienceEnabled) extra.push({ scope: 'ambience', keys: this.assets.ambienceKeys() });
+    if (this.audio.ambienceEnabled) {
+      extra.push({ scope: 'ambience', keys: this.assets.ambienceKeys() });
+      // the score is shared by every floor (audio/Music.ts); silent automation runs never load it
+      extra.push({ scope: 'music', keys: this.assets.musicKeys() });
+    }
     const op = this.loadFloor(id, sink, extra).finally(() => { this.floorOp = null; });
     this.floorOp = op;
     return op;
@@ -386,6 +397,7 @@ export class Game {
     for (const k of [...this.assets.coreKeys(), ...this.assets.ambienceKeys(), ...keys]) {
       if (k.startsWith('snd:') && m.has(k) && !this.audio.isBound(k.slice(4))) this.audio.bind(k.slice(4), m.get<AudioBuffer[]>(k));
     }
+    if (!this.audio.music && m.has('music:explore') && m.has('music:combat')) this.audio.bindMusic(m.get('music:explore'), m.get('music:combat'));
     const t1 = performance.now();
     sink(0.8, `${def.loadingText} — raising the walls`);
     await yieldFrame();
@@ -879,6 +891,7 @@ export class Game {
       return;
     }
     this.menuT = 0;
+    this.enemies.menuVisibility(this.player.pos);
     this.camera.clearViewOffset();
     this.camera.fov = Platform.isPortrait ? 62 : 44;
     this.camera.updateProjectionMatrix();
@@ -1100,6 +1113,7 @@ export class Game {
     }
     this.updateAbilityTip();
     if (this.debug) this.hud.debugEl.textContent = this.debugText();
+    else if (this.perfHud && (this.perfHudT -= this.realDt) <= 0) { this.perfHudT = 0.5; this.hud.debugEl.textContent = this.perfText(); }
   }
 
   /** every enemy of the floor (placed + fissure remnants) */
@@ -1301,6 +1315,8 @@ export class Game {
     const secs = (performance.now() - this.startTime) / 1000 + (this.playTimeBefore?.() ?? 0);
     if (this.floorId === 3) {
       (this.hud.endEl.querySelector('h1') as HTMLElement).textContent = 'THE CROWNHEART IS SILENT';
+      // the last card of the game carries its name (session 13)
+      this.hud.endEl.classList.add('final');
       const ps = this.hud.endEl.querySelectorAll('p');
       ps[ps.length - 1].textContent = 'Caer Veyr is only stone now — and stone can fall. The Uncrowned walks down through the one castle that remains.';
     }
@@ -1309,6 +1325,18 @@ export class Game {
     this.hud.endEl.classList.add('on');
     document.exitPointerLock?.();
     this.onEnd?.();
+  }
+
+  private perfText() {
+    const pf = this.perf;
+    const f = (s: 'wall' | 'step' | 'render' | 'gpu') => { const r = pf.recent(s); return r ? `${r.p50.toFixed(1)}/${r.p95.toFixed(1)}` : '–'; };
+    const w = pf.recent('wall'), mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+    return [
+      `fps ${w ? (1000 / Math.max(1, w.p50)).toFixed(0) : '–'}   frame ${f('wall')} ms (p50/p95)`,
+      `step ${f('step')}  render ${f('render')}  gpu ${f('gpu')}`,
+      `calls ${this.frameStats.calls}  tris ${(this.frameStats.tris / 1000).toFixed(0)}k  echoes ${this.enemies?.activeCount ?? 0}`,
+      `px ${this.renderer.domElement.width}×${this.renderer.domElement.height} ×${this.renderScale}  heap ${mem ? (mem.usedJSHeapSize / 1e6).toFixed(0) + ' MB' : '–'}`,
+    ].join('\n');
   }
 
   private debugText() {

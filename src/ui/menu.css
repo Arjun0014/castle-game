@@ -237,4 +237,9 @@ html.paused #touch { visibility: hidden; }
 #hud .end-card p { font-family: 'EB Garamond', Georgia, serif; letter-spacing: 0.04em; line-height: 1.55; max-width: 30em; text-wrap: balance; }
 #hud .end-card .end-sub { color: #a89a80; font-size: 0.92em; }
 #hud .end-card .end-title { font-size: clamp(13px, 4cqw, 19px); }
+/* the game's name over the final ending card only (session 13) */
+#hud .end-card .end-game { display: none; margin-bottom: 18px; font: 600 clamp(12px, 3.6cqw, 16px)/1 'Cormorant Garamond', 'EB Garamond', Georgia, serif;
+  letter-spacing: 0.42em; margin-right: -0.42em; color: #b99a62; }
+#hud .end-card.final .end-game { display: block; }
+.pm-game { margin: 0 0 8px; font: 600 11px/1 'Cormorant Garamond', 'EB Garamond', Georgia, serif; letter-spacing: 0.36em; margin-right: -0.36em; text-transform: uppercase; color: #a08a60; }
 .pm .mm-panel { text-align: left; }

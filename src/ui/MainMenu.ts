@@ -69,6 +69,7 @@ export function wireTabs(root: HTMLElement) {
 
 const SLIDERS: { key: keyof SettingsData; label: string; min: number; max: number; step: number; pct?: boolean }[] = [
   { key: 'master', label: 'Master volume', min: 0, max: 1, step: 0.05, pct: true },
+  { key: 'score', label: 'Music', min: 0, max: 1.5, step: 0.05, pct: true },
   { key: 'music', label: 'Ambience', min: 0, max: 1.5, step: 0.05, pct: true },
   { key: 'sfx', label: 'Effects', min: 0, max: 1.5, step: 0.05, pct: true },
   { key: 'voice', label: 'Voice', min: 0, max: 1.5, step: 0.05, pct: true },
@@ -137,9 +138,9 @@ export class MainMenu {
       <div class="mm-shade"></div>
       <div class="mm-head">
         <div class="mm-crest">${sigilSVG('mm')}</div>
-        <h1 class="mm-title"><span>THE CASTLE</span><span>REMEMBERS</span></h1>
+        <h1 class="mm-title" aria-label="Echoes of Caer Veyr"><span>ECHOES OF</span><span>CAER VEYR</span></h1>
         <div class="mm-rule"><i></i><b>◆</b><i></i></div>
-        <div class="mm-tag">Caer Veyr · a castle torn between two memories</div>
+        <div class="mm-tag">The castle remembers · a keep torn between two memories</div>
       </div>
       <nav class="mm-list">
         ${cont}
@@ -289,6 +290,7 @@ export class PauseMenu {
     root.innerHTML = `
       <div class="pm-card">
         <div class="pm-crest">${sigilSVG('pm')}</div>
+        <div class="pm-game">Echoes of Caer Veyr</div>
         <h3>Paused</h3>
         <nav class="pm-list">
           <button class="mm-item focus" data-act="resume"><span>Resume</span></button>

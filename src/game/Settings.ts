@@ -3,6 +3,7 @@
  * tuned defaults, so 1 always means "as mixed/tuned". Automated runs (tests, autopilot) never read them.
  *
  *   master / music / sfx / voice   audio buses (music = the ambience beds: wind, fire, water, room tone)
+ *   score                           the music (audio/Music.ts: the exploration and combat cues)
  *   subtitles                       the heroine's lines on screen (the opening film keeps its own subtitles)
  *   look                            camera sensitivity (mouse and touch swipes)
  *   shake                           camera shake / punch strength
@@ -12,13 +13,14 @@ export interface SettingsData {
   music: number;
   sfx: number;
   voice: number;
+  score: number;
   subtitles: boolean;
   look: number;
   shake: number;
 }
 
 const KEY = 'caer-veyr-settings';
-export const DEFAULT_SETTINGS: SettingsData = { master: 1, music: 1, sfx: 1, voice: 1, subtitles: true, look: 1, shake: 1 };
+export const DEFAULT_SETTINGS: SettingsData = { master: 1, music: 1, sfx: 1, voice: 1, score: 1, subtitles: true, look: 1, shake: 1 };
 
 export class Settings {
   data: SettingsData = { ...DEFAULT_SETTINGS };

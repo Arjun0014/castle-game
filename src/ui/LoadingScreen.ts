@@ -21,8 +21,8 @@ const RING_C = 2 * Math.PI * RING_R;
 
 /** The game's own card (the boot load, before the main menu). */
 const BOOT = {
-  title: 'THE CASTLE REMEMBERS',
-  sub: 'Caer Veyr',
+  title: 'ECHOES OF CAER VEYR',
+  sub: 'A keep torn between two memories',
   epigraph: '“The castle remembers its rightful ruler.” So the people of Veyr were taught.',
 };
 
@@ -128,7 +128,7 @@ export class LoadingScreen {
     this.sub.textContent = floor.subtitle.replace(/^Floor [IVX]+ — /, '');
     this.epigraph.textContent = floor.epigraph ?? '';
     this.el.classList.remove('boot');
-    document.title = `The Castle Remembers — ${floor.subtitle}`;
+    document.title = `Echoes of Caer Veyr — ${floor.subtitle}`;
     this.open();
   }
 

@@ -8,11 +8,12 @@ export interface CreditSection { title: string; intro?: string; lines: CreditLin
 
 export const CREDITS: CreditSection[] = [
   {
-    title: 'The Castle Remembers',
+    title: 'Echoes of Caer Veyr',
     lines: [
       { what: 'A game by', who: 'Arjun0014' },
       { what: 'Castle, props and floors', who: 'modelled in Blender for this game' },
       { what: 'Opening film', who: 'Blender, Remotion and HyperFrames — every frame built for this game' },
+      { what: 'Music', who: '“The Last Canopy Sleeps” (exploration) · “Savage Ritual” (combat)', note: 'supplied for this game' },
     ],
   },
   {

@@ -129,6 +129,172 @@ def timber_stair(B, x0, x1, y0, y1, z0, z1, direction, rails=("x0", "x1"), posts
 
 
 # =====================================================================================
+def build_barbican(B):
+    """Session 13 — the way she came in. Turning round at the spawn used to show a bridge end and the night sky; now
+    the apron is a barbican passage walled to the sky and closed to the south by the OUTER GATE: two great oak leaves,
+    iron-bound, in a round-headed arch, still barred from within as they were in the siege. The small wicket cut into
+    the east leaf stands ajar in the Present, cold light through the gap — she came through here, and now she is in.
+    In the Past the wicket is shut and the passage torch-lit. Collision closes the gate, the wicket and the walls; the
+    spawn (0, -52), the camera behind her there (≈ y -57.7) and the route north are untouched."""
+    S = "S1_GATE"
+    Y_IN, Y_OUT = -62.0, -64.0          # the outer wall's inner / outer faces
+    AX = 2.4                            # the arch opening: x -2.4..2.4, a semicircle springing at z 3.8 (crown 6.2)
+    SPRING = 3.8
+    DY0, DY1 = -62.95, -62.8            # the leaves (recessed 0.8 m into the arch)
+    WX0, WX1, WZ = 0.45, 1.65, 2.15     # the wicket in the east leaf
+    rng = random.Random(1307)
+
+    def arch_top(x):
+        d = min(AX, abs(x))
+        return SPRING + math.sqrt(max(0.0, AX * AX - d * d))
+
+    with B.at(S, "SHARED"):
+        # floor: the apron continued to the gate; the bridge beyond it (seen through the wicket, out of reach)
+        B.slab(-3.3, 3.3, -64.0, -57.5, -0.5, 0, "stone_block")
+        B.slab(-3.3, 3.3, -73.0, -64.0, -0.5, 0, "stone_block", col=False)
+        B.box(-3.6, -3.3, -73.0, -64.0, 0, 1.1, "stone_wall")
+        B.box(3.3, 3.6, -73.0, -64.0, 0, 1.1, "stone_wall")
+        # the passage walls (the old parapets raised to a wall-walk, arrow slits looking out over the ravine)
+        slits = [(-59.6, -59.2, 2.2, 3.6, "flat"), (-55.2, -54.8, 2.2, 3.6, "flat"), (-51.0, -50.6, 2.2, 3.6, "flat")]
+        for x0, x1 in ((-4.6, -3.3), (3.3, 4.6)):
+            B.wall(x0, x1, -62.0, -48.0, -0.6, 8.0, openings=slits, axis="y")
+            B.crenellations(x0, x1, -62.0, -48.0, 8.0, "y")
+        # the outer gate wall and its two squat flanking towers
+        B.wall(-9.0, 9.0, Y_OUT, Y_IN, -0.6, 10.5, openings=[(-AX, AX, 0, SPRING + AX)], axis="x")
+        B.crenellations(-9.0, 9.0, Y_OUT, Y_OUT + 0.8, 10.5, "x")
+        for x0, x1 in ((-8.8, -4.6), (4.6, 8.8)):
+            B.box(x0, x1, -66.5, -60.0, -0.6, 13.0, "stone_wall", col=True)
+            B.box(x0 - 0.1, x1 + 0.1, -66.6, -59.9, 8.2, 8.5, "stone_block")         # string course
+            B.box(x0 - 0.12, x1 + 0.12, -66.62, -59.88, -0.02, 0.35, "stone_block")    # plinth
+            B.crenellations(x0, x1, -60.6, -60.0, 13.0, "x")
+            B.crenellations(x0, x1, -66.5, -65.9, 13.0, "x")
+        # --- the stone surround on the inner face: jamb quoins, imposts, a ring of voussoirs, the keystone
+        for side in (-1, 1):
+            z = 0.35
+            k = 0
+            while z < SPRING - 0.2:
+                w = 0.55 if k % 2 == 0 else 0.8
+                a0, a1 = sorted((side * AX, side * (AX + w)))
+                B.box(a0, a1, Y_IN, Y_IN + 0.12, z, min(SPRING - 0.15, z + 0.58), "stone_block")
+                z += 0.62
+                k += 1
+            a0, a1 = sorted((side * (AX - 0.06), side * (AX + 0.75)))
+            B.box(a0, a1, Y_IN - 0.02, Y_IN + 0.16, SPRING - 0.15, SPRING + 0.12, "stone_block")   # impost
+        n = 13
+        for i in range(n):
+            th = math.pi * (i + 0.5) / n
+            key = i == n // 2
+            rr = AX + (0.4 if key else 0.33)
+            ext = 0.8 if key else 0.66
+            cx, cz = rr * math.cos(th), SPRING + rr * math.sin(th)
+            B.obox((cx, Y_IN + (0.1 if key else 0.07), cz), (math.pi * (AX + 0.33) / n - 0.04, 0.2 if key else 0.14, ext),
+                   (0, math.pi / 2 - th, 0), "stone_block")
+        # the royal crest over the arch (House Vaelor's shield and crown, weathered to a relief)
+        B.box(-0.55, 0.55, Y_IN, Y_IN + 0.14, 7.55, 8.55, "stone_block")
+        B.obox((0, Y_IN + 0.07, 7.55), (0.78, 0.14, 0.78), (0, math.pi / 4, 0), "stone_block")
+        B.box(-0.4, 0.4, Y_IN + 0.14, Y_IN + 0.2, 8.1, 8.3, "stone_block")
+        for cx in (-0.32, 0.0, 0.32):
+            B.box(cx - 0.07, cx + 0.07, Y_IN + 0.14, Y_IN + 0.2, 8.3, 8.55 if cx == 0 else 8.46, "stone_block")
+        B.box(-0.75, 0.75, Y_IN - 0.02, Y_IN + 0.22, 8.62, 8.78, "stone_block")
+        # --- the leaves: oak boards following the arch (their stepped tops vanish into the stone), a dark backing
+        # board, the meeting stile, iron straps with strap hinges, studs and pointed tips, the drawbar in its sockets
+        pw = 0.3
+        boards = []                      # the lowest board ends: Past sound, Present rotted (below)
+        for i in range(16):
+            x0 = -AX + i * pw
+            x1 = x0 + pw
+            top = max(arch_top(x0), arch_top(x1)) + 0.05
+            dj = rng.uniform(-0.008, 0.008)
+            in_wicket = WX0 - 0.01 < (x0 + x1) / 2 < WX1 + 0.01
+            zm = WZ if in_wicket else rng.uniform(0.35, 0.7)
+            B.box(x0 + 0.007, x1 - 0.007, DY0 + dj, DY1 + dj, zm, top, "wood_door")
+            if not in_wicket:
+                boards.append((x0, x1, dj, zm))
+        # backing board (hides the joints) — around the wicket's opening
+        B.box(-AX, AX, DY0 - 0.04, DY0 - 0.005, WZ, SPRING + AX, "timber")
+        B.box(-AX, WX0, DY0 - 0.04, DY0 - 0.005, 0, WZ, "timber")
+        B.box(WX1, AX, DY0 - 0.04, DY0 - 0.005, 0, WZ, "timber")
+        B.box(-0.07, 0.07, DY1, DY1 + 0.06, 0, arch_top(0.07) + 0.05, "timber")        # meeting stile
+        # wicket frame (stiles + head) on the east leaf
+        B.box(WX0 - 0.09, WX0, DY1, DY1 + 0.05, 0, WZ + 0.09, "timber")
+        B.box(WX1, WX1 + 0.09, DY1, DY1 + 0.05, 0, WZ + 0.09, "timber")
+        B.box(WX0 - 0.09, WX1 + 0.09, DY1, DY1 + 0.05, WZ, WZ + 0.09, "timber")
+        for zs in (0.55, 2.6, 4.45):
+            for side in (-1, 1):
+                reach = AX if zs < SPRING else math.sqrt(max(0.0, AX * AX - (zs - SPRING) ** 2)) - 0.05
+                segs = [(0.08, reach)]
+                if side > 0 and zs < WZ:
+                    segs = [(0.08, WX0 - 0.1), (WX1 + 0.1, reach)]
+                for a, b in segs:
+                    a0, a1 = sorted((side * a, side * b))
+                    B.box(a0, a1, DY1, DY1 + 0.045, zs - 0.08, zs + 0.08, "iron_rust")
+                    # studs along the strap
+                    s = a + 0.12
+                    while s < b - 0.08:
+                        B.box(side * s - 0.032, side * s + 0.032, DY1 + 0.045, DY1 + 0.08, zs - 0.032, zs + 0.032, "iron")
+                        s += 0.28
+                # the strap's pointed tip toward the meeting stile, the hinge knuckle + pintle at the jamb
+                B.obox((side * 0.1, DY1 + 0.022, zs), (0.17, 0.045, 0.17), (0, math.pi / 4, 0), "iron_rust")
+                if reach > AX - 0.1:
+                    B.prism(side * (AX - 0.05), DY1 - 0.02, zs - 0.15, zs + 0.15, 0.07, 8, "iron")
+                    B.box(*sorted((side * (AX - 0.02), side * (AX + 0.22))), Y_IN - 0.9, Y_IN - 0.72, zs - 0.05, zs + 0.05, "iron")
+        # the drawbar: still across the leaves, in iron-lined sockets cut into the reveals
+        B.box(-2.95, 2.95, DY1 + 0.06, DY1 + 0.32, 3.0, 3.3, "timber")
+        for side in (-1, 1):
+            B.box(*sorted((side * 0.9, side * 1.02)), DY1 + 0.05, DY1 + 0.34, 2.96, 3.34, "iron_rust")
+            B.box(*sorted((side * AX, side * (AX + 0.1))), DY1 + 0.02, DY1 + 0.36, 2.9, 3.4, "iron_rust")
+        # collision: the gate, closed (the wicket gap too — the way out is not the way on)
+        B.col_box(-AX, AX, -63.3, DY1 + 0.36, 0, SPRING + AX)
+        # moonlight reflected off the passage walls onto the gate (the recess and the arch shadow it from the sky)
+        B.marker("light", (0.0, -59.3, 3.4), kind="moon", color="a4b8dc", intensity=6.0, range=9.0, state="PRESENT")
+
+    with B.at(S, "PAST"):
+        # the gate as the siege left it: every board sound, the wicket shut, torches either side
+        for x0, x1, dj, zm in boards:
+            B.box(x0 + 0.007, x1 - 0.007, DY0 + dj, DY1 + dj, 0.0, zm, "wood_door")
+        for i in range(4):
+            x0 = WX0 + i * pw
+            B.box(x0 + 0.007, min(WX1, x0 + pw) - 0.007, DY0, DY1, 0.0, WZ, "wood_door")
+        B.box(WX0 + 0.05, WX1 - 0.05, DY1, DY1 + 0.03, 0.5, 0.62, "iron_rust")
+        B.box(WX0 + 0.05, WX1 - 0.05, DY1, DY1 + 0.03, 1.6, 1.72, "iron_rust")
+        B.prism(WX0 + 0.2, DY1 + 0.03, 1.02, 1.12, 0.06, 8, "iron")                     # ring handle
+        B.box(WX0 + 0.05, WX1 - 0.05, DY0 - 0.04, DY0 - 0.005, 0, WZ, "timber")
+        for side in (-1, 1):
+            B.torch(side * 3.05, Y_IN, 3.0, "+y")
+        B.banner(-1.4, 1.4, Y_IN + 0.05, 10.2, 1.3, "+y", mat="fabric_banner")
+
+    with B.at(S, "PRESENT"):
+        # two centuries: the lowest boards rotted green, one split away to the backing, the wicket hanging open
+        for n_, (x0, x1, dj, zm) in enumerate(boards):
+            broken = n_ == 3
+            B.box(x0 + 0.007, x1 - 0.007, DY0 + dj, DY1 + dj, 0.34 if broken else 0.0, zm, "wood_moss")
+        hinge = (WX1 + 0.02, DY1 - 0.02)
+        ang = math.radians(58)            # swung in toward the passage
+        for i in range(4):
+            u0 = i * pw + 0.007
+            u1 = min(WX1 - WX0, (i + 1) * pw) - 0.007
+            um = (u0 + u1) / 2
+            cx = hinge[0] - math.cos(ang) * um
+            cy = hinge[1] + math.sin(ang) * um
+            B.obox((cx, cy, WZ / 2 - 0.02), (u1 - u0, 0.14, WZ - 0.06), (0, 0, -ang), "wood_moss" if i == 0 else "wood_door")
+        for zs in (0.56, 1.66):
+            um = (WX1 - WX0) / 2
+            B.obox((hinge[0] - math.cos(ang) * um, hinge[1] + math.sin(ang) * um + 0.08, zs), (WX1 - WX0 - 0.1, 0.03, 0.12), (0, 0, -ang), "iron_rust")
+        # the wicket leaf's collision (it stands out of the recess into the passage)
+        um = (WX1 - WX0) / 2
+        B.obox((hinge[0] - math.cos(ang) * um, hinge[1] + math.sin(ang) * um, 1.1), (WX1 - WX0, 0.16, 2.2), (0, 0, -ang), "timber",
+               col=True, visual=False)
+        # rubble and growth along the walls, a fallen merlon by the gate
+        B.chunks(-3.2, -2.2, -61.8, -58.5, lambda x, y: 0.0, 6, smin=0.15, smax=0.35, seed=1311)
+        B.chunks(2.4, 3.2, -61.0, -56.0, lambda x, y: 0.0, 5, smin=0.12, smax=0.3, seed=1312)
+        B.obox((-2.55, -59.9, 0.3), (1.15, 0.8, 0.6), (0.05, 0.1, 0.4), "stone_wall", col=True)
+        veg_line(B, (-3.15, -61.7), (-3.15, -49.0), 9, seed=1313)
+        veg_line(B, (3.15, -61.7), (3.15, -49.0), 8, seed=1314)
+        veg_scatter(B, (-2.2, 2.2, -61.8, -60.8), 4, seed=1315)
+        # cold light through the open wicket, onto the boards and the flags inside
+        B.marker("light", (1.1, -64.6, 1.3), kind="moon", color="9fb8ff", intensity=2.2, range=7.0, state="PRESENT")
+
+
 def build_gate(B):
     S = "S1_GATE"
     with B.at(S, "SHARED"):
@@ -136,11 +302,8 @@ def build_gate(B):
         B.slab(-3.3, 3.3, -57.5, -29, -0.5, 0, "stone_block")
         B.slab(5, 15, -44, -33, -0.5, 0, "stone_block")
         B.slab(-15, -5, -44, -33, -0.5, 0, "stone_block")
-        # apron parapets + blocker (bridge end of the gatehouse)
-        B.parapet(-3.6, -3.3, -57.5, -48, 0, h=1.1)
-        B.parapet(3.3, 3.6, -57.5, -48, 0, h=1.1)
-        B.col_box(-4, 4, -58.2, -57.5, -1, 6)
-        B.box(-3.3, 3.3, -58, -57.5, -3, 0, "stone_block")
+        # the apron is walled in as a barbican passage and closed by the outer gate behind the spawn (session 13:
+        # build_barbican); the piers under the old bridge end stay
         for yy in (-56.5, -52.5):
             B.box(-3.3, 3.3, yy - 0.4, yy + 0.4, -4.5, -0.5, "stone_block")
         # outer facade with the gate arch
@@ -1051,6 +1214,7 @@ def build_under(B):
 
 
 def build_all(B):
+    build_barbican(B)
     build_gate(B)
     build_ward(B)
     build_east(B)

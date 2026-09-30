@@ -18,6 +18,8 @@ export type EState = 'dormant' | 'hidden' | 'rise' | 'idle' | 'chase' | 'circle'
 const _v = new THREE.Vector3();
 const _w = new THREE.Vector3();
 const _fw = new THREE.Vector3();
+const _bc = new THREE.Vector3();
+const _binv = new THREE.Matrix4();
 const UP = new THREE.Vector3(0, 1, 0);
 
 export interface EnemyCtx {
@@ -117,6 +119,8 @@ export class Enemy {
   /** Bone the weapon/bow hand follows (telegraph glint). */
   weaponBone: THREE.Object3D | null = null;
   torsoBone: THREE.Object3D | null = null;
+  /** the skinned meshes of the body (frustum-culled against updateBounds' sphere) */
+  skinned: THREE.SkinnedMesh[] = [];
   auraAcc = Math.random();
   /** presentation bookkeeping (footsteps, idle voice) */
   stepAcc = Math.random();
@@ -171,6 +175,13 @@ export class Enemy {
   ) {
     this.id = Enemy.nextId++;
     this.root.rotation.order = 'YXZ'; // yaw, then the death tumble about the body's own right axis
+    // An Echo that is not drawn (not risen yet, the other memory, far away, released) skips the renderer's per-frame
+    // matrix pass (session 13): 80 Echoes a floor, ~20 drawn at most, and each carries 65–85 bones — the whole
+    // scene-graph update was ~24 % of a frame's CPU. (`force` cannot tell an explicit call from the renderer's: every
+    // auto-updating parent forces its children. Explicit updates happen on drawn Echoes only — a finisher's victim,
+    // the sash at construction — and bone lookups use updateWorldMatrix, which walks the parents itself.)
+    const root = this.root, updateAll = root.updateMatrixWorld;
+    root.updateMatrixWorld = function (force?: boolean) { if (this.visible) updateAll.call(this, force); };
     this.hp = arch.hp;
     this.poise = arch.poise;
     this.root.add(model);
@@ -182,7 +193,12 @@ export class Enemy {
       const m = o as THREE.Mesh;
       if (m.isMesh) {
         m.castShadow = true;
-        m.frustumCulled = false;
+        // Skinned bodies are culled against a sphere that follows the body every frame (updateBounds, session 13):
+        // their bind-pose bounds say nothing about the animated shape, so they used to be drawn — and skinned — in
+        // both passes even behind the camera (in a big fight most of the drawn Echoes are off the portrait frame).
+        const sk = m as THREE.SkinnedMesh;
+        m.frustumCulled = !!sk.isSkinnedMesh;
+        if (sk.isSkinnedMesh) { sk.boundingSphere = new THREE.Sphere(); this.skinned.push(sk); }
         // per-enemy material copies (death fade) — original colours and textures untouched
         const src = Array.isArray(m.material) ? m.material : [m.material];
         const mats = src.map((mm) => {
@@ -216,6 +232,23 @@ export class Enemy {
    * separation and navigation clearance keep the full body `radius`.
    */
   get physRadius() { return Math.min(this.radius, 0.62); }
+  /**
+   * The culling sphere of the skinned body, moved to where the body is this frame: a generous ball round its middle
+   * (height × 0.8 + 1.4 m — arms, weapons, a lunge, a death tumble), mapped into each mesh's own frame, since three.js
+   * tests `boundingSphere` × `matrixWorld`. Called for drawn Echoes after they moved (EnemyManager.update).
+   */
+  updateBounds() {
+    const H = this.arch.height, R = Math.max(2.2, H * 0.8 + 1.4);
+    const c = _bc.copy(this.pos);
+    c.y += H * 0.5;
+    for (const m of this.skinned) {
+      m.updateWorldMatrix(true, false);
+      m.boundingSphere!.center.copy(c).applyMatrix4(_binv.copy(m.matrixWorld).invert());
+      m.boundingSphere!.radius = R / Math.max(1e-6, m.matrixWorld.getMaxScaleOnAxis());
+    }
+  }
+  /** loading-screen warm-up: every body drawn wherever it stands (then culled again) */
+  setCulling(on: boolean) { for (const m of this.skinned) m.frustumCulled = on; }
   get height() { return this.arch.height; }
   get isFlying() { return !!this.arch.flying; }
   get isRanged() { return !!this.arch.ranged; }

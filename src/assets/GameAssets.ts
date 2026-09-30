@@ -7,6 +7,7 @@ import floorManifests from '../data/floorManifests.json';
 import voiceManifest from '../data/voiceManifest.json';
 import assetSizes from '../data/assetSizes.json';
 import audioManifest from '../data/audioManifest.json';
+import musicManifest from '../data/musicManifest.json';
 import { ARCHETYPES, PAST_COUNTERPART, type ArchetypeId, type AssetId } from '../enemies/EnemyTypes';
 import { materialTextureSets } from '../levels/Materials';
 
@@ -91,7 +92,17 @@ export const FLOOR_SOUNDS: Record<number, SoundId[]> = {
   3: (['mage_charge', 'mage_bolt', 'mage_impact', 'mage_nova', 'mage_teleport', 'mage_beam', 'mage_ward', 'mage_rune', 'crown_resonance', 'boss_scream', 'boss_death', 'final_collapse'] as string[])
     .filter((id) => id in audioManifest.sounds) as SoundId[],
 };
-const FLOOR_ONLY = new Set<string>(Object.values(FLOOR_SOUNDS).flat());
+/**
+ * Sounds only a rig uses (session 13): they load with the floors whose Echoes need them — Floor 1 has no monsters, so
+ * it no longer decodes the bats', goblins', the Widow's and the Maw's voices (they were in "core", resident everywhere).
+ */
+const RIG_SOUNDS: Partial<Record<AssetId, SoundId[]>> = {
+  bat: ['bat_screech', 'bat_flap', 'bat_death'],
+  goblin: ['goblin_snarl', 'goblin_death', 'goblin_cry'],
+  widow: ['widow_hiss', 'widow_spit', 'web_hit', 'widow_death'],
+  mutant: ['maw_snarl', 'maw_roar'],
+};
+const FLOOR_ONLY = new Set<string>([...Object.values(FLOOR_SOUNDS).flat(), ...Object.values(RIG_SOUNDS).flat()]);
 
 export class GameAssets {
   readonly manager = new AssetManager();
@@ -104,6 +115,7 @@ export class GameAssets {
   constructor(private renderer: THREE.WebGLRenderer, private anisotropy: number) {
     this.registerAll();
     this.registerVoice();
+    this.registerMusic();
   }
 
   /** KTX2 (Basis) transcoder, created only if a KTX2 asset is requested. */
@@ -207,6 +219,37 @@ export class GameAssets {
     }
   }
 
+  /**
+   * The score (session 13, audio/Music.ts; files from tools/build_music.py): the exploration track's segments stay
+   * compressed until they play (Music decodes two at a time), the combat cue is decoded whole (it loops sample-exact).
+   */
+  private registerMusic() {
+    const m = this.manager;
+    const segs = musicManifest.explore.segments;
+    m.register<ArrayBuffer[]>({
+      key: 'music:explore', bytes: segs.reduce((n, s) => n + s.bytes, 0), label: 'Old songs of the keep', urls: segs.map((s) => s.url),
+      load: async (p) => {
+        let done = 0;
+        return Promise.all(segs.map(async (s) => { const b = await fetchBytes(s.url, s.bytes, () => {}); p(++done / segs.length); return b; }));
+      },
+      dispose: () => { /* garbage-collected once Music drops it */ },
+      memory: (list) => ({ gpu: 0, cpu: list.reduce((n, b) => n + b.byteLength, 0) }),
+    });
+    const c = musicManifest.combat;
+    m.register<AudioBuffer>({
+      key: 'music:combat', bytes: c.bytes, label: 'Old songs of the keep', urls: [c.url],
+      load: async (p) => {
+        const ctx = this.audioCtx;
+        if (!ctx) throw new Error('audio context not created');
+        return ctx.decodeAudioData(await fetchBytes(c.url, c.bytes, p));
+      },
+      dispose: () => { /* garbage-collected once Music drops it */ },
+      memory: (b) => ({ gpu: 0, cpu: b.length * b.numberOfChannels * 4 }),
+    });
+  }
+  /** the score: every floor shares it (scope "music", loaded with core unless the audio is automation-muted) */
+  musicKeys() { return ['music:explore', 'music:combat']; }
+
   private voiceDecoder(): BaseAudioContext {
     if (!this.voiceCtx) {
       try { this.voiceCtx = new OfflineAudioContext(1, 22050, 22050); } catch { this.voiceCtx = this.audioCtx; }
@@ -283,8 +326,10 @@ export class GameAssets {
     // dev server only: ?monsters preloads every session-9 monster rig on any floor (dev/monsterProbe.js spawns them)
     if (import.meta.env.DEV && typeof location !== 'undefined' && new URLSearchParams(location.search).has('monsters')) for (const r of ['goblin', 'bat', 'widow', 'mutant'] as AssetId[]) rigs.add(r);
     keys.push(...[...rigs].sort().map((r) => 'glb:enemy:' + r));
+    const snd = new Set<SoundId>(FLOOR_SOUNDS[id] ?? []);
+    for (const r of rigs) for (const x of RIG_SOUNDS[r] ?? []) snd.add(x);
     keys.push(...man.veg.map((v) => 'veg:' + v));
-    keys.push(...(FLOOR_SOUNDS[id] ?? []).map((s) => 'snd:' + s));
+    keys.push(...[...snd].sort().map((s) => 'snd:' + s));
     return keys;
   }
 }

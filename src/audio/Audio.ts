@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { TimeState } from '../levels/Materials';
 import manifest from '../data/audioManifest.json';
+import { Music } from './Music';
 
 /**
  * Sample-based audio (CC0 recordings processed by tools/build_audio.py → public/assets/audio, listed in
@@ -26,7 +27,7 @@ export class AudioFX {
   private buffers = new Map<SoundId, AudioBuffer[]>();
   private lastVariant = new Map<SoundId, number>();
   private voices: { id: SoundId; src: AudioBufferSourceNode; end: number }[] = [];
-  private beds = new Map<SoundId, { src: AudioBufferSourceNode; gain: GainNode }>();
+  private beds = new Map<SoundId, { src: AudioBufferSourceNode; gain: GainNode; aim?: number }>();
   private channel: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
   private oneShotT = 6;
   enabled = true;
@@ -76,18 +77,20 @@ export class AudioFX {
   }
   duck(on: boolean) {
     this.ducked = on;
+    this.music?.duck(on);
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.buses.amb.gain.setTargetAtTime(0.8 * this.lv.music * (on ? 0.5 : 1), t, on ? 0.08 : 0.4);
     this.buses.sfx.gain.setTargetAtTime(this.lv.sfx * (on ? 0.78 : 1), t, on ? 0.08 : 0.4);
   }
 
-  /** Settings (menu → Settings): multipliers on the tuned bus levels, 1 = as mixed. */
-  private lv = { master: 1, music: 1, sfx: 1, voice: 1 };
+  /** Settings (menu → Settings): multipliers on the tuned bus levels, 1 = as mixed (`music` = the ambience beds, `score` = the music). */
+  private lv = { master: 1, music: 1, sfx: 1, voice: 1, score: 1 };
   private ducked = false;
-  setLevels(l: { master: number; music: number; sfx: number; voice: number }) {
-    this.lv = { master: l.master, music: l.music, sfx: l.sfx, voice: l.voice };
+  setLevels(l: { master: number; music: number; sfx: number; voice: number; score: number }) {
+    this.lv = { master: l.master, music: l.music, sfx: l.sfx, voice: l.voice, score: l.score };
     this.volume = 0.9 * l.master;
+    this.music?.setLevel(l.score);
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(this.muted ? 0 : this.volume, t, 0.05);
@@ -101,6 +104,14 @@ export class AudioFX {
     if (kind === 'move') this.play('blade_ring' as SoundId, { vol: 0.16, rate: 1.9, jitter: 0.04 });
     else if (kind === 'select') { this.play('blade_ring' as SoundId, { vol: 0.34, rate: 1.25 }); this.play('resonance' as SoundId, { vol: 0.18, rate: 0.8 }); }
     else this.play('swing' as SoundId, { vol: 0.2, rate: 0.8 });
+  }
+
+  /** The adaptive score (audio/Music.ts): null in automation mute, and until its files are loaded. */
+  music: Music | null = null;
+  bindMusic(explore: ArrayBuffer[], combat: AudioBuffer) {
+    if (!this.ctx || this.music) return;
+    this.music = new Music(this.ctx, this.master, explore, combat);
+    this.music.setLevel(this.lv.score);
   }
 
   /** Decoded buffers for a sound id (from the AssetManager). */
@@ -138,6 +149,7 @@ export class AudioFX {
     if (!this.ctx || !this.loaded) return;
     void this.ctx.resume();
     this.startBeds();
+    this.music?.start();
   }
 
   private startBeds() {
@@ -205,11 +217,15 @@ export class AudioFX {
     return src;
   }
 
-  /** Listener follows the camera. */
+  /** Listener follows the camera (automation is scheduled only when the camera has actually moved or turned). */
+  private lastListener = { p: new THREE.Vector3(1e9, 0, 0), f: new THREE.Vector3() };
   setListener(cam: THREE.Camera) {
     if (!this.ctx) return;
     const l = this.ctx.listener;
     const f = cam.getWorldDirection(_f);
+    const last = this.lastListener;
+    if (last.p.distanceToSquared(cam.position) < 1e-4 && last.f.dot(f) > 0.99998) return;
+    last.p.copy(cam.position); last.f.copy(f);
     const u = _u.set(0, 1, 0).applyQuaternion(cam.quaternion);
     const t = this.ctx.currentTime;
     if (l.positionX) {
@@ -308,6 +324,7 @@ export class AudioFX {
 
   // ------------------------------------------------------------------ ambience
   update(dt: number, amb: AmbientContext, listener: THREE.Vector3) {
+    if (this.music && this.ctx?.state === 'running') this.music.update(amb.inCombat);
     if (!this.ambienceEnabled || !this.ctx || !this.beds.size || this.ctx.state !== 'running') return;
     const t = this.ctx.currentTime;
     const P = amb.state === 'PRESENT';
@@ -322,6 +339,9 @@ export class AudioFX {
     };
     for (const [id, bed] of this.beds) {
       const g = (target[id] ?? 0) * Math.pow(10, DEFS[id].gain / 20);
+      // re-aim the fade only when the mix wants something new (not five automation events every frame)
+      if (Math.abs(g - (bed.aim ?? -1)) < 0.002) continue;
+      bed.aim = g;
       bed.gain.gain.setTargetAtTime(g, t, 0.6);
     }
     // sparse Present one-shots around the listener: settling rubble, creaking timber, a far-off Echo, thunder

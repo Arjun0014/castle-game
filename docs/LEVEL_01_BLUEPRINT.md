@@ -662,3 +662,25 @@ Deviations found while building and playtesting with the autopilot; the code is 
 - E11 runs in two waves; the Last Muster uses a weaker `muster` Echo-guard archetype; Warden 460 HP.
 - The optional screen-door un-barring loop (G5) is **not implemented** yet.
 - Enemy aggro-on-sight requires line of sight.
+
+### N.1 Session 13 (2026-09-30): the barbican and the outer gate; the Guided tutorial through G3
+
+- **The barbican** (`floor01_layout.build_barbican`). The spawn apron used to end in a bridge edge and the night sky: turning
+  round at the start showed nothing she could have come through. The apron is now a barbican passage open to the sky:
+  1.3 m walls with arrow slits and crenellations replace the parapets (x ±3.3..4.6, y −62..−48, 8 m), and the floor runs
+  on to the **outer gate wall** (y −64..−62, x −9..9, 10.5 m) with two squat flanking towers (x ±4.6..8.8, y −66.5..−60,
+  13 m). In its round-headed arch (x ±2.4, springing z 3.8, crown 6.2) hang the **great leaves**: sixteen oak boards
+  following the arch, a backing board, the meeting stile, three iron straps per leaf with strap hinges, pintles, studs
+  and pointed tips, and the **drawbar** still across them in iron-lined sockets — barred from within since the siege.
+  The inner face carries jamb quoins, imposts, a ring of 13 voussoirs with a keystone and House Vaelor's crest.
+  - **Past:** every board sound, the wicket shut (ring handle), torches either side, a banner above.
+  - **Present:** the lowest boards rotted green, one split away to the backing, rust, the **wicket in the east leaf
+    hanging open** with cold light beyond it (a moon light outside, x 1.1, y −64.6) — she came through here. Rubble, a
+    fallen merlon, grass along the walls; a low moon fill in front of the gate so it reads from the spawn.
+  - Collision closes the gate and the wicket gap (the bridge beyond is visual only) and the ajar wicket leaf; the camera at
+    the spawn (≈ y −57.7) and everywhere tested in the passage stays clear of geometry. The route north is unchanged.
+- **Guided tutorial** now ends at CP3 above G3 (see `src/game/Tutorial.ts`): after the crawl, *A HALF STAIR* (climb the
+  Present rubble to the pad on the old landing's footprint) → *THE STAIR REMEMBERS* (shift there; a shift on the armory
+  floor lands in front of the Past's locked gate and the card says so) → *CLIMB* (the Past's upper flight) → the Blood
+  Sigil CP3 → the closing card. Minimal guidance has the same contextual card (`Objectives` teach `halfstair`). The level
+  prompts `T_ARMORY` / `T_HEIGHT` are superseded by those cards.

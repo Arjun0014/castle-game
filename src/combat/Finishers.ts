@@ -3,6 +3,19 @@ import type { Game } from '../game/Game';
 import type { Enemy } from '../enemies/Enemy';
 import { Platform } from '../platform/Platform';
 
+const _s1 = new THREE.Vector3(), _s2 = new THREE.Vector3(), _sr = new THREE.Vector3(), _sc = new THREE.Vector3();
+/** closest distance between segments p1q1 and p2q2 (the blade against a body's axis) */
+function segDist(p1: THREE.Vector3, q1: THREE.Vector3, p2: THREE.Vector3, q2: THREE.Vector3): number {
+  const d1 = _s1.subVectors(q1, p1), d2 = _s2.subVectors(q2, p2), r = _sr.subVectors(p1, p2);
+  const a = d1.dot(d1), e = d2.dot(d2), f = d2.dot(r), c = d1.dot(r), b = d1.dot(d2);
+  const den = a * e - b * b;
+  let s = a > 1e-8 && den > 1e-10 ? THREE.MathUtils.clamp((b * f - c * e) / den, 0, 1) : 0;
+  let t = e > 1e-8 ? (b * s + f) / e : 0;
+  if (t < 0) { t = 0; s = a > 1e-8 ? THREE.MathUtils.clamp(-c / a, 0, 1) : 0; }
+  else if (t > 1) { t = 1; s = a > 1e-8 ? THREE.MathUtils.clamp((b - c) / a, 0, 1) : 0; }
+  return _sc.copy(p1).addScaledVector(d1, s).distanceTo(_s2.multiplyScalar(t).add(p2));
+}
+
 /**
  * Cinematic finishers (session 8, reworked session 9). A lethal blow of the hero — the last Echo of a fight OR a
  * kill in the middle of one, including a blow deep inside a combo — may become a short staged kill instead of the
@@ -411,6 +424,12 @@ export class Finishers {
   private bladeContact(): boolean {
     const e = this.e, bl = this.g.player.blade;
     if (!e || !this.verts.length) return false;
+    // (session 13) the skinned test (~780 vertices a frame) only once the blade is within reach of the body: while both
+    // this frame's blade and last frame's are farther from the body's axis than its width plus 0.9 m, no blade between
+    // them (a frame's sweep moves the tip ≤ ~0.5 m) can be touching the surface
+    const axA = this._a.copy(e.pos), axB = this._b.copy(e.pos).setY(e.pos.y + e.height);
+    const far = Math.min(segDist(bl.hilt, bl.tip, axA, axB), segDist(bl.prevHilt, bl.prevTip, axA, axB)) - (e.radius + 0.9);
+    if (far > 0) { this.lastGap = far; return false; }
     e.root.updateMatrixWorld(true);
     let best = Infinity;
     for (const k of [1, 0.66, 0.33]) {

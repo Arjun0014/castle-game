@@ -12,6 +12,8 @@ export class HUD {
   private hpLag: HTMLElement;
   private segs: HTMLElement[] = [];
   private segFill: HTMLElement[] = [];
+  /** the fill's colour + shimmer (its own element: the fill itself only scales, so both stay on the compositor) */
+  private segInk: HTMLElement[] = [];
   private badge: HTMLElement;
   private channel: HTMLElement;
   private channelFill: HTMLElement;
@@ -44,7 +46,7 @@ export class HUD {
       <div class="state-badge present">PRESENT</div>
       <div class="hud-bars">
         <div class="hp-bar"><div class="hp-lag"></div><div class="hp-fill"></div></div>
-        <div class="charge"><div class="charge-seg"><div class="charge-fill"></div></div><div class="charge-seg"><div class="charge-fill"></div></div></div>
+        <div class="charge"><div class="charge-seg"><div class="charge-fill"><i></i></div></div><div class="charge-seg"><div class="charge-fill"><i></i></div></div></div>
         <div class="charge-label">RESONANCE</div>
       </div>
       <div class="channel"><div class="channel-track"><div class="channel-fill"></div></div><div class="channel-text">SHIFTING</div></div>
@@ -63,11 +65,11 @@ export class HUD {
       <div class="fade"></div>
       <div class="debug"></div>
       <div class="pause"></div>
-      <div class="end-card"><h1>FLOOR I COMPLETE</h1><p class="end-sub"></p><p>The way to the Upper Keep lies open.</p></div>`;
+      <div class="end-card"><div class="end-game">ECHOES OF CAER VEYR</div><h1>FLOOR I COMPLETE</h1><p class="end-sub"></p><p>The way to the Upper Keep lies open.</p></div>`;
     const q = (s: string) => root.querySelector(s) as HTMLElement;
     this.hpFill = q('.hp-fill');
     this.hpLag = q('.hp-lag');
-    root.querySelectorAll('.charge-seg').forEach((s) => { this.segs.push(s as HTMLElement); this.segFill.push(s.querySelector('.charge-fill') as HTMLElement); });
+    root.querySelectorAll('.charge-seg').forEach((s) => { this.segs.push(s as HTMLElement); this.segFill.push(s.querySelector('.charge-fill') as HTMLElement); this.segInk.push(s.querySelector('.charge-fill i') as HTMLElement); });
     this.badge = q('.state-badge');
     this.channel = q('.channel');
     this.channelFill = q('.channel-fill');
@@ -241,23 +243,37 @@ export class HUD {
     el.classList.add('on');
   }
 
+  /**
+   * The bars are set every frame but only touch the DOM when what they show changes (session 13): the passive
+   * Resonance refill moved the gauge's width a hair every frame, and the channel line rewrote its text — each forced a
+   * style recalc, a layout and a repaint of the HUD on every frame (phones paid ~1 ms a frame for it). Widths are
+   * quantised to 0.25 % (a fraction of a device pixel on the widest bar).
+   */
+  private shown = { hp: -1, low: null as boolean | null, seg: [-1, -1], segCol: ['', ''], full: [false, false], trickle: [false, false], ch: false, chF: -1, chText: '' };
   setHealth(hp: number, max: number) {
-    const f = Math.max(0, hp / max) * 100;
-    this.hpFill.style.width = f + '%';
-    this.hpLag.style.width = f + '%';
+    const f = Math.round(Math.max(0, hp / max) * 400) / 4;
+    const s = this.shown;
+    if (f !== s.hp) { s.hp = f; this.hpFill.style.width = f + '%'; this.hpLag.style.width = f + '%'; }
     const low = hp / max < 0.3;
-    this.vignette.style.boxShadow = low ? 'inset 0 0 200px rgba(140,0,0,0.55)' : 'inset 0 0 180px rgba(0,0,0,0.35)';
+    if (low !== s.low) {
+      s.low = low;
+      this.vignette.style.boxShadow = low ? 'inset 0 0 200px rgba(140,0,0,0.55)' : 'inset 0 0 180px rgba(0,0,0,0.35)';
+    }
   }
 
   /** `trickle`: the passive refill is running (the filling segment shimmers softly) */
   setCharge(charge: number, perShift: number, state: TimeState, trickle = false) {
     const col = state === 'PAST' ? '#f0a54a' : '#7fc4ff';
+    const s = this.shown;
     for (let i = 0; i < this.segs.length; i++) {
       const f = Math.max(0, Math.min(1, (charge - i * perShift) / perShift));
-      this.segFill[i].style.width = f * 100 + '%';
-      this.segFill[i].style.background = f >= 1 ? col : 'rgba(200,200,220,0.55)';
-      this.segs[i].classList.toggle('full', f >= 1);
-      this.segs[i].classList.toggle('trickle', trickle && f > 0 && f < 1);
+      const w = Math.round(f * 400) / 4;
+      if (w !== s.seg[i]) { s.seg[i] = w; this.segFill[i].style.transform = `scaleX(${w / 100})`; }
+      const bg = f >= 1 ? col : 'rgba(200,200,220,0.55)';
+      if (bg !== s.segCol[i]) { s.segCol[i] = bg; this.segInk[i].style.background = bg; }
+      const full = f >= 1, tr = trickle && f > 0 && f < 1;
+      if (full !== s.full[i]) { s.full[i] = full; this.segs[i].classList.toggle('full', full); }
+      if (tr !== s.trickle[i]) { s.trickle[i] = tr; this.segs[i].classList.toggle('trickle', tr); }
     }
   }
 
@@ -267,9 +283,12 @@ export class HUD {
   }
 
   setChannel(on: boolean, f = 0, text = 'SHIFTING') {
-    this.channel.classList.toggle('on', on);
-    this.channelFill.style.width = f * 100 + '%';
-    this.channelText.textContent = text;
+    const s = this.shown, w = Math.round(f * 400) / 4;
+    if (on !== s.ch) { s.ch = on; this.channel.classList.toggle('on', on); }
+    // hidden: empty it once, then nothing to draw (it used to replace its text node every frame of play)
+    if (w !== s.chF) { s.chF = w; this.channelFill.style.width = w + '%'; }
+    if (!on) return;
+    if (text !== s.chText) { s.chText = text; this.channelText.textContent = text; }
   }
 
   prompt(text: string, seconds = 5) {

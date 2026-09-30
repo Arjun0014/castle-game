@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Caer Veyr - third-person Past/Present castle action game (Three.js).",
+  "description": "Echoes of Caer Veyr - third-person Past/Present castle action game (Three.js).",
   "scripts": {
     "predev": "node tools/build_floor_manifest.mjs",
     "dev": "vite --port 5173 --strictPort",

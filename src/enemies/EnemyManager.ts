@@ -215,6 +215,20 @@ export class EnemyManager {
   }
 
   /**
+   * The title screen draws the floor without simulating it (Game.menuScene). Only the Echoes play itself would draw
+   * from there — this memory, within 42 m (update's rule) — each sampled once so none stands in its bind pose. Before
+   * session 13 every Echo left visible by the warm-up (~60 across the floor) was drawn and shadow-cast behind the menu.
+   */
+  menuVisibility(p: THREE.Vector3) {
+    const st = this.g.time.state;
+    for (const e of this.enemies) {
+      const show = !e.removed && e.state !== 'hidden' && (e.owner === st || e.owner === 'BOTH') && e.pos.distanceTo(p) < 42;
+      e.root.visible = show;
+      if (show) { if (!e.posed) e.repose(); else e.mixer.update(0); e.updateBounds(); }
+    }
+  }
+
+  /**
    * Warm-up: make every enemy-side object drawable (hidden risers, other-state enemies, pooled remnants, statues,
    * imprints). Returns the restore function (visibility is re-derived by onStateChange / update afterwards).
    */
@@ -222,10 +236,11 @@ export class EnemyManager {
     const sc = this.g.scene;
     const pooled = [...this.remnantPool, ...this.pastEchoPool];
     for (const e of pooled) sc.add(e.root);
-    for (const e of [...this.enemies, ...pooled]) e.root.visible = true;
+    for (const e of [...this.enemies, ...pooled]) { e.root.visible = true; e.setCulling(false); }
     for (const s of this.statues) s.visible = true;
     for (const im of this.imprints) im.obj.visible = true;
     return () => {
+      for (const e of [...this.enemies, ...pooled]) e.setCulling(true);
       for (const e of pooled) { sc.remove(e.root); e.root.visible = false; }
       for (const e of this.enemies) if (e.state === 'hidden') e.root.visible = false;
       this.onStateChange(this.g.time.state);
@@ -746,7 +761,7 @@ export class EnemyManager {
       // safety net: a drawn body always has an animation on its skeleton (never the bind pose)
       if (e.root.visible && !e.posed) e.repose();
       const hot = e.triggered || d < 38;
-      if (!hot && e.alive) continue;
+      if (!hot && e.alive) { if (e.root.visible) e.updateBounds(); continue; }
       // bosses are never lost to a void: a kick toward the edge staggers them instead (blueprint E10)
       if (e.arch.boss && e.arch.id !== 'last_crown' && e.alive && e.state !== 'hit' && (Math.abs(e.vel.x) + Math.abs(e.vel.z)) > 1 && e.catchAtEdge(ctx)) {
         g.hud.prompt('The Captain reels at the edge!', 1.5);
@@ -755,6 +770,7 @@ export class EnemyManager {
       e.updateReaction(g.realDt);
       e.update(dt, ctx);
       this.presentEnemy(e, dt);
+      if (e.root.visible) e.updateBounds();
       active++;
       if (e.triggered && e.alive && d < 22) combat = true;
       // (a body in a scripted leap — the Maw arcing over the font — is in the air, not in the void)

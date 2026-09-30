@@ -134,6 +134,15 @@ export class Perf {
     return { avg: +avg.toFixed(2), p50: +q(0.5).toFixed(2), p95: +q(0.95).toFixed(2), p99: +q(0.99).toFixed(2), max: +v[v.length - 1].toFixed(2), n: v.length };
   }
 
+  /** p50 / p95 of the last `k` frames of one series (the on-device `?perf` readout) */
+  recent(series: 'wall' | 'step' | 'render' | 'gpu', k = 120) {
+    const arr = this[series], v: number[] = [];
+    for (let i = 1; i <= Math.min(k, this.n); i++) { const x = arr[(this.n - i) % RING]; if (x >= 0) v.push(x); }
+    if (!v.length) return null;
+    v.sort((a, b) => a - b);
+    return { p50: v[Math.floor(v.length * 0.5)], p95: v[Math.min(v.length - 1, Math.floor(v.length * 0.95))] };
+  }
+
   /** Summary of the frames recorded since the last reset (up to RING). */
   report() {
     const count = Math.min(this.n, RING);

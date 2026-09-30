@@ -128,9 +128,60 @@ export async function run() {
     inp.setVirtual('forward', true);
     await expect('crouch', 20, null, 'crawl through the gap');
     inp.setVirtual('forward', false);
-    await until(() => { note(); return !g.tutorial?.active; }, 12);
+    // ---- session 13: the half stair (G3). The armory's fight is not the lesson: clear it
+    for (const id of ['E6', 'E6b']) { const enc = g.enemies.encounters.get(id); if (enc) { enc.triggered = true; enc.cleared = true; for (const e of enc.enemies) e.vanish(); } }
+    const card = () => g.hud.root.querySelector('.tutorial span')?.textContent ?? '';
+    // hold SHIFT; press it again whenever no channel is running (a press while she settles after a teleport is lost)
+    const holdShift = () => { if (!g.player.isChanneling && g.player.state !== 'land') inp.setVirtual('shift', false); inp.setVirtual('shift', true); };
+    const texts = {};
+    // the rubble: from the stair's foot, walk north up the ramp to the old landing
+    g.tp(21.3, 12.4, 0, 0);
+    await until(() => { note(); return false; }, 0.6);
+    texts.halfstair = card();
+    inp.setVirtual('forward', true);
+    await expect('halfstair', 12, () => { g.player.yaw = Math.PI; g.rig.snapBehind(Math.PI); }, 'climb the rubble to the pad');
+    inp.setVirtual('forward', false);
+    await until(() => { note(); return false; }, 0.8);
+    texts.onPad = card();
+    // the wrong memory first: shift on the armory floor — the Past's stair is behind its locked gate
+    g.time.charge = 200;
+    g.tp(27, 16, 0, 270);
+    await until(() => { note(); return false; }, 0.8);
+    texts.floorPresent = card();
+    await until(() => g.time.state === 'PAST', 8, holdShift);
+    inp.setVirtual('shift', false);
+    await until(() => { note(); return false; }, 2);
+    texts.floorPast = card();
+    texts.floorPastState = `${g.time.state} at ${JSON.stringify(bl())} ${g.player.state} deny: ${g.hud.root.querySelector('.deny')?.textContent ?? ''}`;
+    if (lesson() !== 'stairshift') throw new Error('the floor shift should not complete the stair lesson: ' + lesson());
+    // back to the Present, up the rubble, shift on the landing
+    g.time.charge = 200;
+    await until(() => g.time.state === 'PRESENT', 8, holdShift);
+    inp.setVirtual('shift', false);
+    await until(() => false, 1.5);
+    g.tp(21.3, 12.4, 0, 0);
+    await until(() => false, 0.4);
+    inp.setVirtual('forward', true);
+    await until(() => { note(); return g.player.pos.y > 2.6 && -g.player.pos.z > 17.4; }, 10, () => { g.player.yaw = Math.PI; g.rig.snapBehind(Math.PI); });
+    inp.setVirtual('forward', false);
+    await until(() => false, 0.6);
+    g.time.charge = 200;
+    await expect('stairshift', 8, holdShift, 'shift on the old landing');
+    inp.setVirtual('shift', false);
+    texts.climb = card();
+    // the Past's upper flight to the top landing
+    await until(() => false, 1.4);
+    inp.setVirtual('forward', true);
+    await expect('climb', 14, () => { g.player.yaw = Math.PI; g.rig.snapBehind(Math.PI); }, 'climb the Past stair');
+    inp.setVirtual('forward', false);
+    // kneel at CP3
+    const cp3 = g.checkpoints.sigilPos('CP3');
+    g.player.teleport(cp3.clone(), g.player.yaw);
+    await expect('cp3', 10, (i) => { if (i % 30 === 0) inp.tapVirtual('interact'); }, 'kneel at CP3');
+    texts.end = card();
+    await until(() => { note(); return !g.tutorial?.active; }, 14);
     note();
-    return { ok: !g.tutorial?.active, scaleAtLight, lessons: log };
+    return { ok: !g.tutorial?.active, scaleAtLight, lessons: log, texts };
   } catch (err) {
     for (const a of ['forward', 'block', 'shift']) inp.setVirtual(a, false);
     return { ok: false, fail: String(err.message ?? err), lessons: log, lesson: lesson(), timeScale: g.timeScale };

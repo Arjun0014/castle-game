@@ -238,6 +238,16 @@ void main() {
     } else if (teach === 'crouch' && this.zone('27.5,34,-1.5,7.5,-1,3', g.player.pos)) {
       title = 'CROUCH';
       text = touch ? 'The vault has fallen. Walk into the low gap — you stoop through it on your own.' : 'The vault has fallen. Press C to crouch through the low gap — C again to stand.';
+    } else if (teach === 'halfstair' && this.zone('20,34,10.5,27,-1,9', g.player.pos) && !g.enemies.inCombat) {
+      // G3 (session 13): climb in the Present, shift on the old landing, climb in the Past — said for where she is
+      const p = g.player.pos, past = g.time.state === 'PAST';
+      const pad = this.zone('19.9,22.7,16.6,19.7,2.3,4.6', p) || this.zone('19.9,22.7,12,16.6,0.9,3.4', p);
+      title = 'A HALF STAIR';
+      if (past && this.zone('19.9,22.7,11.8,27,0.6,7', p)) text = 'The whole stair stands in this memory. Climb it to the landing above.';
+      else if (past) text = "The stair's gate is locked in this memory. Shift back, climb the rubble to the old landing, and shift there.";
+      else if (!pad) text = 'The stair has fallen in this memory — the rubble still climbs to where its landing stood. Climb it.';
+      else if (g.time.charge < 100) text = "A shift needs a full segment of Resonance: destroy Echoes, or wait — the castle's pull slowly returns.";
+      else { text = touch ? 'Hold SHIFT here: in the Past the stair above still stands.' : 'Hold R here: in the Past the stair above still stands.'; btn = 'shift'; }
     }
     if (this.hitsAtStart === null && teach === 'combat') this.hitsAtStart = L.hits;
     if (teach !== 'combat') this.hitsAtStart = null;
