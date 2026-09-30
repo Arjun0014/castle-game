@@ -21,7 +21,7 @@
     "assets:manifest": "node tools/build_floor_manifest.mjs",
     "assets:ktx2": "node tools/build_ktx2.mjs",
     "assets:sfx": "node tools/elevenlabs_sfx.mjs",
-    "package:itch": "npm run build && powershell -NoProfile -Command \"Compress-Archive -Force -Path dist/* -DestinationPath build/caer-veyr-itch.zip\" && python tools/audit_itch.py",
+    "package:itch": "npm run build && python tools/zip_itch.py && python tools/audit_itch.py",
     "predev:lan": "node tools/build_floor_manifest.mjs",
     "dev:lan": "vite --host 0.0.0.0 --port 5173 --strictPort",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort",

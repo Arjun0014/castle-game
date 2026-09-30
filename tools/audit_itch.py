@@ -20,8 +20,22 @@ BS = chr(92)
 
 if 'index.html' not in names:
     fails.append('index.html is not at the ZIP root')
-if any(BS in n for n in names):
-    fails.append(f'{sum(BS in n for n in names)} entries use backslashes')
+# the entry names exactly as stored: Python's zipfile turns "\\" into "/" when it reads a ZIP on Windows, so `filename`
+# hides the backslash names Windows PowerShell 5.1's Compress-Archive writes — read the central directory itself
+raw = open(path, 'rb').read()
+stored = []
+pos = raw.find(b'PK\x01\x02')
+while pos != -1:
+    n_len = int.from_bytes(raw[pos + 28:pos + 30], 'little')
+    x_len = int.from_bytes(raw[pos + 30:pos + 32], 'little')
+    c_len = int.from_bytes(raw[pos + 32:pos + 34], 'little')
+    stored.append(raw[pos + 46:pos + 46 + n_len].decode('utf-8', 'replace'))
+    pos = raw.find(b'PK\x01\x02', pos + 46 + n_len + x_len + c_len)
+if len(stored) != len(infos):
+    fails.append(f'central directory read {len(stored)} names, zipfile {len(infos)}')
+bs = [n for n in stored if BS in n]
+if bs:
+    fails.append(f'{len(bs)} entries stored with backslashes (e.g. {bs[0]!r}) — itch unpacks them as flat files: use tools/zip_itch.py')
 roots = sorted({n.split('/')[0] for n in names})
 notes.append(f'root entries: {roots}')
 

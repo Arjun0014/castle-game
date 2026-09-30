@@ -719,7 +719,8 @@ A parry staggers the attacker and grants +12 resonance.
 - **Phone on the LAN:** `npm run dev:lan` (Vite on 0.0.0.0:5173) → open `http://192.168.1.39:5173/` on the phone (same
   Wi-Fi; allow Node through the Windows firewall on first run). Production check: `npm run build && npm run preview:lan`
   → `http://192.168.1.39:4173/`.
-- **itch.io:** `npm run package:itch` → `build/caer-veyr-itch.zip`; upload as HTML5, "This file will be played in the
+- **itch.io:** `npm run package:itch` (build → `tools/zip_itch.py` → `tools/audit_itch.py`) → `build/caer-veyr-itch.zip`. **Never
+  zip with Windows PowerShell's Compress-Archive** (it stores `app\index.js` — itch showed a blank page, session 15). Upload as HTML5, "This file will be played in the
   browser", viewport e.g. 540×960 (or 720×1280), tick "Mobile friendly" (orientation: portrait) and "Fullscreen button".
 - `__perf.report()` / `__perf.spikes` / `__perf.reset()`; `__game.bench(seconds)` runs real frames (step+render, measured)
   without rAF (the Claude browser pane is hidden → rAF never fires); `__game.memoryReport()` (GL counts, heap, resident
@@ -746,7 +747,7 @@ A parry staggers the attacker and grants +12 resonance.
    the face light, the action cadence (7–13 s home), whether the glance reads.
 4. **The achievement toast in real fights**: placement (13 / 20.5 / 29 % of the height), the chime's level (0.11), whether
    25 finishers / 30 parries / 40 shifts / 150 Echoes are reached in one or two playthroughs.
-5. On itch: upload `build/caer-veyr-itch.zip` (HTML, "This file will be played in the browser", viewport 720×1280,
+5. On itch: re-upload `build/caer-veyr-itch.zip` (the first upload was the broken PowerShell ZIP — see §10 Session 15 item 6) (HTML, "This file will be played in the browser", viewport 720×1280,
    Mobile friendly · portrait, Fullscreen button on); check the first tap starts the score and the chronicle speaks.
 
 **Session 14 follow-ups — need the user's real phone / ears / eyes (do these first):**
@@ -1127,6 +1128,20 @@ spoken only, `{Display|spoken}` = the subtitle spelling | the respelling).
   - **12 · The Last Crown** — Aldren did not die in the Sundering. He remained… fused with the Crownheart, until king, castle and memory could no longer be told apart. The Last Crown. He still believes Veyr can be saved. And her unbound blood… might finish his ritual. She had come to claim her inheritance. Now she had to ask… should this inheritance survive at all?
 - *Canon note*: the book (the user's pages) states Aldren's guilt and the Last Crown outright; the narration follows it and
   keeps the Queen unnamed ("a hand in the dark") — her rescue stays Floor 2's T3 revelation.
+
+**6. The itch upload showed "Rotate your device to portrait" on a grey page (fixed).** The first itch upload loaded no
+script and no styles: `npm run package:itch` zipped with Windows PowerShell 5.1's `Compress-Archive` (module 1.0.1.0),
+which stores 571 of the 572 entries with backslashes (`app\index-….js`, `assets\characters\hero.glb`); itch unpacks on
+Linux, where those are flat file names, so every `./app/…` and `./assets/…` request 404s and only the bare HTML was left —
+including the rotate prompt, which the stylesheet normally hides. The audit had passed it because Python's zipfile turns
+"\" into "/" when it reads a ZIP on Windows. Fixes: `tools/zip_itch.py` writes the ZIP with forward-slash names (media
+stored, the rest deflated, no directory entries; 571 files, 134.4 MB); `tools/audit_itch.py` reads the central directory
+bytes itself and fails on any backslash (it fails the old ZIP); `index.html` keeps `#rotate` `hidden` (Platform sets
+`hidden` with its `on` class) and shows a plain "ECHOES OF CAER VEYR" line until the code runs, which becomes "The game
+files did not load. Please reload the page." after 25 s if it never does (`window.__booted`, removed by `main.ts`).
+Verified: the new ZIP extracted under `/html/123456/` inside a 720×1280 iframe (`build/itch-sim/embed.html`, like itch's
+embed) → the title screen, 0 failed requests; a copy without `app/` → the load message, never the rotate prompt; a
+handheld held sideways (740×360) → the styled rotate prompt; turned upright → hidden, stage 375×812.
 
 **5. The title menu, three tiers** (`ui/MainMenu.ts`, `ui/menu.css`): Continue / New Game (the way in, as before) · Lore
 and Achievements (a pair with their devices, the tally) · Controls · Settings · Credits (a quiet row). ↑/↓ move by row,

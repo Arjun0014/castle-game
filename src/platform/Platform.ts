@@ -144,6 +144,7 @@ class PlatformImpl {
     const blocked = this.view === 'portrait' && this.handheld && vw > vh * 1.05;
     this.rotateBlocked = blocked;
     this.rotateEl?.classList.toggle('on', blocked);
+    if (this.rotateEl) this.rotateEl.hidden = !blocked;
     this.emit();
   }
 

@@ -13,6 +13,9 @@ import { AchievementToast } from './ui/AchievementToast';
 import { LoreBook } from './ui/LoreBook';
 
 const stage = document.getElementById('stage')!;
+// the code has arrived: the plain boot line in index.html gives way to the loading card
+(window as any).__booted = true;
+document.getElementById('boot-note')?.remove();
 // portrait stage + input mode first: the renderer sizes itself from the stage
 Platform.init(stage, document.getElementById('rotate')!);
 const app = document.getElementById('app')!;

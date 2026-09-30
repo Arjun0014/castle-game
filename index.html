@@ -20,13 +20,24 @@
       <!-- test hook: dev probes click it to start play without the menu (main.ts) -->
       <button id="start-btn" hidden></button>
     </div>
-    <div id="rotate">
+    <!-- shown by the game only (Platform: a handheld held sideways); hidden here so a page whose styles never arrived
+         cannot show it by mistake -->
+    <div id="rotate" hidden>
       <div class="rotate-card">
         <div class="rotate-phone"></div>
         <p>Rotate your device to portrait</p>
         <small>Caer Veyr is played upright</small>
       </div>
     </div>
+    <!-- before the game's code arrives: a plain line on the dark page; if it never arrives (a broken upload, no
+         connection), say so instead of leaving a blank frame. main.ts removes it (window.__booted). -->
+    <div id="boot-note" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:#050404;color:#b99a62;font:13px/1.6 Georgia,serif;letter-spacing:0.28em;text-align:center;z-index:200">ECHOES OF CAER VEYR</div>
+    <script>
+      setTimeout(function () {
+        var n = document.getElementById('boot-note');
+        if (n && !window.__booted) n.textContent = 'The game files did not load. Please reload the page.';
+      }, 25000);
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
