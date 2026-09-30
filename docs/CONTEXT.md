@@ -28,8 +28,15 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 **AI authoring workflow:** Claude Code + Blender MCP where available  
 **World scope:** one ancestral castle  
 **Total floors:** 3  
-**Game title:** THE CASTLE REMEMBERS (the castle is Caer Veyr).
-**Current implementation priority:** session 11 = bug fixes + Floor 3 polish (§10 Session 11): monsters on their feet,
+**Game title:** ECHOES OF CAER VEYR (session 13; displayed on the title screen, boot card, tab title, credits and the final
+ending card). "The castle remembers" stays the world's creed and a recurring phrase (dialogue, loading labels, the
+respawn card, the opening film and the Remotion trailer) — it is no longer the game's name.
+**Current implementation priority:** session 13 = first-player experience + music + mobile performance (§10 Session 13):
+the outer gate behind the spawn (the barbican), the new title, an adaptive score (exploration ↔ combat, position kept,
+voice ducking), the Guided tutorial extended through the crawl AND the armory's half stair (G3) to CP3, Minimal
+guidance through the same section, and the mobile frame-time investigation (no single regression found — the
+structural costs it found are fixed, see §10). Next: the real-phone checks in §8 Session 13.
+Session 11 = bug fixes + Floor 3 polish (§10 Session 11): monsters on their feet,
 no sliding on stairs, passive Resonance, floor transitions that survive a lost connection (retry / TRY AGAIN /
 prefetch), the right reward message per floor, **the Maw of the Crownheart rebuilt on the Creature Pack Mutant**
 (16 clips, full moveset, CP2 before / CP2B after), **the Crownheart as the chamber's living light**, and finishers
@@ -271,6 +278,16 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 `tools/build_audio.py` -> 48 runtime sounds / ~200 OGG files (3.9 MB) in `public/assets/audio/` +
 `src/data/audioManifest.json`. The "Hit sounds" pack (8 kHz mono) was rejected; CC-BY-SA bow sounds not used.
 
+## Music — `assets/music/` (supplied by the user, session 13; local source, not committed)
+
+- `The_Last_Canopy_Sleeps.mp3` — 120.03 s, 192 kbps MP3, 44.1 kHz stereo, −22.7 LUFS, LRA 16 LU (ambient, dynamic);
+  1.1 s of silence at the start, fades to silence from ~108 s (silent from 116.2 s). The **exploration** score.
+- `Savage_Ritual.mp3` — 60.03 s, 192 kbps, −13.7 LUFS, LRA 4.9 LU; grid-locked at **180.0 BPM**, first beat 0.0116 s,
+  8-beat phrases of 2.667 s; a 13.3 s intro, the full section from 13.345 s, a closing hit + decay after ~56 s. The
+  **combat** score (loops 13.345 → 56.012 s).
+- Runtime (`tools/build_music.py`): Ogg Opus 160 kbps 48 kHz — `public/assets/music/canopy_00..09.ogg` (12 s segments with
+  0.08 s shared overlap, 2.5 MB) and `ritual.ogg` (1.2 MB); `src/data/musicManifest.json`.
+
 ## Tooling verified
 
 - Node v22.14.0, npm 10.9.2, Python 3.13.1 (+ Pillow 11.1, numpy 2.2), ffmpeg.
@@ -426,6 +443,11 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **The Maw = Creature Pack Mutant (s11)** | DONE, VERIFIED (god bot) | `enemies/Maw.ts`, `mutant.glb`, CP2 at the cistern door + CP2B after; real-damage bot NOT run |
 | **Crownheart light (s11)** | DONE, VERIFIED (numeric + screenshots) | `vfx/Crownheart.ts` shader + chamber tone; boss bot NOT re-run |
 | **Finisher contact (s11)** | DONE, VERIFIED (contact matrix, regression) | cut beats fire on blade contact; 5 variants × 7 bodies |
+| **Title "Echoes of Caer Veyr" (s13)** | DONE, VERIFIED (browser) | `index.html`, `ui/MainMenu.ts`, `ui/LoadingScreen.ts` (boot card + tab title), `data/credits.ts`, `Game.finish` (final ending card); the creed "the castle remembers" kept in the world |
+| **Outer gate / barbican (s13)** | DONE, VERIFIED (screenshots Past + Present, camera + collision probes) | `floor01_layout.build_barbican`; floor01 rebuilt (0 issues, 47.6k tris) + NAV3 rebaked; `LEVEL_01_BLUEPRINT.md` §N.1 |
+| **Adaptive score (s13)** | DONE, VERIFIED (headless Chrome, real AudioContext; NOT heard by a human) | `audio/Music.ts`, `tools/build_music.py` → `public/assets/music/*.ogg` + `data/musicManifest.json`; segment joins sample-clean (recorded vs source), 3 fight cycles, loops, ducking, title → film → game |
+| **Guided tutorial through G3 (s13)** | DONE, VERIFIED (`dev/tutorialProbe.js` desktop + touch: all 23 lessons incl. the wrong-memory detour; Minimal probe) | `game/Tutorial.ts`, `game/Objectives.ts` teach `halfstair`, `data/objectives.ts`. **Not played by a new human yet** |
+| **Mobile CPU fixes (s13)** | DONE, VERIFIED (numeric) | invisible Echoes skip the matrix pass, skinned Echoes frustum-culled, HUD writes only on change (compositor-only Resonance bar), audio automation only on change, title backdrop culls Echoes, monster sounds floor-scoped — §10 Session 13 |
 | **Enemy audit (s10)** | DONE, VERIFIED (`dev/auditProbe.js`, all floors) | 4 blind perched archers relocated at load (`checkPerches`), perched archers no longer slide down ramps, bats' swoop counter leak fixed, blind flyer spawns moved (`checkFlyers`), F3 respawn crash fixed; slot rotation fair in every big fight |
 
 ---
@@ -480,6 +502,15 @@ Runtime (`src/`):
   shaft dust, smoke wisps. Per-state presets `ATMO`; lighting presets `ENV` in `Game.ts` (Present: low hemi,
   near-vertical shadowing moon so light falls through roof holes, low-angle shadowless `fill`, hero light).
 - `vfx/Fire.ts` — all `fire` markers as one instanced procedural flame shader per state.
+- Session 13: `audio/Music.ts` (the adaptive score: `SegmentStream` for the exploration track, a looping buffer for the
+  combat cue, the mode machine explore → combat → leaving → explore, `duck` / `setPaused` / `setLevel`, `__music.debug()`),
+  `AudioFX.music` / `bindMusic`, Settings `score` (the Music slider), `GameAssets.registerMusic` / `musicKeys` (scope
+  `music`) + `RIG_SOUNDS` (monster voices load with the floors whose rigs need them), `tools/build_music.py`
+  (`python tools/build_music.py`: `assets/music/*.mp3` → `public/assets/music/canopy_NN.ogg` + `ritual.ogg` +
+  `data/musicManifest.json`; the source MP3s stay local, untracked), `floor01_layout.build_barbican` (the outer gate),
+  `Tutorial` lessons `halfstair` / `stairshift` / `climb` / `cp3` + dynamic card text, `Objectives` teach `halfstair`,
+  `Enemy.updateBounds` / `setCulling` + the invisible-root matrix skip, `EnemyManager.menuVisibility`, `HUD` change-only
+  writes. Dev: `dev/tutorialProbe.js` now walks G3 (incl. the wrong-memory detour).
 - Session 11: `enemies/Maw.ts` (the Maw / crown brutes), `enemies/MonsterBase.ts` (the shared `Monster` body, split out
   of Monsters.ts), `data/mutantAnimations.json` + `tools/blender/build_mutant.py` (Blender headless: `blender --background
   --factory-startup --python tools/blender/build_mutant.py`, then `node tools/build_ktx2.mjs --only glb`), `AssetManager.Net`
@@ -603,6 +634,11 @@ A parry staggers the attacker and grants +12 resonance.
   `T.ready(); await T.run()` → every lesson), `dev/auditProbe.js` (`A.ready(); await A.floor()` → problems per
   encounter), `dev/f3Probe.js` (`?floor=3&input=kbm`: `F.gates()`, `await F.route()`), `dev/bossBot.js` (`?at=lastcrown`:
   `bb.setup(); bb.fight(240, false)`). Browser-pane JS calls time out after 45 s: run long loops detached and poll.
+- **Session 13:** `__music.debug()` (mode, exploration position + the kept position, combat position, gains, duck, decoded
+  MB) and `__music.log` (every transition on the audio clock). Music is not loaded in automation mute (`?mute`,
+  `?autopilot`, webdriver) — test it unmuted. The profiling harness used for the mobile investigation (headless Chrome
+  154 via playwright-core, phone viewport + touch, CDP CPU throttling ×4, V8 CPU profiles, invalidation traces, the
+  deterministic Great Hall fight bench) lived in the session scratchpad; its method is in §10 Session 13.
 - **Session 8 regression suite:** `http://localhost:5173/?mute&autostart&input=touch` at 375×812, console:
   `const R = await import('/dev/regression.js'); await R.run()` → 43 PASS/FAIL rows (walks F1 → F2 → F3 in place).
   Probes: `dev/enemyProbe.js` (stall scenarios + global stall watcher), `dev/abilityProbe.js`, `dev/finisherProbe.js`.
@@ -626,6 +662,22 @@ A parry staggers the attacker and grants +12 resonance.
 ---
 
 # 8. Next Concrete Tasks
+
+**Session 13 follow-ups — need the user's real phone / ears (do these first):**
+1. **Frame rate on the phone that used to run smoothly:** play Floor 1 from New Game (Guided) to the armory and one big
+   fight (the Inner Ward E3, or the Great Hall E13) on `npm run dev:lan` or the itch build, and compare with before. No
+   per-frame regression was found on this machine (§10 Session 13), so if drops remain, note WHERE and WHEN (a finisher?
+   a shift? walking only? after how many minutes — thermal?) and, if possible, the backquote debug overlay is desktop
+   only: tell Claude the phone model + Chrome version so the next session can target it.
+2. **The score by ear:** levels (`MUSIC_LEVEL` in `audio/Music.ts`: exploration 0.82, combat 0.42), the voice duck (0.45),
+   the pause dip (0.4), how fast combat music arrives (0.35 s) and leaves (3 s calm + to the next 2.67 s phrase + a
+   2.67 s fade, exploration rising over 4.5 s), whether exploration + the ambience beds are too much together. The
+   Settings menu has a new **Music** slider (the old "Ambience" one still drives the beds).
+3. **A new player through the Guided tutorial** to CP3 (portrait touch): is each card read before it is needed; is the
+   half stair clear (climb the rubble → shift on the old landing → climb the Past stair)? The cards and their order are
+   in `game/Tutorial.ts`; Minimal's in `game/Objectives.ts` (`halfstair`).
+4. **The outer gate** on a phone screen: readable in the Present from the spawn (fill light `light` marker at
+   (0, −59.3, 3.4) in `floor01_layout.build_barbican`), the wicket's cold light, the Past torches.
 
 **Session 11 follow-ups (do these first):**
 1. Run what this session could not: `dev/bossBot.js` on `?at=lastcrown` with real damage (god passed: 67 s, 0 errors),
@@ -796,6 +848,129 @@ then generation + `Audio.voice(id)` hook.
 ---
 
 # 10. Latest Verified Session
+
+### Session 13 (2026-09-30) — first-player experience, the score, mobile performance
+
+Commits (Arjun0014/castle-game main, as Arjun0014): `63bcdb2` code + assets · this CONTEXT commit. The Remotion
+trailer (`remotion-intro/`, session 12, a parallel session), `docs/ELEVENLABS_NOTES.md`, `THE_CASTLE_REMEMBERS_LORE.md`
+and the source MP3s in `assets/music/` stay untracked; only this session's hunks of this file were committed.
+
+**1. The outer gate behind the spawn** (`floor01_layout.build_barbican`, `LEVEL_01_BLUEPRINT.md` §N.1). Turning round at
+the start showed a bridge end and the night sky. The apron is now a barbican passage walled to the sky (arrow slits,
+crenellations) closed by the outer gate wall with two flanking towers; in its round-headed arch the great oak leaves —
+16 boards following the arch, iron straps with strap hinges, pintles, studs and tips, the meeting stile — still barred
+by the drawbar in its sockets; voussoirs, keystone, quoins, imposts and House Vaelor's crest on the inner face. Past:
+sound boards, the wicket shut, torches, a banner. Present: rotted green board ends, one split to the backing, rust, the
+**wicket in the east leaf hanging open onto cold light** — she came through here. Collision closes the gate, the wicket
+gap and the ajar leaf; camera probes at 9 positions round the spawn and the gate: never inside geometry; pushing south
+from the wicket for 3 s stops at the gate. A low moon fill in front of the gate makes it read from the spawn (the arch and
+the near-vertical moon left it black). Floor 1 rebuilt (0 validation issues, 47,578 visual / 7,936 collision tris, +3k),
+NAV3 rebaked, floor manifest regenerated.
+
+**2. The title: ECHOES OF CAER VEYR** — title screen (two lines, "ECHOES OF / CAER VEYR", the tag "The castle remembers ·
+a keep torn between two memories"), the boot card, the tab title (and each chapter card's `Echoes of Caer Veyr — Floor …`),
+credits, the pause menu (a small line over "Paused") and the final ending card (`end-card.final`). Unchanged on purpose:
+the creed "the castle remembers" in dialogue, loading labels ("The castle remembers"), the respawn card ("THE CASTLE
+REMEMBERS YOU"), the fracture card, the opening film and the Remotion trailer. A sigil favicon (the tab's 404 is gone).
+
+**3. The adaptive score** (`audio/Music.ts`, `tools/build_music.py`, §4 Music). Opus 160 kbps; exploration streamed from
+12 s segments with 0.08 s shared overlaps (only the playing + next segment decoded: ~4.6–9 MB instead of ~46 MB), combat
+decoded whole (23 MB at 48 kHz) and looped sample-exactly over its main section. Modes: explore → (0.35 s of fighting)
+combat: exploration fades out in 1.1 s and its position is kept; combat enters at the intro — or, within 30 s of the last
+fight, at the next 8-beat phrase after where it stopped → (3 s of calm) leaving: the combat cue fades over one phrase
+(2.67 s) from its next phrase boundary while exploration rises over 4.5 s from the kept position (−1.5 s pre-roll); a fight
+flaring up during the hand-over takes the cue straight back. The title screen starts it on the first touch; New Game's
+film stops it (position kept); play resumes it. The heroine's lines duck it to 0.45; the pause menu dips it to 0.4.
+Settings has a **Music** slider (`score`). Everything on the AudioContext clock; nothing decoded on first use (the
+combat cue decodes during loading; exploration segments ~8 s ahead, off the main thread). Loaded with core (scope
+`music`) unless automation-muted. Verified in headless Chrome with a real AudioContext: every segment decodes to exactly
+its manifest length (579,840 samples); a 26 s recording of the music bus across two joins matched the source to 1 sample
+at the set gain (0.8194 of 0.82), the residual at the joins at the codec floor (−56…−72 dB, same as elsewhere): no
+clicks; three fight cycles (explore kept 41.0 / 46.1 / 86.1 s and resumed there; the second fight within 30 s resumed the
+cue at its next phrase 16.0 s; the third began at the intro); the exploration loop 116.1 → 1.05 s and the combat loop
+56.0 → 13.3 s; duck 0.45 → 0.99 after the line; title (silent until touched) → film (stopped at 6.9 s) → Floor 1 (resumed
+at 6.9 s, Guided on "move", ducked under the arrival line). **Never heard by a human.**
+
+**4. Guided tutorial to CP3** (`game/Tutorial.ts`, 23 lessons; Minimal: `game/Objectives.ts` teach `halfstair`).
+Kept (texts sharpened): move · look · the way in · light (near-freeze until the first blow) · heavy · combo · guard ·
+parry · dodge (desktop) · finish · Resonance ("every Echo you destroy… hits and parries add a little") · Blood Sigil ·
+two memories. Rewritten to say what is missing and why: **TIME SHIFT** (not enough Resonance / not at the rusted gate /
+"stand in the blue ring and hold…; let go — or take a heavy blow — and it breaks"), **BLOCKED IN THIS MEMORY** (the
+barracks barricade: spent Resonance / whole ground on the east half of the yard / hold here). New, after the crawl: **A HALF
+STAIR** (the Present's stair has lost its upper flight — climb the rubble to the old landing) → **THE STAIR REMEMBERS**
+(shift on the old landing; shifted on the armory floor instead she lands before the Past's locked gate and the card says
+so and what to do; not enough Resonance → how to get it) → **CLIMB** (the Past's upper flight, a slow beat) → **BLOOD
+SIGIL** CP3 → **YOU CAN READ THE CASTLE** (when a way is closed, look at what closes it and ask the other memory). Action
+cards never time out; they step aside in fights and come back where they apply; the SHIFT seal pulses only when a shift
+there would work. Level prompts `T_ARMORY` / `T_HEIGHT` retired (taught by the cards). Verified: `dev/tutorialProbe.js`
+passes every lesson on desktop (kbm) and portrait touch, incl. the wrong-memory detour; the Minimal probe shows the
+armory card, the ring on the old landing (0.9), the Past card after shifting there and the objective moving on from the
+top. **Not played by a new human yet.**
+
+**5. Mobile frame drops — investigated, measured, fixed.**
+*Method.* Headless Chrome 154 (this machine's RX 5600M via ANGLE/D3D11) at a phone viewport (390×844 @3, touch, the
+mobile quality tier: 6 point lights, 1024 shadows), **CDP CPU throttling ×4** (phone-class CPU), the game's own Perf
+(step / render / GPU timer query per frame), V8 CPU profiles, Chrome invalidation traces; production builds of **s7**
+(a7fbddb), **s8** (3444855), **s9** (5c1bce6), **s10** (a814901) and **HEAD** (a619a28) built from git worktrees; a
+deterministic Great Hall E13 fight (seeded `Math.random`, fixed 1/60 steps, the hero attacking) and the autopilot
+traversal (E1–E3). Runs interleaved: the laptop's speed drifts ±35 % between identical runs.
+*Findings.*
+- **No per-frame regression in the core loop** between s8 and HEAD: spawn idle 27.5 vs 27.5 ms (×4), the E13 fight
+  58.3 vs 59.9 ms, s9 / s10 / HEAD equal in the traversal; the scene is the same since s8 (6,015 objects, 5,170 bones,
+  162 skinned meshes). GPU is not the limit here (3–7 ms); at ×4 a frame is CPU-bound (render-CPU ~60 %, sim step ~20 %).
+- **Floor 1 residency is correct**: GLBs = hero + archer / ghost / hollow / knight; 14 texture sets; no Floor 2 monsters,
+  no Creature Pack, no Last Crown, no Floor 3 spells or geometry, no later-floor voice. One leak by design: the 12 bat /
+  goblin / Widow / Maw sounds lived in `core` (decoded on every floor) → now loaded with the rigs that use them.
+- **What a frame costs** (V8 profile, traversal ×4): three.js's scene-graph matrix update **24 %** — every Echo's skeleton,
+  drawn or not (5,381 of 6,005 nodes belong to the floor's 80 Echoes, ≤ ~20 ever drawn); shadow pass 10 %; the draw loop.
+- **New in session 11, per frame:** while passive Resonance trickles (most of exploration) the Resonance bar's width
+  changed every frame and its shimmer + width transition ran on the main thread → a style recalc + layout + paint every
+  frame (UpdateLayoutTree 0.05 → 0.33 ms/frame here; phones ≈ ×4–6); the finisher contact test skinned ~780 vertices on
+  every frame of each contact window.
+- **Older per-frame waste:** the hidden HUD channel line replaced its text node every frame (a style / layout /
+  whole-document paint every frame of play); 14 WebAudio automation events per frame (listener + 5 beds); off-screen
+  Echoes drawn and skinned in both passes (`frustumCulled = false`); the title backdrop drew and shadow-cast every Echo on
+  the floor (~60), heating a phone before play began.
+- **Conclusion:** no single code change reproduces as "the regression" on this machine. The likeliest contributors to
+  what the phone showed after session 11 are the Resonance-bar work (new, whenever the gauge refills) on top of the
+  structural costs; thermal throttling over a long session cannot be measured here → real-phone check in §8.
+*Fixes (the picture is unchanged):* Echoes not drawn skip the matrix pass (`Enemy` root override); skinned Echo bodies
+are frustum-culled per pass against a sphere that follows the body (`Enemy.updateBounds`, off during the GPU warm-up);
+HUD writes only on change, the Resonance fill is a compositor-only `scaleX` with its shimmer on its own element and no
+transition while trickling; audio automation only on change; the title backdrop shows only the Echoes play would draw
+(`EnemyManager.menuVisibility`); monster sounds floor-scoped; the finisher contact test starts only once the blade is
+within reach of the body (all 30 variant × body finishers still play; 60 armed beats fired at gaps ≤ 0.074 m, none late).
+No adaptive degradation was added (the existing dynamic resolution is unchanged).
+*Before → after* (×4 CPU, interleaved pairs, pre-session build vs this one):
+| Measure | Before | After |
+|---|---|---|
+| E13 fight — render-CPU p50 (3 pairs) | 27.3 ms | **19.0 ms** (−30 %) |
+| E13 fight — frame p50 / frames > 33 ms of 1,199 | 37.6 ms / 819 | **29.4 ms / 504** (−38 %) |
+| Traversal E1–E3 — render-CPU p50 (2 pairs) | 23.1 ms | **13.8 ms** (−40 %) |
+| Traversal — frame p50 / share of frames > 50 ms | 36.2 ms / 31 % | **26.0 ms / 10 %** |
+| Scene matrix pass, spawn / Great Hall (same page, A/B) | 12.1 / 11.5 ms | **1.3 / 6.2 ms** |
+| Draw calls, Great Hall fight (same views) | 194 | **172** |
+| DOM per frame while exploring (desktop ×1): style / layout / paint | 0.05 / 0.19 / 0.10 ms | **0.006 / 0 / 0.004 ms** |
+| … while the gauge trickles | 0.33 / 0.21 / 0.12 ms | **~0.08 / 0 / 0.004 ms** |
+*Floor 1 residency after load (unmuted, as a player):* GPU 91.8 MB (unchanged; 46 programs, 249 textures). CPU (asset
+estimates): core sounds 32.0 → **28.3 MB**, ambience beds 86.7 MB, voice 6.4 MB, **music 25.6 MB** (the combat cue
+decoded, 23 MB + the compressed exploration segments; plus ≤ 9 MB of decoded segments held by Music — whole-track decoding
+would have been ~69 MB). JS heap 191 → 209 MB (the score). 116 resident keys (was 126).
+*On a phone:* `?perf` shows fps, frame / step / render / GPU ms (p50/p95 of 120 frames), draw calls, drawn Echoes, pixels
+and heap, refreshed twice a second — e.g. `http://192.168.1.39:5173/?perf` with `npm run dev:lan`.
+
+**Tests (session 13):** tsc + `npm run build`; `dev/tutorialProbe.js` desktop + portrait touch (every lesson, the
+wrong-memory detour); the Minimal probe (desktop + touch); music: decode lengths, the join recording, 3 fight cycles,
+loops, duck, title → film → game; the gate: screenshots Past + Present, 9 camera probes, the wicket push; the finisher
+contact matrix (30/30 played); the performance runs above; **`dev/regression.js` 49/49 PASS** (portrait touch 375×812,
+F1 → F2 → F3 in place; no console errors, no 404 — a sigil favicon now answers the tab's request); `npm run build` +
+**`npm run package:itch`** → `build/caer-veyr-itch.zip` 170 MB, 546 files, 198.5 MB unpacked (the score included);
+production preview (:4174): desktop portrait (432×768 stage, the new title), `?view=wide` (title left, the heroine and the
+gatehouse right, framed by the barbican), phone touch 375×812 (New Game → Guided → the film → Skip → "MOVE" with touch
+wording, music exploring, `?perf` readout). Last fix after those runs: the Guided crouch lesson also completes anywhere in
+the armory (it could otherwise have held the half-stair lessons for a player who reached the armory without crossing the
+zone behind the crawl); the touch tutorial probe re-ran clean after it.
+**Needs the user:** everything in §8 Session 13 (real phone, ears, a new player).
 
 ### Session 11 (2026-09-30) — bug fixes + Floor 3 polish: grounding, stairs, passive Resonance, transition robustness, the Mutant Maw, the living Crownheart, contact-true finishers
 
