@@ -1,0 +1,139 @@
+{
+ "_generatedBy": "tools/blender/build_hero_menu.py",
+ "fps": 30.0,
+ "clips": {
+  "menu_restless": {
+   "source": "Angry.fbx",
+   "role": "restless wait, 19.2 s: sword low -> arms crossed with the blade on her shoulder -> leans on the planted blade, hand on hip, weight shifting -> sword low. Front-facing, stands still",
+   "duration": 19.1667,
+   "frames": 576,
+   "loop": false,
+   "drift": [
+    0.0,
+    0.0
+   ],
+   "hipsHeight": [
+    1.015,
+    1.042
+   ],
+   "footWander": [
+    0.237,
+    0.169
+   ]
+  },
+  "menu_stretch": {
+   "source": "Arm Stretching.fbx",
+   "role": "limbering up, 8.9 s: stretches the sword arm across her chest, one calm overhead swing, lowers it and rolls her shoulders",
+   "duration": 8.8667,
+   "frames": 267,
+   "loop": false,
+   "drift": [
+    -0.0,
+    0.0
+   ],
+   "hipsHeight": [
+    1.037,
+    1.045
+   ],
+   "footWander": [
+    0.008,
+    0.012
+   ]
+  },
+  "menu_ready": {
+   "source": "Taunt.fbx",
+   "role": "two-handed high guard swaying the blade side to side, 2.8 s (rare: a restrained ready beat)",
+   "duration": 2.8333,
+   "frames": 86,
+   "loop": false,
+   "drift": [
+    0.0,
+    -0.0
+   ],
+   "hipsHeight": [
+    0.894,
+    0.933
+   ],
+   "footWander": [
+    0.005,
+    0.009
+   ]
+  },
+  "menu_inspect": {
+   "source": "great sword idle (3).fbx",
+   "role": "raises the blade upright before her and looks along it, 3.6 s (sword inspection)",
+   "duration": 3.6,
+   "frames": 109,
+   "loop": false,
+   "drift": [
+    0.002,
+    -0.006
+   ],
+   "hipsHeight": [
+    0.994,
+    1.026
+   ],
+   "footWander": [
+    0.001,
+    0.001
+   ]
+  },
+  "menu_vigil": {
+   "source": "great sword idle (4).fbx",
+   "role": "brings the blade up close before her face, a quiet vigil / salute, 3.7 s",
+   "duration": 3.7,
+   "frames": 112,
+   "loop": false,
+   "drift": [
+    0.004,
+    -0.006
+   ],
+   "hipsHeight": [
+    0.994,
+    1.029
+   ],
+   "footWander": [
+    0.0,
+    0.0
+   ]
+  },
+  "menu_ease": {
+   "source": "great sword idle (5).fbx",
+   "role": "lowers the sword to her side at ease, looks around, raises it back to guard, 7.6 s",
+   "duration": 7.5667,
+   "frames": 228,
+   "loop": false,
+   "drift": [
+    -0.0,
+    0.0
+   ],
+   "hipsHeight": [
+    0.99,
+    1.028
+   ],
+   "footWander": [
+    0.003,
+    0.002
+   ]
+  },
+  "menu_stance_2h": {
+   "source": "great sword idle (2).fbx",
+   "role": "two-handed breathing guard, 3.6 s loop: the alternate home stance (subtle stance change)",
+   "duration": 3.6,
+   "frames": 109,
+   "loop": true,
+   "drift": [
+    -0.009,
+    0.006
+   ],
+   "hipsHeight": [
+    0.984,
+    0.994
+   ],
+   "footWander": [
+    0.004,
+    0.005
+   ]
+  }
+ }
+}

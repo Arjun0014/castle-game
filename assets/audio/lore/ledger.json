@@ -1,0 +1,57 @@
+[
+ {
+  "take": "t1_s05",
+  "name": "test",
+  "chars": 421,
+  "model": "eleven_v4",
+  "stability": 0.5,
+  "seed": 7,
+  "credits": 0,
+  "left": 26157,
+  "at": "2026-09-30T12:16:57.020Z"
+ },
+ {
+  "take": "t1_s03",
+  "name": "test",
+  "chars": 421,
+  "model": "eleven_v4",
+  "stability": 0.3,
+  "seed": 7,
+  "credits": 0,
+  "left": 26157,
+  "at": "2026-09-30T12:17:10.719Z"
+ },
+ {
+  "take": "b1",
+  "name": "book",
+  "chars": 5098,
+  "model": "eleven_v4",
+  "stability": 0.5,
+  "seed": 7,
+  "credits": 561,
+  "left": 25488,
+  "at": "2026-09-30T12:20:15.078Z"
+ },
+ {
+  "take": "p1_nn",
+  "name": "page_01",
+  "chars": 436,
+  "model": "eleven_v4",
+  "stability": 0.5,
+  "seed": 7,
+  "credits": 48,
+  "left": 25329,
+  "at": "2026-09-30T12:21:37.599Z"
+ },
+ {
+  "take": "p1_slow",
+  "name": "page_01",
+  "chars": 472,
+  "model": "eleven_v4",
+  "stability": 0.5,
+  "seed": 7,
+  "credits": 0,
+  "left": 25329,
+  "at": "2026-09-30T12:21:51.082Z"
+ }
+]

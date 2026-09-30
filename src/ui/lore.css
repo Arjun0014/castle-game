@@ -1,0 +1,112 @@
+/* ==========================================================================================================
+   Session 15: the Chronicle of Caer Veyr — the lore book (ui/LoreBook.ts).
+   The artwork is the point: the page sits in a thin gilt frame over a dark, softly lit ground made from its own
+   colours (a tiny blurred copy); the chrome is quiet, small and gold, and a tap on the page clears it away.
+   ========================================================================================================== */
+.lb { position: absolute; inset: 0; z-index: 36; display: flex; flex-direction: column; overflow: hidden; color: var(--parch, #efe4cc);
+  font-family: 'EB Garamond', Georgia, serif; background: #070404; opacity: 0; transition: opacity 0.55s ease; -webkit-user-select: none; user-select: none;
+  --pw: 60cqw; --ph: 90cqw; }
+.lb.in { opacity: 1; }
+.lb.out { opacity: 0; pointer-events: none; transition-duration: 0.45s; }
+html.lore-on #menu { visibility: hidden; }
+
+/* the ground: the current page's own colours, blurred far out, and a warm-dark vignette */
+.lb-amb { position: absolute; inset: -12%; pointer-events: none; }
+.lb-amb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; filter: blur(34px) saturate(0.85) brightness(0.62);
+  transform: scale(1.1); transition: opacity 1.4s ease; }
+.lb-amb img.on { opacity: 0.55; }
+.lb-veil { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 46%, rgba(20,8,6,0.1) 0%, rgba(8,4,4,0.55) 62%, rgba(3,2,2,0.9) 100%),
+    linear-gradient(180deg, rgba(5,3,3,0.75) 0%, transparent 16%, transparent 78%, rgba(5,3,3,0.85) 100%); }
+
+/* ---- header: the way out, the chronicle's name and this page's title, the folio */
+.lb-head { position: relative; z-index: 2; display: grid; grid-template-columns: 44px 1fr 64px; align-items: center; gap: 8px;
+  padding: calc(var(--sat) + 1.2cqh) calc(var(--sar) + 3.5cqw) 0.6cqh calc(var(--sal) + 3.5cqw); transition: opacity 0.4s; }
+.lb-title { text-align: center; min-width: 0; }
+.lb-title small { display: block; font-size: clamp(8px, 2.25cqw, 10.5px); letter-spacing: 0.3em; margin-right: -0.3em; text-transform: uppercase; color: #a88c5a; white-space: nowrap; }
+.lb-title b { display: block; margin-top: 3px; font: italic 500 clamp(13px, 3.9cqw, 17px)/1.2 'EB Garamond', Georgia, serif; letter-spacing: 0.04em; color: #e6d3a6;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px #000; }
+.lb-folio { justify-self: end; display: flex; align-items: baseline; gap: 4px; font-family: 'Cormorant Garamond', 'EB Garamond', Georgia, serif; font-variant-numeric: lining-nums;
+  color: #9d8a66; font-size: clamp(12px, 3.4cqw, 15px); letter-spacing: 0.08em; }
+.lb-folio b { font-weight: 600; font-size: 1.45em; color: #f0d9a2; text-shadow: 0 0 12px rgba(230,150,80,0.35); }
+.lb-folio i { font-style: normal; opacity: 0.6; }
+.lb-btn { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border-radius: 50%; cursor: pointer; color: #d9bf85;
+  background: rgba(10,6,6,0.45); border: 1px solid rgba(216,179,106,0.32); box-shadow: 0 2px 10px rgba(0,0,0,0.5); touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s, color 0.2s, background 0.2s; }
+.lb-btn:hover { color: #fff0c8; border-color: rgba(236,200,130,0.8); }
+.lb-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---- the page */
+.lb-stage { position: relative; z-index: 1; flex: 1; min-height: 0; margin: 1cqh calc(var(--sar) + 3cqw) 0 calc(var(--sal) + 3cqw); touch-action: none; cursor: grab; }
+.lb-stage.dragging { cursor: grabbing; }
+.lb-track { position: absolute; inset: 0; }
+.lb-page { position: absolute; inset: 0; margin: 0; display: grid; place-items: center; will-change: transform, opacity; }
+.lb-page.void { visibility: hidden; }
+.lb-frame { position: relative; width: var(--pw); height: var(--ph); background: #1a1210;
+  box-shadow: 0 0 0 1px rgba(216,179,106,0.42), 0 0 0 4px rgba(0,0,0,0.55), 0 0 0 5px rgba(216,179,106,0.14), 0 18px 60px rgba(0,0,0,0.85), 0 0 90px rgba(150,40,20,0.12); }
+.lb-frame::before, .lb-frame::after { content: ''; position: absolute; z-index: 3; width: 16px; height: 16px; border: 1.5px solid #d8b36a; pointer-events: none; }
+.lb-frame::before { left: -6px; top: -6px; border-right: 0; border-bottom: 0; }
+.lb-frame::after { right: -6px; bottom: -6px; border-left: 0; border-top: 0; }
+.lb-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; pointer-events: none; }
+.lb-ph { filter: blur(7px) brightness(0.9); transform: scale(1.02); }
+.lb-img { opacity: 0; transition: opacity 0.5s ease; }
+.lb-img.ready { opacity: 1; }
+.lb-shade { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: linear-gradient(90deg, rgba(0,0,0,0.85), rgba(0,0,0,0.6)); }
+.lb.in .lb-page[data-slot="0"] .lb-frame { animation: lb-rise 0.9s cubic-bezier(0.2,0.7,0.2,1) both; }
+@keyframes lb-rise { from { opacity: 0; transform: translateY(14px) scale(0.985); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+.lb-nav { position: absolute; top: 50%; z-index: 3; width: 44px; height: 64px; margin-top: -32px; display: grid; place-items: center; padding: 0; cursor: pointer; color: #e6cd92;
+  background: rgba(8,5,5,0.35); border: 1px solid rgba(216,179,106,0.22); opacity: 0; transition: opacity 0.3s, background 0.2s; touch-action: manipulation; }
+.lb-nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.lb-nav.prev { left: 0; } .lb-nav.next { right: 0; }
+.lb-stage:hover .lb-nav, .lb-nav:focus-visible { opacity: 0.75; }
+.lb-nav:hover { opacity: 1 !important; background: rgba(20,10,8,0.6); }
+.lb-nav.off { visibility: hidden; }
+html.input-touch .lb-nav { display: none; }
+/* wide: the arrows stand beside the page, not over it */
+html.view-wide .lb-nav.prev { left: calc(50% - var(--pw) / 2 - 64px); }
+html.view-wide .lb-nav.next { right: calc(50% - var(--pw) / 2 - 64px); }
+html.view-wide .lb-nav { opacity: 0.55; }
+
+/* ---- the spoken line */
+.lb-sub { position: relative; z-index: 2; min-height: calc(3.1em + 1.6cqh); display: flex; align-items: center; justify-content: center;
+  padding: 1.1cqh 6cqw 0.4cqh; font-size: clamp(13px, 3.8cqw, 17px); transition: opacity 0.4s; }
+html.view-wide .lb-sub { font-size: 17px; }
+.lb-line { margin: 0; max-width: 34em; text-align: center; font-style: italic; line-height: 1.45; color: #efe2c4; text-wrap: balance;
+  text-shadow: 0 1px 2px #000, 0 0 16px rgba(0,0,0,0.9); opacity: 0; transform: translateY(3px); transition: opacity 0.35s ease, transform 0.45s ease; }
+.lb-line.on { opacity: 1; transform: none; }
+.lb.subs-off .lb-line { visibility: hidden; }
+.lb-end { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 0.5em; text-align: center; }
+.lb-end p { margin: 0; font-style: italic; color: #d8c49a; letter-spacing: 0.04em; }
+.lb.ended .lb-end { display: flex; animation: lb-fadein 1.2s ease both; }
+.lb.ended .lb-line { opacity: 0; }
+@keyframes lb-fadein { from { opacity: 0; } to { opacity: 1; } }
+.lb-textbtn { margin: 0 0.4em; font: 500 clamp(10px, 2.9cqw, 12px)/1 'EB Garamond', Georgia, serif; letter-spacing: 0.26em; text-transform: uppercase; color: #d9bf85;
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(216,179,106,0.35); padding: 0.85em 1.1em 0.8em 1.35em; cursor: pointer; touch-action: manipulation; }
+.lb-textbtn:hover { color: #fff0c8; border-color: #d8b36a; }
+
+/* ---- the bar: pause / resume, the twelve pages, subtitles */
+.lb-bar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: clamp(10px, 3.5cqw, 22px);
+  padding: 0.8cqh calc(var(--sar) + 4cqw) calc(var(--sab) + 1.8cqh) calc(var(--sal) + 4cqw); transition: opacity 0.4s; }
+.lb-play .i-play, .lb-play .i-again { display: none; }
+.lb.paused .lb-play .i-pause, .lb.ended .lb-play .i-pause { display: none; }
+.lb.paused .lb-play .i-play { display: block; }
+.lb.ended .lb-play .i-again { display: block; }
+.lb.paused .lb-play { color: #fff0c8; border-color: rgba(236,200,130,0.85); box-shadow: 0 0 14px rgba(230,160,90,0.35); }
+.lb.waiting:not(.paused) .lb-play { animation: lb-wait 1.2s ease-in-out infinite; }
+@keyframes lb-wait { 50% { border-color: rgba(236,200,130,0.85); } }
+.lb-cc span { font: 600 11px/1 'EB Garamond', Georgia, serif; letter-spacing: 0.08em; }
+.lb.subs-off .lb-cc { color: #6f6452; border-color: rgba(216,179,106,0.14); }
+.lb.subs-off .lb-cc span { text-decoration: line-through; }
+.lb-dots { position: relative; display: flex; align-items: center; gap: clamp(3px, 1.1cqw, 7px); padding-bottom: 9px; }
+.lb-dot { width: clamp(13px, 3.9cqw, 18px); height: 22px; padding: 0; background: none; border: 0; cursor: pointer; display: grid; place-items: center; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent; }
+.lb-dot::before { content: ''; width: 6px; height: 6px; transform: rotate(45deg); border: 1px solid rgba(216,179,106,0.45); background: transparent; transition: all 0.3s; }
+.lb-dot.seen::before { background: rgba(216,179,106,0.45); }
+.lb-dot.on::before { width: 8px; height: 8px; background: #f0d49a; border-color: #fff0c8; box-shadow: 0 0 8px rgba(255,200,120,0.85); }
+.lb-dot:hover::before { border-color: #f0d49a; }
+.lb-prog { position: absolute; left: 4px; right: 4px; bottom: 2px; height: 1px; background: rgba(216,179,106,0.16); overflow: hidden; }
+.lb-prog b { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(216,179,106,0.4), #e8c77e); transform-origin: 0 50%; transform: scaleX(0); }
+
+/* the clean view (a tap on the page): only the artwork */
+.lb.clean .lb-head, .lb.clean .lb-bar, .lb.clean .lb-sub { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .lb.in .lb-page[data-slot="0"] .lb-frame { animation: none; } .lb-amb img { transition: none; } }

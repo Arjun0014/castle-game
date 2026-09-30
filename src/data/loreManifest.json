@@ -1,0 +1,488 @@
+{
+ "_generatedBy": "tools/lore/build_lore.py",
+ "take": "b1",
+ "model": "eleven_v4",
+ "stability": 0.5,
+ "similarity": 0.75,
+ "seed": 7,
+ "voice": {
+  "id": "JSIqdqOB9ZIcrBFOti5d",
+  "name": "Cthulu female - v4 narrator (IVC)",
+  "source": {
+   "voiceId": "VhuTJN7jTXadMoTbfY1r",
+   "name": "Cthulu female",
+   "account": "ELEVENLABS_API_KEY (free)",
+   "kind": "designed (eleven_ttv_v3)"
+  }
+ },
+ "pages": [
+  {
+   "n": 1,
+   "title": "Before the First Crown",
+   "image": "assets/lore/page_01.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 399370,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwBLfxrZW0X2a+ub8TglXYEbc57e1VdP8WXd4ZGW8lKhioAYE+xx1rK8vwdJI4uJb/7WSQ4Qcbs1SeG0ttKRFXNyXLbyeQOwrNJFts7uy8Uq9v8AZ55J45xIArP1IzzmivObHU9RS/hR5CwEigEgEjmipkkNMkihie+upXby3SVifQjPY+tS3L28Vz5XmB2AGXHK8+9bYsPDdz5pm1SSOfzC0qrD0OenSspLeS41G4gt4lIbGwlM8e31p8w1EYIrNo4JTco03mIAq9SM96KNOs/K16K1niGd6vl/4MdR+dFKUh8jR6JdeC9IkuDMFlR2YsSr4zn8KZF4N0yGQPHLdKy9CJeg9OlFFQNbjbXwTpKXIuS1y8hcElpc5wenSiiikyj/2Q==",
+   "audio": "assets/lore/narration_01.ogg",
+   "audioBytes": 283386,
+   "duration": 33.01,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 10.18,
+     "text": "Before Veyr had a name… before any crown was forged, or any king was laid in stone… something slept beneath the mountain."
+    },
+    {
+     "t0": 10.93,
+     "t1": 12.36,
+     "text": "And it remembered."
+    },
+    {
+     "t0": 13.11,
+     "t1": 22.16,
+     "text": "It kept the shape of stone. The hollow of every chamber. The weight of everything that came near it — and it let nothing go."
+    },
+    {
+     "t0": 22.91,
+     "t1": 29.49,
+     "text": "Centuries later, the founders of House Vaelor broke through into the dark… and found it waiting."
+    },
+    {
+     "t0": 30.59,
+     "t1": 32.2,
+     "text": "They called it the Crownheart."
+    }
+   ]
+  },
+  {
+   "n": 2,
+   "title": "The Blood That Opened Stone",
+   "image": "assets/lore/page_02.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 423630,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwBLfxra7ZLV5r97lNyswlAXdzyKisNb1W+0GeWLULgzQMCZCRtOegHv1rLk8DyXZkuoNRtofOZmO5+QM1lWJuNILElnjKsQmODjgE1loapSZ01v4j1SRzb/ANozeZ8rDp6jP86K56x1T7RqsZZBG5ZEYhevP19qKhltGmNI0OOaR59f+zTOxLxMpOw56U/RNJt9ck1Vp7h5I7SBvKaM7Q2OnH4VhXtveTanJBcWrs7ylUbHbJrofD8txo98+jRiPz7mFzOH52qFJA471UkQm0cvayBbyBkgUlJFGcnJye9FT2VtMl4kzwkxmRfoTuFFNpCu3ueit4OsI5ZTHdXyeYxJCzY6+nFS2Xg3S7CX7VAbjzyp/eNICeRj0ooqRkC+CdMa5SQz3eVcMB5oxn6YooopNgj/2Q==",
+   "audio": "assets/lore/narration_02.ogg",
+   "audioBytes": 311219,
+   "duration": 34.61,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 7.44,
+     "text": "The first rulers did not understand what they had found. They learned only this… it answered to blood."
+    },
+    {
+     "t0": 8.19,
+     "t1": 15.96,
+     "text": "So they gave it theirs. Before the ancient ring, the first king opened his palm… and the stone drank."
+    },
+    {
+     "t0": 16.71,
+     "t1": 24.91,
+     "text": "Doors that were never built for human hands swung open. Hidden chambers breathed again. Preserved memories obeyed."
+    },
+    {
+     "t0": 25.66,
+     "t1": 30.01,
+     "text": "And a promise became a belief… and the belief became law."
+    },
+    {
+     "t0": 31.11,
+     "t1": 33.87,
+     "text": "The castle remembers its rightful king."
+    }
+   ]
+  },
+  {
+   "n": 3,
+   "title": "A Kingdom Built on Memory",
+   "image": "assets/lore/page_03.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 477086,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwC1a+Jd1s0JnvGuVyrOzjYCD/Ko38atHIscbkg4LSE+nUAVzNoGjW6uGcCBZmT5lBPJ9quQwx+acW8c0sSFwB0K5rC6W5tZ9Dp7/W3uVR7O6nhGVJ2vkAZxRXKFr26uIRFcf6OZeQowpwRkCijQWp0vm6VdKbF7OBS7HcykZBB6n60tvomn2kxaBHRjwdjdf/rVzcPiT7M8tu+lWBMT7d8i/M3J5NZ32yV71rsOVAP3Aei4x0qXFlqR2Oy0ivorRPlRJMKR90E9vrRXCRfaBfWiR3Tt++/hkJ7g0U+XzFzeR6Fd+BNGnvZLhhcB3O44k4zn6U5fBWleTs3XH13jP8qKKBISy8A6LHdR3A+0l4yGGZO/5UUUUNgj/9k=",
+   "audio": "assets/lore/narration_03.ogg",
+   "audioBytes": 249734,
+   "duration": 27.71,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 9.85,
+     "text": "Caer Veyr rose above the Crownheart. Walls became towers. Towers became halls. And generations passed beneath its banners."
+    },
+    {
+     "t0": 10.6,
+     "t1": 17.09,
+     "text": "Every coronation deepened the binding. Every royal rite drew the castle closer to the blood."
+    },
+    {
+     "t0": 17.84,
+     "t1": 21.29,
+     "text": "House Vaelor believed it owned the Crownheart's memory…"
+    },
+    {
+     "t0": 22.39,
+     "t1": 26.98,
+     "text": "It never understood… that the Crownheart was learning House Vaelor."
+    }
+   ]
+  },
+  {
+   "n": 4,
+   "title": "The Last Days of Veyr",
+   "image": "assets/lore/page_04.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 380184,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwC3aeJLR4tst/e+cCVfEgADZrNm8SXWmyqlxqcs5YbsRuCAPc1mP4c1wvLeQwwNblmkVyQDjPXFZsqTCSRJIYnZF3EoM8Yz1rKyNDZ/4TfUp7xIEmmUGUAHP8JPeisWxvv9Mt8R7A0g5Hbmih2ErjbptXhurgp9oMJkb7pJXbnt2xTYNZuI4JFhiR/l2s3faa0NS8Q61bbrWzvfMsSTFjyhwSSNuaz9JsNW8l7ZLRgGGVlBHB7ZqW1Y0SdytYvLcX9tCCCElUjkcciitK20+60m8tnvUMUvnKUwMq/PPP8ASipcn0DlXU7t/BGkrcyMr3K+YxYgSDGT+FacHh2yFp5G6bb67+fzxRRUSLjuSXPh+xuY445Q7KjBh83cUUUUohLc/9k=",
+   "audio": "assets/lore/narration_04.ogg",
+   "audioBytes": 284898,
+   "duration": 31.81,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 8.65,
+     "text": "Under King Aldren Vaelor, a long war came home at last. The fires of the siege burned from one horizon to the other."
+    },
+    {
+     "t0": 9.4,
+     "t1": 14.9,
+     "text": "Behind the gates, the people of Veyr crowded into the halls… and waited for the end."
+    },
+    {
+     "t0": 15.65,
+     "t1": 22.81,
+     "text": "But the king did not wait. By candlelight, deep in the royal archives, he searched the records of his fathers…"
+    },
+    {
+     "t0": 23.91,
+     "t1": 31.08,
+     "text": "and he found a possibility. The whole of Caer Veyr… held forever, at one chosen moment."
+    }
+   ]
+  },
+  {
+   "n": 5,
+   "title": "The Price of Forever",
+   "image": "assets/lore/page_05.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 388516,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwB58W6XDC0VzrGoJd4O5RnAb8ulclD4u1hrdmbWLppmbCIpH51Zl8NXt9dvcC1aPMjHeUJRxn2qqbWGFHmURRfNgOPukj9awVjYu2/iPXy9uW1mdi0oDIGBwM9DRTbWaGO5t0mkiEjMo3D3NFJgTNf6/HI8Mct0lvGzbSgJXGT3HasmQzX0YS1hMpDZyP8APNWpPFGtW5ntYr90VXKRoEUgjJ9qqaTfahZ+ZHBGclW6x5/HNVstA9SvZ3NzcajbLLNHnzVGD16iiqNgxOrQL3M65+u6im1Ym7Z69c+BNEmlLMk2dxbIcDr+FTQeDNJhUeX5429P3nT9KKKy6GnUo2/w+0NLxLgfaN6vu5kGM5+lFFFNsSP/2Q==",
+   "audio": "assets/lore/narration_05.ogg",
+   "audioBytes": 289487,
+   "duration": 31.21,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 9.03,
+     "text": "But the Crownheart could not hold so much without living resonance. It needed lives, bound into its memory… thousands of them."
+    },
+    {
+     "t0": 9.78,
+     "t1": 14.52,
+     "text": "Aldren looked upon the people sheltering inside his walls… and he chose them."
+    },
+    {
+     "t0": 15.27,
+     "t1": 20.65,
+     "text": "To him, losing the kingdom was a greater crime than sacrificing those who lived in it."
+    },
+    {
+     "t0": 21.4,
+     "t1": 28.01,
+     "text": "The deepest chambers were sealed. Guards turned to face inward. Servants vanished in the night…"
+    },
+    {
+     "t0": 29.11,
+     "t1": 30.44,
+     "text": "and the work began."
+    }
+   ]
+  },
+  {
+   "n": 6,
+   "title": "A House Divided",
+   "image": "assets/lore/page_06.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 398498,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwB0XjuyjzbTyXxuFLKzLJgZBxWTDr+oyF5Dr8qr1wzDINUp/BusT3D3ltAHjMjSK28dMk9KxYYdyTKY2dhyxHbNY2NUdHL4v1KS8t1h1WdQWjUgn7/PNFc/ZWe3V4FYsAsqclckciilZIepbuBq8d5Okf2kx+Y21l3FduT0xxWaLqSGQtb3AXbx1xmtebxhr9k729vdBYI2ZAvlqcDJ71y6O3nkv1JycjvVpXJbaOlspdUur+OXysB5EDyDGCMjFFU9HvpY76GFZeJJVBB+vFFNwS2Fztnpc3gPRzcSMGuQHYsVEgxk/hVc/DvQiCD9pP1kH+FFFZItjrT4daFDdxzL9p3IwYAyjGR+FFFFNtiSR//Z",
+   "audio": "assets/lore/narration_06.ogg",
+   "audioBytes": 323286,
+   "duration": 36.01,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 4.2,
+     "text": "Some at court learned what the king intended… and tried to stop him."
+    },
+    {
+     "t0": 4.95,
+     "t1": 12.48,
+     "text": "And Caer Veyr turned against itself — soldiers of Veyr cutting down soldiers of Veyr, beneath the same banners."
+    },
+    {
+     "t0": 13.23,
+     "t1": 22.16,
+     "text": "In the chaos, a child was taken from the castle. Royal blood, never acknowledged… never marked… never bound by the rites."
+    },
+    {
+     "t0": 22.91,
+     "t1": 28.38,
+     "text": "A servants' door. A hand in the dark. The moon over the walls."
+    },
+    {
+     "t0": 29.48,
+     "t1": 35.23,
+     "text": "That forgotten branch of House Vaelor would endure… long after the ruin."
+    }
+   ]
+  },
+  {
+   "n": 7,
+   "title": "The Sundering",
+   "image": "assets/lore/page_07.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 442048,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwB0vj0B3soY55JtpBlMu0K3TvWG/iDxDDcRtJqUyqTwAwOeOtN/tXQ0mK3GkzyTIWy6y4BO48gdqbqF7Z3lg09tbyWhRgiBmDs5P3h9MVzpPY3uramr/a+uS21vNDq8rfMpYbh8wJxiisq+2WMthFY+ZAG8tnjfB3dOaKbg0HPF7IqpbxahcXKxyBbkOQq4xkA1dntVt9Cj8oh2W9yxI4JxxWDINuoTmOby2eVgCTjvXRxiwbw79ie6/fRsJjn7pycAZqVpIq3NEoSpdz6lb3N4QhWVeDxxngCitWXxBobNFb/2OTIGCo/m52nPBoraTMEjfuPAGitcu2bkb2LECQcE/hTh8P8AQ/su3FxnP3vN5/lRRWVzVDbb4faILqOUm5YxsGAMgxn8qKKKbbJR/9k=",
+   "audio": "assets/lore/narration_07.ogg",
+   "audioBytes": 328206,
+   "duration": 36.61,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 6.03,
+     "text": "At the height of the siege, Aldren descended to the Crownheart and began the ritual."
+    },
+    {
+     "t0": 6.78,
+     "t1": 11.59,
+     "text": "The bells of Caer Veyr rang out… and the ritual was interrupted."
+    },
+    {
+     "t0": 12.34,
+     "t1": 20.28,
+     "text": "The Crownheart failed to hold one moment. The ancient ring broke apart, and its memory tore in two —"
+    },
+    {
+     "t0": 21.03,
+     "t1": 27.81,
+     "text": "the castle as it stood before the catastrophe… and the ruin it would become, generations later."
+    },
+    {
+     "t0": 28.56,
+     "t1": 32.96,
+     "text": "Two remembered states, locked in the same stone."
+    },
+    {
+     "t0": 34.06,
+     "t1": 35.82,
+     "text": "This was the Sundering."
+    }
+   ]
+  },
+  {
+   "n": 8,
+   "title": "Those Who Could Not Leave",
+   "image": "assets/lore/page_08.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 414320,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwCzb+JLPYY7jUdR88Eq+18LkHtWFL4t1OxlaP8AtSS4Y9w2QtMTwndtcPfwapaqsjOwSVuRknt61gPdw290rS2AJHUqx+b3qFylO519r4yuNQtbW2S9lS8Eo8xy2FZc9MUVy9jcRm9tJktWijaRRkkE5BGaKTSGrll/tbXflSQN5cU0gD44CnvnvUh022ht4JDcwODIcuX4ANbDeJNUsbCWOSKH7OjNEilCGcc96wLphfWcVvapGmTnbnkD0zU2K1Ype0F9Z29nIsg84EtwBncKKzIoIYdWtoI3DMkqbz23Z5ooYJHs2qeGdN1BR56ScdCrYxWfD4J0eCBhGJgx/j3jP8qKKlbDe5Stfh5ocV8s4NyXD7+ZRgnP0ooopSeo4n//2Q==",
+   "audio": "assets/lore/narration_08.ogg",
+   "audioBytes": 323408,
+   "duration": 35.41,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 8.2,
+     "text": "Generations passed. The road to Caer Veyr vanished beneath the forest, and ordinary life abandoned it."
+    },
+    {
+     "t0": 8.95,
+     "t1": 16.15,
+     "text": "But not everything left. Thousands of human imprints remained within the Crownheart… the Echoes."
+    },
+    {
+     "t0": 16.9,
+     "t1": 19.34,
+     "text": "Some still remember who they were."
+    },
+    {
+     "t0": 20.09,
+     "t1": 27.61,
+     "text": "Others keep watch at doors that no longer matter… repeating an order, long after its meaning died."
+    },
+    {
+     "t0": 28.71,
+     "t1": 34.62,
+     "text": "And sometimes, in windows that fell centuries ago… a torch is burning."
+    }
+   ]
+  },
+  {
+   "n": 9,
+   "title": "The Uncrowned",
+   "image": "assets/lore/page_09.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 421656,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDobXV4fspE9xP5yOI3xJ3Pf6Vjy+IboRMsLTmQQswy+cPuwM/hzXIiNhqU93NdmOOIO3LfeYE4X61S0jULW3eJ7hZWdn3SsDyfbmseU1uddD4zvbnWYrVJZhB5YUkj7z8ZOfSitaPX9LnhjggiQbwAjkYI/wDr0U2vISZ5trIvpL65VLV9iSEAKC2eeuapGxv3jUray4Lf3Dmu4i8YTadA8MsETxo7JlUGep/WrFj4pu7jQzHaRRx3ROThADjNNPsDVtzndBmu4r2CG4t5Wh8xQFZCD165orTTV7yKeC3ubnczyrkn5iM0UmCOqfwRpKXUjg3GJGLMpcEHP4VLN4N0qSMIPPjAXHyPg/yoorMsrJ4G0mS8imkkunaMgjMo7dO1FFFDA//Z",
+   "audio": "assets/lore/narration_09.ogg",
+   "audioBytes": 315927,
+   "duration": 34.31,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 13.14,
+     "text": "The child who escaped did not die. Her line went on, far from Veyr — a worn crest, a half-forgotten name, a warning about a castle no one should enter."
+    },
+    {
+     "t0": 13.89,
+     "t1": 19.08,
+     "text": "And from that unbound line came a woman… with a claim to the ruin."
+    },
+    {
+     "t0": 19.83,
+     "t1": 27.18,
+     "text": "Vaelor blood, without the completed binding. Connected to the castle… yet not imprisoned by it."
+    },
+    {
+     "t0": 27.93,
+     "t1": 30.99,
+     "text": "She came to reclaim a stolen inheritance."
+    },
+    {
+     "t0": 32.09,
+     "t1": 33.56,
+     "text": "She was the Uncrowned."
+    }
+   ]
+  },
+  {
+   "n": 10,
+   "title": "Which Memory Will Answer?",
+   "image": "assets/lore/page_10.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 473590,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwC7/wAJpptvaMl1dXZnXKlQ3JYenNYmjeJNX1C4yL6ZlyylOTjjjn1qG58N2WpXDzyaxBGSxynl/MvPQmqekRvaRNLaTf6OC26Q4B4PbvWO2xp6mr/a+t2tzbw3GrXJaWQAAEEEZx6UVAhe9lSRm3LHMqqxP3ueufWip9SvQq6p/aUDXC2Nu2x2YNIEJOCetVdDe1js7i1vBtaQ8NnmtGfxbfWyXNubt41TKpH5YOeSMZxWVoZeRPNVInlEgA8w84qkwaNaO9tLd7KxtXRwZRuZiPm5orLEVvFe2rSODL5y5ROepoqbjtY9Au/BWkySSK7XBWRslS4wOe3FTWng3SLaRfLSXAxgF+OB9KKKQDI/Bek/alk/fZDBsbxjIP0ooopAf//Z",
+   "audio": "assets/lore/narration_10.ogg",
+   "audioBytes": 280261,
+   "duration": 31.01,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 9.79,
+     "text": "Inside, the Echoes rose against her. And when they fell, they released the resonance trapped within them… and her blood could gather it."
+    },
+    {
+     "t0": 10.54,
+     "t1": 16.5,
+     "text": "With that power, she could force the castle to choose… and another memory would answer."
+    },
+    {
+     "t0": 17.25,
+     "t1": 23.49,
+     "text": "Rubble gathered itself back into walls. Torches burned where only moonlight had been."
+    },
+    {
+     "t0": 24.24,
+     "t1": 26.44,
+     "text": "She did not travel through history."
+    },
+    {
+     "t0": 27.54,
+     "t1": 30.23,
+     "text": "The castle changed… around her."
+    }
+   ]
+  },
+  {
+   "n": 11,
+   "title": "What the Stones Confessed",
+   "image": "assets/lore/page_11.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 436700,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwB48d2sYNtOL5pl3KzrLgAg4zXM3PivWY41EetXDPubd0/CtBrPwrNNJ9oubpbksxdFTIDfXFZ+l6fYXOnXUlxAdwyYSG/LI96xSNehZsPEutTtbD+2blmMo3r225xRWXZwlJ7eVFQhJkBTnjnvRUtFXN+fwlJexvdC6twpZnw0mGxzxWMk0McbwWjylwvzMDlRxyM1X1O4lE08CwER+axLLyWOf0o0rzbG4ZpY2EU8bKQ6kbfeqFr0J7exMF5azicyq0q7gnJXkf40Vat3gglSFHDyvKoBHTG4UUMR3UngvSluGdGuEJZm4kHBJz6Vb/sC0ZEWR5ZPL6FiCf5UUVmzRblH/hBtHk1JbthP5gcPgOAM/TFFFFDF1P/Z",
+   "audio": "assets/lore/narration_11.ogg",
+   "audioBytes": 256758,
+   "duration": 28.01,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 3.24,
+     "text": "But the castle's two memories did not agree."
+    },
+    {
+     "t0": 3.99,
+     "t1": 11.69,
+     "text": "A door that stood sealed in the Past… lay broken outward in the Present. The wounds were in the wrong places."
+    },
+    {
+     "t0": 12.44,
+     "t1": 18.71,
+     "text": "The stones told a different history. The people of Caer Veyr had not been defending their king."
+    },
+    {
+     "t0": 19.46,
+     "t1": 21.48,
+     "text": "They had been trying to escape him."
+    },
+    {
+     "t0": 22.58,
+     "t1": 27.23,
+     "text": "The siege was real. But the catastrophe… was Aldren's."
+    }
+   ]
+  },
+  {
+   "n": 12,
+   "title": "The Last Crown",
+   "image": "assets/lore/page_12.webp",
+   "width": 1024,
+   "height": 1536,
+   "imageBytes": 473536,
+   "placeholder": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAkABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDRk1a/m02UwQ6s05DBJUYbS3Yj2rnW1rxFYW5F3qE5uTyIy3I578Vl3HiXV7KdrKC7mQCU7SG+6MnipTZ3k7G4luGMzNkMx5YjmsHZG8E5GtF4l1CTypBq12m6RQwb7uT2zjpRWWL24uZ4tPKqpjKlz2baeMe/NFOyE27jNQ0uSZnu1l2vJKSn+zg859K0NLZLuxV5X80iQ4zgHcMc/Tmlk0SXVIby3gFw8iTHa8PIx6MM0+DwfrENs8NrvjXnO5cFuB2okroqnKzKkVmslwLt2CyW83KdCRkY+tFSyaTqtr5DXVtIh81VMj4VQPp70UdCG9T0PTNCtNOuZZbdpQ0rkuS2c/pW15SddvP1ooqGM5/UdBtdUv0e5lnOxwwVXwMj8KKKKG2NI//Z",
+   "audio": "assets/lore/narration_12.ogg",
+   "audioBytes": 283990,
+   "duration": 31.41,
+   "cues": [
+    {
+     "t0": 0.28,
+     "t1": 11.34,
+     "text": "Aldren did not die in the Sundering. He remained… fused with the Crownheart, until king, castle and memory could no longer be told apart."
+    },
+    {
+     "t0": 12.09,
+     "t1": 13.45,
+     "text": "The Last Crown."
+    },
+    {
+     "t0": 14.2,
+     "t1": 20.92,
+     "text": "He still believes Veyr can be saved. And her unbound blood… might finish his ritual."
+    },
+    {
+     "t0": 21.67,
+     "t1": 24.98,
+     "text": "She had come to claim her inheritance."
+    },
+    {
+     "t0": 25.73,
+     "t1": 27.25,
+     "text": "Now she had to ask…"
+    },
+    {
+     "t0": 28.35,
+     "t1": 30.64,
+     "text": "should this inheritance survive at all?"
+    }
+   ]
+  }
+ ]
+}

@@ -40,6 +40,8 @@ export class AudioFX {
   muted = false;
   /** Background ambience (beds + random Present one-shots). On in normal play; off only in automation mute. */
   get ambienceEnabled() { return !this.muted; }
+  /** dev `?mute&scoretest` (session 15): the score loads and runs in a muted test session (master stays at 0) */
+  scoreInMute = false;
 
   constructor(opts: { muted?: boolean } = {}) {
     this.muted = !!opts.muted;
@@ -104,6 +106,30 @@ export class AudioFX {
     if (kind === 'move') this.play('blade_ring' as SoundId, { vol: 0.16, rate: 1.9, jitter: 0.04 });
     else if (kind === 'select') { this.play('blade_ring' as SoundId, { vol: 0.34, rate: 1.25 }); this.play('resonance' as SoundId, { vol: 0.18, rate: 0.8 }); }
     else this.play('swing' as SoundId, { vol: 0.2, rate: 0.8 });
+  }
+
+  /**
+   * An achievement (session 15): a soft struck bell — three sine partials (A5, E6, A6 slightly stretched) with a slow
+   * decay, a breath of the Resonance sample under it. Restrained: about as loud as a menu select, never a fanfare.
+   */
+  achievement() {
+    if (!this.ctx || this.ctx.state !== 'running' || this.muted) return;
+    const ctx = this.ctx, t = ctx.currentTime + 0.02;
+    const out = ctx.createGain();
+    out.gain.value = 0.11 * this.lv.sfx;
+    out.connect(this.master);
+    for (const [f, a, d] of [[880, 1, 2.2], [1322, 0.45, 1.5], [1766, 0.22, 1.0], [440, 0.3, 2.6]] as const) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(a, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + d);
+      o.connect(g).connect(out);
+      o.start(t);
+      o.stop(t + d + 0.05);
+    }
+    if (this.buffers.has('resonance' as SoundId)) this.play('resonance' as SoundId, { vol: 0.14, rate: 1.2, jitter: 0 });
   }
 
   /** The adaptive score (audio/Music.ts): null in automation mute, and until its files are loaded. */

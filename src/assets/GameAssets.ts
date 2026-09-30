@@ -80,6 +80,7 @@ const VEG_URL: Record<string, { url: string; height: number; emissive?: number }
   flower: { url: 'assets/vegetation/low_poly_glowing_flower.glb', height: 0.45, emissive: 0xff7040 },
 };
 const HERO_URL = variant('assets/characters/hero.glb');
+const HERO_MENU_URL = 'assets/characters/hero_menu.glb';
 
 type SoundId = keyof typeof audioManifest.sounds;
 const SOUNDS = audioManifest.sounds as unknown as Record<SoundId, { files: string[]; bus: string; loop: boolean }>;
@@ -142,6 +143,13 @@ export class GameAssets {
       load: (p) => this.loadGltf(HERO_URL, p),
       dispose: (g) => disposeObject(g.scene, { textures: true }),
       memory: (g) => objectMemory(g.scene),
+    });
+    // session 15: the title screen heroine's clips (animation only; scope "menu", released when play begins)
+    m.register<THREE.AnimationClip[]>({
+      key: 'glb:hero-menu', bytes: size(HERO_MENU_URL), label: 'The Uncrowned', urls: [HERO_MENU_URL],
+      load: async (p) => (await this.loadGltf(HERO_MENU_URL, p)).animations,
+      dispose: () => { /* AnimController.removeClips uncaches them; the tracks are garbage-collected */ },
+      memory: (clips) => ({ gpu: 0, cpu: clips.reduce((n, c) => n + c.tracks.reduce((k, t) => k + t.times.byteLength + t.values.byteLength, 0), 0) }),
     });
     for (const [id, url0] of Object.entries(ENEMY_URL) as [AssetId, string][]) {
       const url = variant(url0);

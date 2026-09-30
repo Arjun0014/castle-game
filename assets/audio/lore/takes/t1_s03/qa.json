@@ -1,0 +1,15 @@
+[
+ {
+  "take": "t1_s03",
+  "name": "test",
+  "refWords": 60,
+  "heardWords": 60,
+  "errors": 1,
+  "accuracy": 0.983,
+  "ops": [
+   "~veyr→verre"
+  ],
+  "spokenTags": [],
+  "events": []
+ }
+]

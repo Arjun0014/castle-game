@@ -1,0 +1,125 @@
+{
+ "_doc": "Session 15: the lore book's narration, one entry per illustrated page (assets/Echoes_of_Caer_Veyr_All_12_Pages/Page_NN.webp, order verified by the printed folios 01-12). Written from THE_CASTLE_REMEMBERS_LORE.md + docs/LORE.md and what each page shows. Markup: each line is one subtitle cue; [tag] = an Eleven v4 audio direction (spoken text only, removed from subtitles); {Display|spoken} = subtitle spelling | pronunciation respelling. tools/lore/gen_lore.mjs voices it, tools/lore/build_lore.py builds public/assets/lore/* + src/data/loreManifest.json.",
+ "pages": [
+  {
+   "title": "Before the First Crown",
+   "lines": [
+    "[low, reverent narration] Before {Veyr|Vair} had a name… before any crown was forged, or any king was laid in stone… something slept beneath the mountain.",
+    "And it remembered.",
+    "It kept the shape of stone. The hollow of every chamber. The weight of everything that came near it — and it let nothing go.",
+    "Centuries later, the founders of House {Vaelor|Vaylor} broke through into the dark… and found it waiting.",
+    "[whispering] They called it the Crownheart."
+   ]
+  },
+  {
+   "title": "The Blood That Opened Stone",
+   "lines": [
+    "The first rulers did not understand what they had found. They learned only this… it answered to blood.",
+    "So they gave it theirs. Before the ancient ring, the first king opened his palm… and the stone drank.",
+    "Doors that were never built for human hands swung open. Hidden chambers breathed again. Preserved memories obeyed.",
+    "And a promise became a belief… and the belief became law.",
+    "[reverently] The castle remembers its rightful king."
+   ]
+  },
+  {
+   "title": "A Kingdom Built on Memory",
+   "lines": [
+    "{Caer Veyr|Kair Vair} rose above the Crownheart. Walls became towers. Towers became halls. And generations passed beneath its banners.",
+    "Every coronation deepened the binding. Every royal rite drew the castle closer to the blood.",
+    "[lower, thoughtful] House {Vaelor|Vaylor} believed it owned the Crownheart's memory…",
+    "[whispering] It never understood… that the Crownheart was learning House {Vaelor|Vaylor}."
+   ]
+  },
+  {
+   "title": "The Last Days of Veyr",
+   "lines": [
+    "Under King Aldren {Vaelor|Vaylor}, a long war came home at last. The fires of the siege burned from one horizon to the other.",
+    "Behind the gates, the people of {Veyr|Vair} crowded into the halls… and waited for the end.",
+    "[hushed, urgent] But the king did not wait. By candlelight, deep in the royal archives, he searched the records of his fathers…",
+    "[slowly, with restrained awe] and he found a possibility. The whole of {Caer Veyr|Kair Vair}… held forever, at one chosen moment."
+   ]
+  },
+  {
+   "title": "The Price of Forever",
+   "lines": [
+    "[grave] But the Crownheart could not hold so much without living resonance. It needed lives, bound into its memory… thousands of them.",
+    "Aldren looked upon the people sheltering inside his walls… and he chose them.",
+    "To him, losing the kingdom was a greater crime than sacrificing those who lived in it.",
+    "[quiet dread] The deepest chambers were sealed. Guards turned to face inward. Servants vanished in the night…",
+    "and the work began."
+   ]
+  },
+  {
+   "title": "A House Divided",
+   "lines": [
+    "Some at court learned what the king intended… and tried to stop him.",
+    "[intense] And {Caer Veyr|Kair Vair} turned against itself — soldiers of {Veyr|Vair} cutting down soldiers of {Veyr|Vair}, beneath the same banners.",
+    "In the chaos, a child was taken from the castle. Royal blood, never acknowledged… never marked… never bound by the rites.",
+    "[whispering] A servants' door. A hand in the dark. The moon over the walls.",
+    "[reflective] That forgotten branch of House {Vaelor|Vaylor} would endure… long after the ruin."
+   ]
+  },
+  {
+   "title": "The Sundering",
+   "lines": [
+    "At the height of the siege, Aldren descended to the Crownheart and began the ritual.",
+    "The bells of {Caer Veyr|Kair Vair} rang out… and the ritual was interrupted.",
+    "[rising dread] The Crownheart failed to hold one moment. The ancient ring broke apart, and its memory tore in two —",
+    "the castle as it stood before the catastrophe… and the ruin it would become, generations later.",
+    "[heavy, final] Two remembered states, locked in the same stone.",
+    "[whispering] This was the Sundering."
+   ]
+  },
+  {
+   "title": "Those Who Could Not Leave",
+   "lines": [
+    "Generations passed. The road to {Caer Veyr|Kair Vair} vanished beneath the forest, and ordinary life abandoned it.",
+    "[low] But not everything left. Thousands of human imprints remained within the Crownheart… the Echoes.",
+    "Some still remember who they were.",
+    "[sorrowful] Others keep watch at doors that no longer matter… repeating an order, long after its meaning died.",
+    "[whispering] And sometimes, in windows that fell centuries ago… a torch is burning."
+   ]
+  },
+  {
+   "title": "The Uncrowned",
+   "lines": [
+    "The child who escaped did not die. Her line went on, far from {Veyr|Vair} — a worn crest, a half-forgotten name, a warning about a castle no one should enter.",
+    "And from that unbound line came a woman… with a claim to the ruin.",
+    "[measured] {Vaelor|Vaylor} blood, without the completed binding. Connected to the castle… yet not imprisoned by it.",
+    "She came to reclaim a stolen inheritance.",
+    "[whispering] She was the Uncrowned."
+   ]
+  },
+  {
+   "title": "Which Memory Will Answer?",
+   "lines": [
+    "Inside, the Echoes rose against her. And when they fell, they released the resonance trapped within them… and her blood could gather it.",
+    "[intense, building] With that power, she could force the castle to choose… and another memory would answer.",
+    "Rubble gathered itself back into walls. Torches burned where only moonlight had been.",
+    "[slowly] She did not travel through history.",
+    "The castle changed… around her."
+   ]
+  },
+  {
+   "title": "What the Stones Confessed",
+   "lines": [
+    "[low, uneasy] But the castle's two memories did not agree.",
+    "A door that stood sealed in the Past… lay broken outward in the Present. The wounds were in the wrong places.",
+    "The stones told a different history. The people of {Caer Veyr|Kair Vair} had not been defending their king.",
+    "[sorrowful] They had been trying to escape him.",
+    "[grave, restrained] The siege was real. But the catastrophe… was Aldren's."
+   ]
+  },
+  {
+   "title": "The Last Crown",
+   "lines": [
+    "[low, ominous] Aldren did not die in the Sundering. He remained… fused with the Crownheart, until king, castle and memory could no longer be told apart.",
+    "The Last Crown.",
+    "He still believes {Veyr|Vair} can be saved. And her unbound blood… might finish his ritual.",
+    "[slowly, with weight] She had come to claim her inheritance.",
+    "[whispering] Now she had to ask…",
+    "should this inheritance survive at all?"
+   ]
+  }
+ ]
+}

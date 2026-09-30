@@ -1,0 +1,16 @@
+[
+ {
+  "take": "p1_nn",
+  "name": "page_01",
+  "refWords": 70,
+  "heardWords": 71,
+  "errors": 2,
+  "accuracy": 0.971,
+  "ops": [
+   "+crown",
+   "~crownheart→heart"
+  ],
+  "spokenTags": [],
+  "events": []
+ }
+]

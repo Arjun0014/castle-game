@@ -42,6 +42,7 @@ import { Crownheart, AbyssEmbers } from '../vfx/Crownheart';
 import { Tutorial } from './Tutorial';
 import type { Guidance } from './Save';
 import { LOOPING } from '../data/animationManifest';
+import { MenuIdle, MENU_PACK_IDS } from '../character/MenuIdle';
 
 /** Loading-screen sink: fraction 0..1 of the whole operation + what is happening. */
 export type LoadSink = (f: number, label: string) => void;
@@ -301,7 +302,7 @@ export class Game {
     this.assets.audioCtx = this.audio.createContext();
     // session 14: the title score first — its exploration track (2.5 MB) loads ahead of the floor so it can play under
     // the loading card and the title screen (Music waits for the browser to allow sound: autoplay or a first gesture)
-    if (this.audio.ambienceEnabled) {
+    if (this.audio.ambienceEnabled || this.audio.scoreInMute) {
       const m = this.assets.manager;
       void m.acquire('music', ['music:explore']).then(() => {
         if (!this.audio.music) this.audio.bindMusic(m.get('music:explore'), m.has('music:combat') ? m.get('music:combat') : null);
@@ -585,7 +586,7 @@ export class Game {
       this.audio.block(parry);
       // sparks where the blow meets the blade (its middle), not the hilt
       this.fx.sparks(p.blade.hilt.clone().lerp(p.blade.tip, 0.45), parry ? 30 : 12, parry ? 0xfff0c0 : 0xffc080);
-      if (parry) { this.time.gain(12, 'parry'); this.hud.flash('#fff6d8', 0.25); this.rig.addShake(0.2); }
+      if (parry) { this.signals.emit('parry', {}); this.time.gain(12, 'parry'); this.hud.flash('#fff6d8', 0.25); this.rig.addShake(0.2); }
     };
     p.events.onAttackStart = (a) => {
       // one swing per hit window, timed to the blade's motion rather than the button press
@@ -803,6 +804,7 @@ export class Game {
       // after the floor's title card: the reward this floor's arrival brings (none on Floor 1)
       this.schedule(4.2, () => this.announceAbilities());
       this.onFloorArrive?.(this.floorId);
+      this.signals.emit('floor:arrive', { id: this.floorId, deaths: this.deaths });
     }
     this.clock.start();
     this.renderer.setAnimationLoop(() => this.frame());
@@ -909,13 +911,36 @@ export class Game {
    * rusted gate (Floor 1) — atmosphere, flames, dust and her idle only; nothing is simulated, nothing wakes.
    */
   private menuT = 0;
+  /** the title screen's heroine (character/MenuIdle.ts) while the title shows */
+  menuIdle: MenuIdle | null = null;
+  /** the lore book covers the title: the castle behind it stops drawing (a phone's battery), then carries on */
+  menuPause(on: boolean) {
+    if (!this.menuIdle) return;
+    if (on) { this.renderer.setAnimationLoop(null); return; }
+    this.clock.getDelta();
+    this.renderer.setAnimationLoop(() => this.menuFrame());
+  }
+  /** the title's animation pack (hero_menu.glb, 1.4 MB): loaded behind the title, dropped when play begins */
+  loadMenuPack() {
+    return this.assets.manager.acquire('menu', ['glb:hero-menu']).then(() => {
+      if (!this.menuIdle) { this.assets.manager.release('menu'); return; }
+      this.player.anim.addClips(this.assets.manager.get<THREE.AnimationClip[]>('glb:hero-menu'));
+    }).catch((err) => console.warn('[menu] the title animations did not load:', err));
+  }
   menuScene(on: boolean) {
     if (!on) {
       this.renderer.setAnimationLoop(null);
+      this.menuIdle?.dispose();
+      this.menuIdle = null;
+      // back to her gameplay facing (the title turned her toward the camera) and the gameplay clip set
+      this.player.root.rotation.y = this.player.yaw;
+      this.player.anim.removeClips(MENU_PACK_IDS);
+      this.assets.manager.release('menu');
       this.resize();
       return;
     }
     this.menuT = 0;
+    this.menuIdle = new MenuIdle(this.player.anim, this.player.model);
     this.enemies.menuVisibility(this.player.pos);
     this.camera.clearViewOffset();
     this.camera.fov = Platform.isPortrait ? 62 : 44;
@@ -927,25 +952,32 @@ export class Game {
     const dt = Math.min(this.clock.getDelta(), 1 / 20);
     this.menuT += dt;
     const p = this.player;
-    p.anim.setBase({ [LOOPING.has('idle') ? 'idle' : 'idle_combat']: 1 });
-    p.anim.update(dt);
-    // the shot: over her shoulder toward the gate, drifting slowly round her (portrait: she stands between the
-    // name above and the menu below; widescreen: she and the gate sit in the right half)
-    const S = Platform.isPortrait ? { dist: 5.8, h: 1.3, look: 2, ty: 0.25, side: -0.3, span: 0.25, lat: 0 } : { dist: 5.4, h: 1.5, look: 5, ty: 1.4, side: -0.15, span: 0.2, lat: -3.2 };
+    // session 15: she faces the player. The camera stands where it always did (on the gate's side of her, looking
+    // past her at the rusted gate and the keep) and she has turned round toward it — a three-quarter view (face: her
+    // offset from looking straight into the lens), the castle behind her. Portrait: she stands between the name above
+    // and the menu below; widescreen: she and the gate sit in the right half.
+    const S = Platform.isPortrait
+      ? { dist: 3.95, h: 1.25, look: 2.2, ty: 0.45, side: -0.3, span: 0.22, lat: 0, face: -0.38 }
+      : { dist: 4.1, h: 1.35, look: 5, ty: 1.15, side: -0.15, span: 0.2, lat: -2.6, face: -0.45 };
     Object.assign(S, (window as unknown as { __menuShot?: object }).__menuShot);
     const k = Math.sin(this.menuT * 0.05) * 0.5 + 0.5;
     const yaw = p.yaw + Math.PI + S.side + (k - 0.5) * S.span;
+    p.root.rotation.y = p.yaw + Math.PI + S.side + S.face;
     const cam = this.camera;
     cam.position.set(p.pos.x + Math.sin(yaw) * S.dist, p.pos.y + S.h + k * 0.2, p.pos.z + Math.cos(yaw) * S.dist);
     const ahead = new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
     // lat > 0 aims right of her line (she and the gate move left in the frame), < 0 left of it
     cam.lookAt(p.pos.x + ahead.x * S.look - ahead.z * S.lat, p.pos.y + S.ty, p.pos.z + ahead.z * S.look + ahead.x * S.lat);
+    cam.updateMatrixWorld();
+    if (this.menuIdle) this.menuIdle.update(dt, cam);
+    else { p.anim.setBase({ [LOOPING.has('idle') ? 'idle' : 'idle_combat']: 1 }); p.anim.update(dt); }
     const t = this.t + this.menuT;
     this.atmo.update(dt, t, cam, p.pos, p.pos.y, (this.scene.fog as THREE.Fog).color);
     this.level.update(dt, t, p.pos);
     this.fx.update(dt, t);
-    this.playerLight.position.copy(p.pos).add(new THREE.Vector3(0, 2.3, 0));
-    this.playerLight.intensity = this.heroLight;
+    // her light stands on the camera's side for the title (a soft key on her face; the moon is behind her)
+    this.playerLight.position.set(p.pos.x + Math.sin(yaw) * 1.6, p.pos.y + 2.1, p.pos.z + Math.cos(yaw) * 1.6);
+    this.playerLight.intensity = this.heroLight * 1.35;
     this.sun.position.copy(p.pos).addScaledVector(this.sunDir, 70);
     this.sun.target.position.copy(p.pos);
     this.renderer.render(this.scene, cam);
@@ -1334,6 +1366,7 @@ export class Game {
 
   private finish() {
     this.finished = true;
+    this.signals.emit('floor:leave', { id: this.floorId, next: this.floor.next ?? null, deaths: this.deaths });
     if (this.floor.next) {
       // hand HP and resonance to the next floor; main.ts shows the chapter card and loads it — at the top of the
       // NEXT frame: the transition tears this floor down synchronously, and doing that from inside step() (the exit

@@ -3,6 +3,9 @@ import { CREDITS } from '../data/credits';
 import type { Settings, SettingsData } from '../game/Settings';
 import type { Guidance, SaveData } from '../game/Save';
 import { sigilSVG } from './LoadingScreen';
+import { ACHIEVEMENTS, ACH_GROUPS } from '../data/achievements';
+import type { Achievements } from '../game/Achievements';
+import { iconSVG } from './AchievementToast';
 import './menu.css';
 import '@fontsource/cormorant-garamond/latin-700.css';
 
@@ -11,6 +14,10 @@ import '@fontsource/cormorant-garamond/latin-700.css';
  * and the menu — Continue (a floor reached before), New Game (→ Guided or Minimal guidance), Controls, Settings,
  * Credits. Mouse, touch and keyboard (↑/↓ or W/S, Enter, Esc) all drive it. The same panels (Controls, Settings)
  * open from the pause menu in play (PauseMenu).
+ *
+ * Session 15: three tiers so the list stays short — the way in (Continue / New Game), the book and the deeds (Lore ·
+ * Achievements, a pair with their devices), and the quiet row (Controls · Settings · Credits). The keyboard moves by
+ * row (↑/↓) and along a row (←/→). Lore opens the narrated chronicle (ui/LoreBook.ts, main.ts); Achievements a panel.
  */
 export type UiSound = 'move' | 'select' | 'back';
 
@@ -22,6 +29,9 @@ interface MenuHooks {
   sound(kind: UiSound): void;
   /** first user gesture on the menu (resume the audio context for the menu's sounds) */
   onGesture(): void;
+  /** Lore: open the chronicle (main.ts → LoreBook) */
+  onLore(): void;
+  achievements: Achievements;
 }
 
 const ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III' };
@@ -121,6 +131,61 @@ export function creditsHTML() {
     </section>`).join('') + '<p class="mm-cred-end">Caer Veyr remembers you.</p>';
 }
 
+/** The Achievements panel (title + pause menu): the count, then each group — unlocked, locked, secret, progress. */
+export function achievementsHTML(ach: Achievements) {
+  const n = ach.count, total = ach.total;
+  const C = 2 * Math.PI * 25;
+  const date = (t: number) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  let html = `<div class="ach-sum"><svg class="ach-ring" viewBox="0 0 58 58"><circle class="bg" cx="29" cy="29" r="25"/><circle class="fg" cx="29" cy="29" r="25"
+      stroke-dasharray="${(C * n / total).toFixed(1)} ${C.toFixed(1)}"/><text x="29" y="30">${n}</text></svg>
+    <div><b>${n} of ${total} deeds remembered</b><span>${n === total ? 'The castle has nothing left to show you.' : 'What the castle has seen you do.'}</span></div></div>`;
+  for (const g of ACH_GROUPS) {
+    const list = ACHIEVEMENTS.filter((a) => a.group === g.id);
+    const got = list.filter((a) => ach.has(a.id)).length;
+    html += `<h4 class="ach-group">${g.title} <small>${got} / ${list.length}</small></h4>`;
+    for (const a of list) {
+      const on = ach.has(a.id);
+      const secret = !!a.hidden && !on;
+      const veiled = secret && a.group === 'secret';
+      const prog = ach.progress(a);
+      const desc = secret ? (a.hint ?? 'A secret of the castle.') : a.desc;
+      html += `<div class="ach-row${on ? ' on' : ''}${secret ? ' secret' : ''}">
+        <div class="ach-medal">${iconSVG(veiled ? 'eye' : a.icon)}</div>
+        <div class="ach-info"><b>${veiled ? 'A Secret' : a.name}</b><span>${desc}</span>
+          ${prog && !on ? `<div class="ach-bar"><i style="width:${(100 * prog[0] / prog[1]).toFixed(1)}%"></i></div>` : ''}
+          ${on ? `<em class="ach-when">Remembered ${date(ach.data.unlocked[a.id])}</em>` : ''}</div>
+        <div class="ach-count">${prog ? `${prog[0]} / ${prog[1]}` : on ? '◆' : ''}</div>
+      </div>`;
+    }
+  }
+  html += `<button class="mm-reset ach-reset" type="button">Forget every deed</button>`;
+  return html;
+}
+
+/** Fill an Achievements panel body (re-rendered on every open); the reset asks twice. Returns the re-render. */
+export function wireAchievements(body: HTMLElement, ach: Achievements, sound: (k: UiSound) => void) {
+  const render = () => {
+    body.innerHTML = achievementsHTML(ach);
+    const reset = body.querySelector<HTMLButtonElement>('.ach-reset')!;
+    let armed = 0;
+    reset.addEventListener('click', () => {
+      if (!armed) {
+        reset.classList.add('armed');
+        reset.textContent = 'Press again to forget them all';
+        sound('move');
+        armed = window.setTimeout(() => { armed = 0; reset.classList.remove('armed'); reset.textContent = 'Forget every deed'; }, 3500);
+        return;
+      }
+      clearTimeout(armed);
+      ach.reset();
+      sound('back');
+      render();
+    });
+  };
+  render();
+  return render;
+}
+
 // ------------------------------------------------------------------ the title screen
 export class MainMenu {
   root: HTMLDivElement;
@@ -131,9 +196,11 @@ export class MainMenu {
   private guidance: Guidance = 'guided';
   private gestured = false;
   private open = false;
+  private renderAch: () => void = () => {};
 
   constructor(stage: HTMLElement, private h: MenuHooks) {
-    const cont = h.save ? `<button class="mm-item" data-act="continue"><span>Continue</span><small>Floor ${ROMAN[h.save.floor]} · ${FLOOR_NAME[h.save.floor]}</small></button>` : '';
+    const r0 = h.save ? 1 : 0;
+    const cont = h.save ? `<button class="mm-item" data-act="continue" data-row="0"><span>Continue</span><small>Floor ${ROMAN[h.save.floor]} · ${FLOOR_NAME[h.save.floor]}</small></button>` : '';
     const root = this.root = document.createElement('div');
     root.id = 'menu';
     root.className = 'mm hidden';
@@ -150,12 +217,18 @@ export class MainMenu {
       </div>
       <nav class="mm-list">
         ${cont}
-        <button class="mm-item" data-act="new"><span>New Game</span></button>
-        <button class="mm-item" data-act="controls"><span>Controls</span></button>
-        <button class="mm-item" data-act="settings"><span>Settings</span></button>
-        <button class="mm-item" data-act="credits"><span>Credits</span></button>
+        <button class="mm-item" data-act="new" data-row="${r0}"><span>New Game</span></button>
+        <div class="mm-pair">
+          <button class="mm-item mm-sec" data-act="lore" data-row="${r0 + 1}" data-col="0">${iconSVG('book', 'mm-dev')}<span>Lore</span></button>
+          <button class="mm-item mm-sec" data-act="achievements" data-row="${r0 + 1}" data-col="1">${iconSVG('crown', 'mm-dev')}<span>Achievements</span><small class="mm-tally"></small></button>
+        </div>
+        <div class="mm-minor">
+          <button class="mm-item mm-min" data-act="controls" data-row="${r0 + 2}" data-col="0"><span>Controls</span></button><i>◆</i>
+          <button class="mm-item mm-min" data-act="settings" data-row="${r0 + 2}" data-col="1"><span>Settings</span></button><i>◆</i>
+          <button class="mm-item mm-min" data-act="credits" data-row="${r0 + 2}" data-col="2"><span>Credits</span></button>
+        </div>
       </nav>
-      <div class="mm-foot"><span class="mm-keys">↑ ↓ choose · Enter confirm · Esc back</span></div>
+      <div class="mm-foot"><span class="mm-keys">↑ ↓ ← → choose · Enter confirm · Esc back</span></div>
       ${this.panelHTML('guidance', 'New game', `
         <p class="mm-lead">How much should the castle teach you?</p>
         <div class="mm-choices">
@@ -165,12 +238,15 @@ export class MainMenu {
         <button class="mm-begin" type="button">Enter the keep</button>`)}
       ${this.panelHTML('controls', 'Controls', controlsHTML(Platform.isTouch))}
       ${this.panelHTML('settings', 'Settings', settingsHTML())}
-      ${this.panelHTML('credits', 'Credits', creditsHTML())}`;
+      ${this.panelHTML('credits', 'Credits', creditsHTML())}
+      ${this.panelHTML('achievements', 'Achievements', '')}`;
     stage.appendChild(root);
     this.list = root.querySelector('.mm-list')!;
     root.querySelectorAll<HTMLElement>('.mm-panel').forEach((p) => this.panels.set(p.dataset.panel!, p));
     wireTabs(this.panels.get('controls')!);
     wireSettings(this.panels.get('settings')!, h.settings, h.sound);
+    this.renderAch = wireAchievements(this.panels.get('achievements')!.querySelector('.mm-body') as HTMLElement, h.achievements, h.sound);
+    this.tally();
     this.items().forEach((b, i) => {
       b.addEventListener('pointerenter', () => { if (!this.panel && this.focusIdx !== i) { this.focusIdx = i; this.paintFocus(); h.sound('move'); } });
       b.addEventListener('click', () => this.activate(b.dataset.act!));
@@ -223,7 +299,16 @@ export class MainMenu {
     this.gesture();
     if (act === 'continue') { this.h.sound('select'); this.h.onContinue(); return; }
     if (act === 'new') { this.openPanel('guidance'); return; }
+    if (act === 'lore') { this.h.sound('select'); this.h.onLore(); return; }
+    if (act === 'achievements') this.renderAch();
     this.openPanel(act);
+  }
+
+  /** the Achievements entry's small tally (3 / 26): when the title shows and when an unlock lands */
+  tally() {
+    const t = this.root.querySelector('.mm-tally');
+    if (t) t.textContent = `${this.h.achievements.count} / ${this.h.achievements.total}`;
+    if (this.panel === 'achievements') this.renderAch();
   }
 
   private begin() {
@@ -256,7 +341,7 @@ export class MainMenu {
   }
 
   private onKey = (e: KeyboardEvent) => {
-    if (!this.open || document.documentElement.classList.contains('intro-on')) return;
+    if (!this.open || document.documentElement.classList.contains('intro-on') || document.documentElement.classList.contains('lore-on')) return;
     const k = e.code;
     const nav = ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS', 'Enter', 'NumpadEnter', 'Space', 'Escape', 'ArrowLeft', 'ArrowRight', 'KeyA', 'KeyD'];
     if (!nav.includes(k)) return;
@@ -276,10 +361,22 @@ export class MainMenu {
       if (body && (k === 'ArrowUp' || k === 'KeyW')) body.scrollBy({ top: -80, behavior: 'smooth' });
       return;
     }
-    const n = this.items().length;
-    if (k === 'ArrowUp' || k === 'KeyW') { this.focusIdx = (this.focusIdx + n - 1) % n; this.paintFocus(); this.h.sound('move'); }
-    else if (k === 'ArrowDown' || k === 'KeyS') { this.focusIdx = (this.focusIdx + 1) % n; this.paintFocus(); this.h.sound('move'); }
-    else if (k === 'Enter' || k === 'NumpadEnter' || k === 'Space') this.activate(this.items()[this.focusIdx].dataset.act!);
+    // rows (↑/↓) and places along a row (←/→): the pair and the quiet row are rows of two and three
+    const items = this.items();
+    const cur = items[this.focusIdx];
+    const row = Number(cur.dataset.row ?? 0), col = Number(cur.dataset.col ?? 0);
+    const rows = Math.max(...items.map((b) => Number(b.dataset.row ?? 0))) + 1;
+    const at = (r: number, c: number) => {
+      const inRow = items.filter((b) => Number(b.dataset.row ?? 0) === r);
+      return items.indexOf(inRow[Math.min(c, inRow.length - 1)]);
+    };
+    let next = this.focusIdx;
+    if (k === 'ArrowUp' || k === 'KeyW') next = at((row + rows - 1) % rows, col);
+    else if (k === 'ArrowDown' || k === 'KeyS') next = at((row + 1) % rows, col);
+    else if (k === 'ArrowLeft' || k === 'KeyA') next = at(row, Math.max(0, col - 1));
+    else if (k === 'ArrowRight' || k === 'KeyD') next = at(row, col + 1);
+    else if (k === 'Enter' || k === 'NumpadEnter' || k === 'Space') { this.activate(cur.dataset.act!); return; }
+    if (next !== this.focusIdx && next >= 0) { this.focusIdx = next; this.paintFocus(); this.h.sound('move'); }
   };
 }
 
@@ -290,7 +387,8 @@ export class PauseMenu {
   onResume?: () => void;
   onQuit?: () => void;
 
-  constructor(host: HTMLElement, settings: Settings, private sound: (k: UiSound) => void) {
+  private renderAch: () => void;
+  constructor(host: HTMLElement, settings: Settings, private sound: (k: UiSound) => void, achievements: Achievements) {
     const root = this.root = document.createElement('div');
     root.className = 'pm';
     root.innerHTML = `
@@ -302,15 +400,18 @@ export class PauseMenu {
           <button class="mm-item focus" data-act="resume"><span>Resume</span></button>
           <button class="mm-item" data-act="controls"><span>Controls</span></button>
           <button class="mm-item" data-act="settings"><span>Settings</span></button>
+          <button class="mm-item" data-act="achievements"><span>Achievements</span></button>
           <button class="mm-item" data-act="quit"><span>Quit to title</span></button>
         </nav>
         <p class="pm-note">Progress is kept at the start of each floor.</p>
       </div>
       <section class="mm-panel" data-panel="controls"><div class="mm-frame"><header><h2>Controls</h2><button class="mm-back" type="button">Back</button></header><div class="mm-body">${controlsHTML(Platform.isTouch)}</div></div></section>
-      <section class="mm-panel" data-panel="settings"><div class="mm-frame"><header><h2>Settings</h2><button class="mm-back" type="button">Back</button></header><div class="mm-body">${settingsHTML()}</div></div></section>`;
+      <section class="mm-panel" data-panel="settings"><div class="mm-frame"><header><h2>Settings</h2><button class="mm-back" type="button">Back</button></header><div class="mm-body">${settingsHTML()}</div></div></section>
+      <section class="mm-panel" data-panel="achievements"><div class="mm-frame"><header><h2>Achievements</h2><button class="mm-back" type="button">Back</button></header><div class="mm-body"></div></div></section>`;
     host.appendChild(root);
     wireTabs(root.querySelector('[data-panel="controls"]') as HTMLElement);
     wireSettings(root.querySelector('[data-panel="settings"]') as HTMLElement, settings, sound);
+    this.renderAch = wireAchievements(root.querySelector('[data-panel="achievements"] .mm-body') as HTMLElement, achievements, sound);
     root.querySelectorAll<HTMLButtonElement>('.pm-list .mm-item').forEach((b) => {
       b.addEventListener('pointerenter', () => { root.querySelectorAll('.pm-list .mm-item').forEach((x) => x.classList.toggle('focus', x === b)); });
       b.addEventListener('click', (e) => { e.stopPropagation(); this.act(b.dataset.act!); });
@@ -333,6 +434,7 @@ export class PauseMenu {
     if (a === 'resume') { this.sound('select'); this.onResume?.(); return; }
     if (a === 'quit') { this.sound('back'); this.onQuit?.(); return; }
     this.sound('select');
+    if (a === 'achievements') this.renderAch();
     this.panel = a;
     this.root.classList.add('panel-on');
     this.root.querySelectorAll<HTMLElement>('.mm-panel').forEach((p) => p.classList.toggle('on', p.dataset.panel === a));

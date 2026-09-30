@@ -216,8 +216,13 @@ export class Music {
   /** settings: the Music slider (1 = as mixed) */
   setLevel(v: number) { this.level = v; this.bus.gain.setTargetAtTime(v * (this.paused ? 0.4 : 1), this.ctx.currentTime, 0.05); }
   private paused = false;
-  /** her voice (and any important line): the score steps back ~7 dB, then returns */
-  duck(on: boolean) { this.duckGain.gain.setTargetAtTime(on ? 0.45 : 1, this.ctx.currentTime, on ? 0.12 : 0.55); }
+  /**
+   * her voice (and any important line): the score steps back ~7 dB, then returns. `level` = the ducked gain (the lore
+   * book's narration uses a lighter 0.5 and a slower release between pages).
+   */
+  duck(on: boolean, level = 0.45, release = 0.55) { this.duckGain.gain.setTargetAtTime(on ? level : 1, this.ctx.currentTime, on ? 0.12 : release); }
+  /** the duck gain right now (tests) */
+  get duckLevel() { return this.duckGain.gain.value; }
   /** the pause menu: quieter, still there */
   setPaused(on: boolean) { this.paused = on; this.bus.gain.setTargetAtTime(this.level * (on ? 0.4 : 1), this.ctx.currentTime, 0.2); }
 

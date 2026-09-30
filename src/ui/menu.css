@@ -136,6 +136,25 @@ html.menu-on #hud, html.menu-on #touch { visibility: hidden; }
 .mm-item.focus > span::after { opacity: 1; transform: none; }
 .mm-item.focus::before, .mm-item.focus::after { opacity: 1; transform: translateY(-50%) scale(1); }
 .mm-item small { display: block; margin-top: 0.45em; font: italic 400 0.6em/1 'EB Garamond', Georgia, serif; letter-spacing: 0.08em; text-transform: none; color: #bba67c; }
+/* session 15: the second tier (Lore · Achievements, each with its device) and the quiet third (Controls · Settings · Credits) */
+.mm-pair { display: flex; justify-content: center; gap: clamp(2px, 2cqw, 14px); margin-top: 0.3cqh; }
+.mm-item.mm-sec { display: inline-flex; align-items: center; gap: 0.55em; padding: 0.72em 1em; font-size: clamp(12.5px, 3.9cqw, 17.5px); letter-spacing: 0.24em;
+  color: rgba(239,228,204,0.62); }
+.mm-item.mm-sec > span { margin-right: -0.24em; }
+.mm-sec .mm-dev { flex: none; width: 1.3em; height: 1.3em; color: #c9a768; opacity: 0.75; transition: color 0.25s, opacity 0.25s, filter 0.25s; }
+.mm-sec.focus .mm-dev { color: #ffe3a6; opacity: 1; filter: drop-shadow(0 0 5px rgba(255,180,100,0.75)); }
+.mm-item.mm-sec small.mm-tally { display: inline; margin: 0 0 0 0.15em; font: italic 400 0.72em/1 'EB Garamond', Georgia, serif; letter-spacing: 0.04em; color: #a8946c; }
+.mm-item.mm-sec::before, .mm-item.mm-sec::after, .mm-item.mm-min::before, .mm-item.mm-min::after { display: none; }
+.mm-item.mm-sec.focus { letter-spacing: 0.26em; }
+.mm-minor { display: flex; justify-content: center; align-items: center; margin-top: 0.2cqh; }
+.mm-minor i { font-style: normal; font-size: 6px; color: rgba(216,179,106,0.42); }
+.mm-item.mm-min { padding: 0.75em 0.85em; font-size: clamp(10.5px, 3.05cqw, 13.5px); letter-spacing: 0.26em; color: rgba(239,228,204,0.5); }
+.mm-item.mm-min > span { margin-right: -0.26em; }
+.mm-item.mm-min.focus { letter-spacing: 0.28em; }
+html.view-wide .mm-pair, html.view-wide .mm-minor { justify-content: flex-start; margin-left: 0.55em; }
+html.view-wide .mm-item.mm-sec { font-size: clamp(13px, 1.25cqw, 18px); padding-left: 0.7em; }
+html.view-wide .mm-item.mm-min { font-size: clamp(11px, 1.02cqw, 14px); padding-left: 0.7em; }
+html.view-wide .mm-item.mm-sec > span::after, html.view-wide .mm-item.mm-min > span::after { left: 0; right: 20%; }
 .mm-foot { position: absolute; left: 0; right: 0; bottom: calc(var(--sab) + 2.6cqh); text-align: center; font-size: clamp(9.5px, 2.6cqw, 11px); letter-spacing: 0.22em; color: rgba(190,175,145,0.5); }
 html.input-touch .mm-keys { display: none; }
 #menu.panel-on .mm-list { opacity: 0; pointer-events: none; }

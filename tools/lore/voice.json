@@ -1,0 +1,19 @@
+{
+ "voiceId": "JSIqdqOB9ZIcrBFOti5d",
+ "name": "Cthulu female - v4 narrator (IVC)",
+ "account": "ELEVENLABS_API_KEY_2 (Starter)",
+ "kind": "instant voice clone",
+ "source": {
+  "voiceId": "VhuTJN7jTXadMoTbfY1r",
+  "name": "Cthulu female",
+  "account": "ELEVENLABS_API_KEY (free)",
+  "kind": "designed (eleven_ttv_v3)"
+ },
+ "trainingFiles": [
+  "2026-09-29_jSen1RhYcWELqzl924DA.mp3",
+  "2026-09-29_1s3w5DdGloBVOvs42afi.mp3",
+  "2026-09-29_UE250UNHvhiuCpW7Syxs.mp3",
+  "2026-07-23_wcsF7zC9vkEzi3EcvCRM.mp3"
+ ],
+ "created": "2026-09-30T12:13:42.292Z"
+}

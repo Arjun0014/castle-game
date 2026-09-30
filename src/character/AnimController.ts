@@ -46,6 +46,31 @@ export class AnimController {
 
   has(id: string) { return this.clips.has(id); }
 
+  /** Extra clips on the same rig (the title screen's pack, hero_menu.glb): full-body only, no masked variants. */
+  addClips(clips: THREE.AnimationClip[]) {
+    for (const c of clips) if (!this.clips.has(c.name)) this.clips.set(c.name, c);
+  }
+
+  /** Drop clips added with addClips (their actions are stopped and uncached; the tracks are garbage-collected). */
+  removeClips(ids: string[]) {
+    for (const id of ids) {
+      const c = this.clips.get(id);
+      if (!c) continue;
+      const ov = this.overlayClips.get(id);
+      this.overlays = this.overlays.filter((o) => {
+        if (o.id !== id) return true;
+        o.action.stop();
+        return false;
+      });
+      if (this.current?.id === id) this.current = null;
+      const b = this.base.get(id);
+      if (b) { b.action.stop(); this.base.delete(id); }
+      if (ov) { this.mixer.uncacheClip(ov); this.overlayClips.delete(id); }
+      this.mixer.uncacheClip(c);
+      this.clips.delete(id);
+    }
+  }
+
   duration(id: string) {
     const c = this.clips.get(id);
     if (!c) throw new Error('Unknown clip ' + id);

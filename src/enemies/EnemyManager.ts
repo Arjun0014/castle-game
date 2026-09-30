@@ -1129,6 +1129,7 @@ export class EnemyManager {
         if (!hit) continue;
         this.hitRegistry.add(key);
         this.playerHits++;
+        g.signals.emit('hit', { attack: p.attack?.id ?? null, serial: p.attackSerial, index });
         p.hitsDone.add(index * 1000 + e.id);
         const cm = (p.attack?.charge ? 1 + p.chargeLevel : 1) * falloff; // the Crownbreaker's charge doubles its blow
         const res = e.takeHit(win.damage * cm, win.poise * cm, win.knock * (p.attack?.shock ? 1 + p.chargeLevel * 0.5 : 1), p.pos, { knockdown: win.knockdown, guardBreak: win.guardBreak });

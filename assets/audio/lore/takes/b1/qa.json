@@ -1,0 +1,31 @@
+[
+ {
+  "take": "b1",
+  "name": "book",
+  "refWords": 805,
+  "heardWords": 805,
+  "errors": 17,
+  "accuracy": 0.979,
+  "ops": [
+   "~veyr→verre",
+   "~veyr→verre",
+   "~aldren→aldrin",
+   "~veyr→verre",
+   "~veyr→verre",
+   "~aldren→aldrin",
+   "~veyr→verre",
+   "~veyr→verre",
+   "~veyr→verre",
+   "~aldren→aldrin",
+   "~veyr→verre",
+   "~veyr→verre",
+   "~veyr→verre",
+   "~veyr→verre",
+   "~aldrens→aldrins",
+   "~aldren→aldrin",
+   "~veyr→verre"
+  ],
+  "spokenTags": [],
+  "events": []
+ }
+]

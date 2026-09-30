@@ -8,6 +8,9 @@ import { applyDevStart, devFloor } from './game/DevStart';
 import { Settings } from './game/Settings';
 import { Save, type Guidance, type SaveData } from './game/Save';
 import { Net } from './assets/AssetManager';
+import { Achievements } from './game/Achievements';
+import { AchievementToast } from './ui/AchievementToast';
+import { LoreBook } from './ui/LoreBook';
 
 const stage = document.getElementById('stage')!;
 // portrait stage + input mode first: the renderer sizes itself from the stage
@@ -28,6 +31,9 @@ const quick = params.has('autostart') || params.has('autopilot');
 /** `?guide=guided|minimal` pins the guidance for quick starts (default Minimal: no tutorial slow motion in tests) */
 const pinnedGuide: Guidance = params.get('guide') === 'guided' ? 'guided' : 'minimal';
 const game = new Game(app, hud, { muted: automated, stage });
+/** dev only: `?mute&scoretest` loads and runs the title score silently (master 0), so music / ducking can be measured */
+const scoreTest = import.meta.env.DEV && params.has('scoretest');
+game.audio.scoreInMute = scoreTest;
 // automated runs measure fixed quality; adaptive resolution is for players
 if (automated) game.dynResEnabled = false;
 const loader = new LoadingScreen(overlay);
@@ -61,6 +67,16 @@ game.onFloorArrive = (id) => {
 };
 game.playTimeBefore = () => playTimeBefore;
 
+// ------------------------------------------------------------------ achievements (session 15)
+/** kept across sessions for players; automated runs keep them in memory only unless `?ach` asks to persist (tests) */
+const achievements = new Achievements((!automated && !dev) || params.has('ach'));
+achievements.bind(game.signals, { floorId: () => game.floorId, hp: () => game.player.hp, now: () => performance.now() / 1000 });
+const toast = new AchievementToast(stage, () => game.audio.achievement());
+achievements.onUnlock = (a) => { toast.show(a); menu?.tally(); };
+window.setInterval(() => { if (game.started && !game.paused) achievements.update(); }, 100);
+(window as any).__ach = achievements;
+(window as any).__toast = toast;
+
 // ------------------------------------------------------------------ the opening film (optional module)
 /**
  * The film (ui/Intro.ts, public/cinematic/) plays between New Game and the first step. It is loaded through a glob so
@@ -92,7 +108,7 @@ async function loadIntro() {
  */
 let filmOn = false;
 const startScore = () => {
-  if (automated || filmOn || game.started) return;
+  if ((automated && !scoreTest) || filmOn || game.started) return;
   game.audio.unlock();
   game.audio.music?.start(3.5);
 };
@@ -114,7 +130,29 @@ const menu = quick ? null : new MainMenu(stage, {
   sound: (k) => game.audio.ui(k),
   // a gesture on the title screen: sound is allowed now (the score was waiting for it, or is already playing)
   onGesture: () => startScore(),
+  onLore: () => { startScore(); lore.open(1); },
+  achievements,
 });
+
+// ------------------------------------------------------------------ the chronicle (session 15)
+/** the narrated lore book over the title: the score keeps playing (ducked under each page), the castle stops drawing */
+const lore = new LoreBook(stage, {
+  audio: game.audio, settings, sound: (k) => game.audio.ui(k),
+  onPage: (n) => achievements.lorePage(n),
+  onOpen: () => game.menuPause(true),
+  onClose: () => game.menuPause(false),
+});
+(window as any).__lore = lore;
+/** the secret: the title left alone for three minutes (the chronicle, the film and a hidden tab do not count) */
+let titleWait = 0;
+/** three minutes; dev `?patience=N` shortens it for tests */
+const PATIENCE = import.meta.env.DEV && params.has('patience') ? Number(params.get('patience')) || 5 : 180;
+window.setInterval(() => {
+  const html = document.documentElement;
+  if (html.classList.contains('menu-on') && !html.classList.contains('lore-on') && !html.classList.contains('intro-on') && !document.hidden && !game.started) {
+    if (++titleWait >= PATIENCE) achievements.unlock('patience');
+  }
+}, 1000);
 
 loader.showInitial(floor);
 game.boot(floorId, (f, label) => loader.progress(f, label)).then(() => {
@@ -126,6 +164,7 @@ game.boot(floorId, (f, label) => loader.progress(f, label)).then(() => {
   if (quick || !menu) { begin(pinnedGuide); return; }
   // the title screen, over the castle itself
   game.menuScene(true);
+  void game.loadMenuPack();
   document.documentElement.classList.add('menu-on');
   setTimeout(() => { loader.hide(); menu.show(); }, 350);
   void loadIntro();
@@ -256,7 +295,7 @@ game.onEnd = () => {
 };
 
 // ------------------------------------------------------------------ pause menu
-const pause = new PauseMenu(game.hud.pauseEl, settings, (k) => game.audio.ui(k));
+const pause = new PauseMenu(game.hud.pauseEl, settings, (k) => game.audio.ui(k), achievements);
 const resume = () => {
   if (!game.paused || Platform.rotateBlocked) return;
   game.togglePause(false);

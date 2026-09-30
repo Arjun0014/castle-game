@@ -14,6 +14,9 @@
  *   hero:hurt {hp, max} · hero:death · hero:respawn
  *   fracture {id} · floor:start {id} · objective {id}
  *   reinforce {id, area, kinds}   a memory-return group rose (enemies/Reinforcements.ts)
+ *   hit {attack, serial, index}   one of her blows connected (session 15: achievements)
+ *   parry · floor:arrive {id, deaths} · floor:leave {id, next, deaths}   (session 15)
+ *   finisher {id, enemy, last} · ability {id, phase}
  */
 export type SignalData = Record<string, any>;
 type Listener = (data: SignalData) => void;

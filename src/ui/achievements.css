@@ -1,0 +1,87 @@
+/* ==========================================================================================================
+   Session 15: achievements — the unlock banner (in play and on the title) and the Achievements panel.
+   The title screen's dark Vaelor / Crownheart language: aged gold hairlines, the lozenge, a crimson ember.
+   ========================================================================================================== */
+
+/* ---------------------------------------------------------------- the unlock banner */
+.ach-host { position: absolute; left: 0; right: 0; top: calc(var(--sat) + 13cqh); z-index: 45; display: flex; justify-content: center; pointer-events: none;
+  transition: top 0.4s ease; }
+/* portrait: under the bars and the boss bar; a spoken line or a Guided lesson card keeps its place, the banner steps below */
+html.view-portrait:has(#hud .subtitle.on) .ach-host { top: calc(var(--sat) + 20.5cqh); }
+html.view-portrait:has(#hud .tutorial.on) .ach-host { top: calc(var(--sat) + 29cqh); }
+/* on the title screen (the chronicle, the secret) it sits high over the name */
+html.menu-on .ach-host { top: calc(var(--sat) + 3cqh); }
+/* over the chronicle: below its header (portrait: across the top of the page for a moment; wide: beside the page) */
+html.lore-on .ach-host { top: calc(var(--sat) + 9.5cqh); }
+html.view-wide .ach-host, html.view-wide.menu-on .ach-host { top: calc(var(--sat) + 3cqh); left: auto; right: calc(var(--sar) + 2.2cqw); justify-content: flex-end; }
+html.view-wide.lore-on .ach-host { top: calc(var(--sat) + 12cqh); }
+.ach-toast { position: relative; display: flex; align-items: center; gap: 12px; width: min(88cqw, 380px); padding: 10px 16px 11px 12px; overflow: hidden;
+  background: linear-gradient(100deg, rgba(34,14,12,0.94), rgba(12,7,7,0.94) 60%, rgba(22,10,9,0.92));
+  border: 1px solid rgba(216,179,106,0.5); box-shadow: 0 0 0 3px rgba(0,0,0,0.45), 0 10px 34px rgba(0,0,0,0.7), inset 0 0 22px rgba(160,40,30,0.18);
+  opacity: 0; transform: translateY(-14px) scale(0.97); filter: blur(2px);
+  transition: opacity 0.45s ease, transform 0.6s cubic-bezier(0.2,0.8,0.2,1), filter 0.45s ease; }
+html.view-wide .ach-toast { width: 360px; }
+.ach-toast::before, .ach-toast::after { content: ''; position: absolute; width: 9px; height: 9px; border: 1px solid #d8b36a; pointer-events: none; }
+.ach-toast::before { left: 3px; top: 3px; border-right: 0; border-bottom: 0; }
+.ach-toast::after { right: 3px; bottom: 3px; border-left: 0; border-top: 0; }
+.ach-toast.in { opacity: 1; transform: none; filter: none; }
+.ach-toast.out { opacity: 0; transform: translateY(-8px); transition-duration: 0.6s; }
+.ach-seal { position: relative; flex: none; width: 46px; height: 46px; color: #f4dca0; display: grid; place-items: center; }
+.ach-lozenge { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ach-lozenge path:first-child { fill: rgba(120,24,22,0.55); stroke: rgba(236,200,130,0.9); stroke-width: 1.4; }
+.ach-lozenge path:last-child { fill: none; stroke: rgba(236,200,130,0.35); stroke-width: 0.8; }
+.ach-seal .ach-ico { position: relative; width: 24px; height: 24px; filter: drop-shadow(0 0 4px rgba(255,190,110,0.7)); }
+.ach-toast.in .ach-seal { animation: ach-seal 1.4s cubic-bezier(0.2,0.8,0.2,1) both; }
+@keyframes ach-seal { 0% { transform: scale(0.6) rotate(-45deg); opacity: 0; } 45% { transform: scale(1.08) rotate(0); opacity: 1; filter: drop-shadow(0 0 12px rgba(255,190,110,0.9)); }
+  100% { transform: none; filter: drop-shadow(0 0 3px rgba(255,190,110,0.35)); } }
+.ach-text { display: flex; flex-direction: column; min-width: 0; font-family: 'EB Garamond', Georgia, serif; }
+.ach-text small { font-size: 9.5px; letter-spacing: 0.38em; text-transform: uppercase; color: #b99a62; }
+.ach-text b { margin-top: 2px; font: 600 clamp(15px, 4.4cqw, 18px)/1.1 'Cormorant Garamond', 'EB Garamond', Georgia, serif; letter-spacing: 0.08em; color: #f6e2b0;
+  text-shadow: 0 0 14px rgba(230,150,80,0.35); }
+html.view-wide .ach-text b { font-size: 17px; }
+.ach-text span { margin-top: 3px; font-size: clamp(11px, 3.2cqw, 13px); line-height: 1.35; color: #c9baa0; font-style: italic; }
+html.view-wide .ach-text span { font-size: 12.5px; }
+.ach-sheen { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255,236,190,0.16) 50%, transparent 65%);
+  transform: translateX(-100%); }
+.ach-toast.in .ach-sheen { animation: ach-sheen 1.6s ease-out 0.35s both; }
+@keyframes ach-sheen { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .ach-toast, .ach-toast.in .ach-seal, .ach-toast.in .ach-sheen { animation: none; transition: opacity 0.3s; transform: none; filter: none; }
+}
+
+/* ---------------------------------------------------------------- the Achievements panel */
+.ach-sum { display: flex; align-items: center; gap: 14px; margin: 6px 0 4px; padding: 10px 2px 14px; border-bottom: 1px solid rgba(216,179,106,0.14); }
+.ach-ring { flex: none; width: 58px; height: 58px; }
+.ach-ring circle { fill: none; stroke-width: 3; }
+.ach-ring .bg { stroke: rgba(216,179,106,0.15); }
+.ach-ring .fg { stroke: #d8b36a; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; filter: drop-shadow(0 0 3px rgba(255,200,120,0.6)); }
+.ach-ring text { fill: #f1dfb2; font: 600 13px 'Cormorant Garamond', Georgia, serif; text-anchor: middle; dominant-baseline: central; }
+.ach-sum b { display: block; font: 600 clamp(15px, 4.4cqw, 19px)/1.2 'Cormorant Garamond', 'EB Garamond', Georgia, serif; letter-spacing: 0.1em; color: #ecd6a2; }
+.ach-sum span { display: block; margin-top: 3px; font-style: italic; color: #9f927a; font-size: 0.92em; }
+.ach-group { margin: 16px 0 4px; font: 600 clamp(12px, 3.5cqw, 14px)/1.2 'Cormorant Garamond', 'EB Garamond', Georgia, serif; letter-spacing: 0.26em; text-transform: uppercase; color: #c7a462;
+  display: flex; align-items: center; gap: 10px; }
+.ach-group::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(216,179,106,0.35), transparent); }
+.ach-group small { font: 500 0.78em 'EB Garamond', Georgia, serif; letter-spacing: 0.12em; color: #8d8068; }
+.ach-row { display: flex; align-items: center; gap: 12px; padding: 9px 2px; border-bottom: 1px solid rgba(216,179,106,0.07); }
+.ach-medal { position: relative; flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #6d6252;
+  background: radial-gradient(circle at 50% 38%, rgba(40,30,26,0.9), rgba(10,8,8,0.95)); box-shadow: inset 0 0 0 1px rgba(216,179,106,0.16); }
+.ach-medal .ach-ico { width: 21px; height: 21px; }
+.ach-row.on .ach-medal { color: #f6dfa4; background: radial-gradient(circle at 50% 36%, rgba(150,34,28,0.75), rgba(36,10,10,0.95));
+  box-shadow: inset 0 0 0 1px rgba(236,200,130,0.75), 0 0 14px rgba(200,70,40,0.35); }
+.ach-row.on .ach-medal .ach-ico { filter: drop-shadow(0 0 3px rgba(255,190,110,0.7)); }
+.ach-row:not(.on) .ach-medal::after { content: ''; position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%;
+  background: #120c0b url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3.5 5.5V4a2.5 2.5 0 0 1 5 0v1.5M3 5.5h6v4.5H3z' fill='none' stroke='%23857760' stroke-width='1'/%3E%3C/svg%3E") center / 10px no-repeat;
+  box-shadow: 0 0 0 1px rgba(216,179,106,0.22); }
+.ach-info { flex: 1; min-width: 0; }
+.ach-info b { display: block; font: 600 clamp(14px, 4cqw, 16.5px)/1.2 'Cormorant Garamond', 'EB Garamond', Georgia, serif; letter-spacing: 0.05em; color: #8f8470; }
+.ach-row.on .ach-info b { color: #f1dfb4; }
+.ach-info span { display: block; margin-top: 2px; font-size: 0.9em; line-height: 1.4; color: #7f7563; }
+.ach-row.on .ach-info span { color: #c4b699; }
+.ach-row.secret .ach-info span { font-style: italic; }
+.ach-bar { position: relative; height: 3px; margin-top: 7px; background: rgba(216,179,106,0.12); overflow: hidden; }
+.ach-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8f6d34, #e8c77e); }
+.ach-count { flex: none; min-width: 3.6em; text-align: right; font-size: 0.82em; color: #9f927a; font-variant-numeric: tabular-nums; }
+.ach-row.on .ach-count { color: #cdb483; }
+.ach-when { display: block; font-size: 0.78em; letter-spacing: 0.06em; color: #8c7b5c; font-style: italic; margin-top: 2px; }
+.ach-reset { margin: 22px auto 4px; display: block; }
+.ach-reset.armed { color: #ffb4a0; border-color: rgba(255,140,120,0.5); }
