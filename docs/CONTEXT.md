@@ -36,7 +36,7 @@ respawn card, the opening film and the Remotion trailer) — it is no longer the
 the player's own sketch + the `wideTouch` camera; the first build's Portrait / Landscape choice is gone), the Wavedash SDK (load progress, `init()` once, player identity,
 achievements + stats mirrored from the game's own system, cloud saves `saves/main.json` with conflict safety, platform
 fullscreen) behind one facade — the same `dist/` still runs on itch as a local game. Saves now resume at Blood Sigils.
-**LIVE ON WAVEDASH (2026-10-01): https://wavedash.com/games/echoes-of-caer-veyr** — build #3 (the phone fixes) published,
+**LIVE ON WAVEDASH (2026-10-01): https://wavedash.com/games/echoes-of-caer-veyr** — build #4 (the phone fixes) published,
 store page complete, mobile layout **Wide** (§10 Session 16 → "The Wavedash release", "Phones: landscape only"). Next: §8
 Session 16 (the new touch layout on a real phone, Safari, host fullscreen on a real monitor).
 Session 15 = MAIN MENU LIFE, ACHIEVEMENTS and the LORE EXPERIENCE (§10 Session 15):
@@ -679,7 +679,9 @@ anywhere free turns the camera), the verbs in an arc round its upper-left: ATTAC
 ⌀56 (166, 121) above it · GUARD ⌀52 (113, 166) on top (slide onto Heavy = kick, onto Attack = bash) · JUMP ⌀56 (44, 166)
 above the pad · SHIFT lozenge ⌀50 (44, 231) above Jump; every seal ≥ 9 u clear of the pad and its neighbours (the
 regression checks ≥ 6 u). Stick zone = left 40 % below the top 28 % (floating, radius 0.14 × short side, rim = sprint),
-its home ring ⌀108 at (56, 44) u from the bottom-left. No Dodge, no lock-on (soft combat camera). The contextual button stays between
+its home ring ⌀108 at (56, 44) u from the bottom-left. The whole right hand (pad + arc) sits `--rx` = 34 u further in
+from the right edge (the user's phone test: flush to the edge was hard to reach) — the pad's right edge ≈ 59 px in on an
+852×393 phone. No Dodge, no lock-on (soft combat camera). The contextual button stays between
 the thumbs (30–66 % across, 18–58 % down). Swipe gain is per short side, so one thumb turns the camera the same in both
 modes. HUD: vitals top-left, PRESENT/PAST badge top-right beside the pause seal, boss bar top-centre, subtitles and the
 ability tip in the band between the thumbs, floor title 22 %, prompts 40 %, deed banner top-right under the pause seal.
@@ -1254,6 +1256,9 @@ phone (`wd_public_play.mjs`): Fullscreen → New Game → Minimal → the film s
 gaps. Re-tested: tsc clean, sideways-phone regression 52/52, title at 852×393 / 740×360 / 393×221 (column inside the
 frame, items 14 / 12 / 11 px), the pause card at 0.914, hints at 0.728; the live page as a phone (hints 0.728, bars 0.914,
 LOOK swipe + ATTACK tap working).
+**Build #4** `mn77q1x3tg767yv5m27c69srjx8fety6` (release `rx7f1dyckbmnvsaqyxb61mxqe58ff4r2`, published): the right-hand
+cluster moved 34 u in from the edge (`--rx` in `ui/platform.css`; tune there). Sideways-phone regression 52/52; the live
+page as a phone: pad 59 px from the right edge, LOOK swipe + ATTACK tap working.
 **Not tested:** a real phone (the user's next test), iOS Safari.
 
 ### Session 15 (2026-09-30) — the living title screen, achievements, the narrated lore book

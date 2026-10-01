@@ -95,8 +95,10 @@ html.view-wide.input-touch #hud :is(.channel, .prompt, .message, .deny, .subtitl
    its upper-left: ATTACK low on the left, HEAVY up-left, GUARD on top (slides onto HEAVY = kick, ATTACK = bash), JUMP
    above the pad and the blue SHIFT lozenge above JUMP. The stick's ring sits under the left thumb. Centres (--r, --b)
    from the corner and diameters (--d) in u (1 u ≈ 1 px on a phone ≈400 px tall); every seal clears its neighbours and
-   the pad by ≥9 u. */
-html.view-wide .t-cluster { width: calc(212 * var(--u)); height: calc(262 * var(--u)); }
+   the pad by ≥9 u. The whole right hand sits --rx u in from the edge (the user's phone test: flush to the edge was hard
+   to reach — the thumb's joint, not its tip, rests at the frame's edge). */
+html.view-wide #touch { --rx: 34; }
+html.view-wide .t-cluster { right: calc(var(--sar) + var(--rx) * var(--u)); width: calc(212 * var(--u)); height: calc(262 * var(--u)); }
 html.view-wide .t-light { --d: 62; --r: 173; --b: 47; }
 html.view-wide .t-heavy { --d: 56; --r: 166; --b: 121; }
 html.view-wide .t-guard { --d: 52; --r: 113; --b: 166; }
@@ -104,7 +106,7 @@ html.view-wide .t-jump { --d: 56; --r: 44; --b: 166; }
 html.view-wide .t-shift { --d: 50; --r: 44; --b: 231; }
 html.view-wide .t-btn span { font-size: calc(6.8 * var(--u)); }
 html.view-wide .t-light span { font-size: calc(7.6 * var(--u)); }
-html.view-wide .t-look-hint { right: calc(var(--sar) + 26 * var(--u)); bottom: calc(var(--sab) + 24 * var(--u)); width: calc(112 * var(--u)); height: calc(112 * var(--u));
+html.view-wide .t-look-hint { right: calc(var(--sar) + (26 + var(--rx)) * var(--u)); bottom: calc(var(--sab) + 24 * var(--u)); width: calc(112 * var(--u)); height: calc(112 * var(--u));
   border: 1.5px solid rgba(216,179,106,0.26); background: radial-gradient(circle, rgba(20,16,12,0.04) 40%, rgba(20,16,12,0.3) 100%); }
 html.view-wide .t-look-hint.learned { border-color: rgba(216,179,106,0.16); }
 html.view-wide .t-stick-home { left: calc(var(--sal) + 56 * var(--u)); bottom: calc(var(--sab) + 44 * var(--u)); width: calc(108 * var(--u)); height: calc(108 * var(--u)); }
