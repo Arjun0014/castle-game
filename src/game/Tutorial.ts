@@ -119,7 +119,7 @@ export class Tutorial {
         enter: () => { this.moved = 0; },
       },
       {
-        id: 'look', title: 'LOOK AROUND', kbm: 'Move the mouse to turn the camera.', touch: 'Drag the right side of the screen to turn the camera.',
+        id: 'look', title: 'LOOK AROUND', kbm: 'Move the mouse to turn the camera.', touch: 'Swipe the LOOK circle — or anywhere free on the right — to turn the camera.',
         done: () => this.looked > 1.6, skip: () => !!e1()?.triggered,
         enter: () => { this.looked = 0; },
       },

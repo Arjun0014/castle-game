@@ -105,12 +105,13 @@ function face(b: typeof BUTTONS[number]): string {
 }
 
 /**
- * Landscape (Display: Landscape, session 16) — two thumbs on a phone held sideways. The left thumb owns a floating stick
- * anywhere in the left 40 % below the top 28 %; the right thumb rests on ATTACK in the lower-right corner with HEAVY to
- * its left, GUARD up-left between them (Guard → slide onto Attack = bash, onto Heavy = kick, as in portrait), JUMP above
- * Attack and the rare blue SHIFT lozenge up-left of Jump. Everything else — the whole middle and the upper right — turns
- * the camera; a dashed LOOK ring marks the spot the right thumb reaches first. No Dodge button (as in portrait), no
- * lock-on (the soft combat camera frames fights). Positions: style.css `html.view-wide.input-touch .t-*`.
+ * Landscape (every phone and tablet since the session-16 playtest) — two thumbs on a device held sideways. The left thumb
+ * owns a floating stick anywhere in the left 40 % below the top 28 %; the right thumb rests on the LOOK pad in the
+ * lower-right corner and the verbs arc round its upper-left (the player's own sketch): ATTACK low on the left, HEAVY
+ * up-left, GUARD on top (Guard → slide onto Attack = bash, onto Heavy = kick), JUMP above the pad and the rare blue SHIFT
+ * lozenge above Jump. The pad is only a mark: a swipe anywhere that is not a seal or the stick's zone turns the camera.
+ * No Dodge button (as in portrait), no lock-on (the soft combat camera frames fights). Positions: platform.css
+ * `html.view-wide .t-*`.
  */
 const LANDSCAPE = { stick: { x: 0.4, y: 0.28 }, cta: { x0: 0.3, x1: 0.66, y0: 0.18, y1: 0.58 } };
 const PORTRAIT_STICK = { x: 0.46, y: 0.42 };
@@ -202,7 +203,7 @@ export class TouchControls {
   private layout() {
     this.W = this.root.clientWidth || Platform.width; this.H = this.root.clientHeight || Platform.height;
     const short = Math.min(Platform.width, Platform.height);
-    this.radius = Math.max(46, Math.min(72, short * (Platform.isPortrait ? 0.14 : 0.17)));
+    this.radius = Math.max(46, Math.min(72, short * 0.14));
     this.root.style.setProperty('--tu', String(Math.max(0.82, Math.min(Platform.isPortrait ? 1.3 : 1.45, short / 400))));
   }
 

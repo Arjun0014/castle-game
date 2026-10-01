@@ -40,8 +40,8 @@ export interface CamProfile {
 }
 
 /**
- * 'wide' = keyboard + mouse widescreen (desktop, Wavedash); 'wideTouch' = a phone / tablet held sideways (Display:
- * Landscape): a touch screen is small and the thumbs cover its lower corners, so the camera stands a little farther back
+ * 'wide' = keyboard + mouse widescreen (desktop, Wavedash); 'wideTouch' = a phone / tablet (always held sideways): a touch
+ * screen is small and the thumbs cover its lower corners, so the camera stands a little farther back
  * and higher, nearly centred behind her (the soft combat camera keeps fights framed), with the portrait camera's
  * low-ceiling care; 'portrait' = the jam build's tall frame.
  */
@@ -104,8 +104,8 @@ export class CameraRig {
 
   profileId: CamProfileId | null = null;
   /**
-   * Switch camera profile. `keep` (a view change while playing: a phone turned to landscape in Settings, a desktop window
-   * dragged tall): her yaw stays and the pitch is only clamped into the new range — the boom then eases to its new length.
+   * Switch camera profile. `keep` (a view change while playing: a desktop window dragged tall, a touchscreen laptop
+   * switching input): her yaw stays and the pitch is only clamped into the new range — the boom then eases to its new length.
    */
   setProfile(id: CamProfileId, keep = false) {
     this.profileId = id;

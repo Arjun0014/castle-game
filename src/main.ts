@@ -15,7 +15,6 @@ import { Wave } from './platform/Wavedash';
 import { LocalStore } from './platform/Storage';
 import { CloudSave } from './platform/CloudSave';
 import { WavedashStats } from './platform/WavedashStats';
-import { askDisplay } from './ui/DisplayChoice';
 import { askConflict } from './ui/CloudConflict';
 import { SaveIndicator } from './ui/SaveIndicator';
 import './ui/platform.css';
@@ -231,8 +230,6 @@ game.boot(floorId, (f, label) => { loader.progress(f, label); Wave.progress(0.02
   // ready: Wavedash's loader steps aside (Wavedash.init — once) and the stats sync begins
   Wave.ready();
   stats.start();
-  // a phone or tablet chooses Portrait or Landscape once (Settings → Display changes it)
-  if (Platform.needsDisplayChoice) await askDisplay((k) => game.audio.ui(k));
   if (cloud.conflict) await askConflict(stage, cloud.conflict, (k) => game.audio.ui(k));
   menu = createMenu(continuable(Save.load()));
   setTimeout(() => { loader.hide(); menu?.show(); }, 350);
@@ -388,7 +385,7 @@ pause.onResume = resume;
 pause.onQuit = () => { void toTitle(); };
 game.pauseBack = () => pause.back();
 game.onPause = (on) => { document.documentElement.classList.toggle('paused', on); if (!on) pause.reset(); game.audio.music?.setPaused(on); };
-// a handheld held the wrong way for its display mode pauses behind the rotate card (turning back shows the pause menu)
+// a phone held upright in a frame that does not turn for it pauses behind the turn card (turning it shows the pause menu)
 Platform.onChange(() => {
   if (Platform.rotateBlocked && game.started && !game.paused && !game.finished) game.togglePause(true);
 });

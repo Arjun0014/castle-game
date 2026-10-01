@@ -20,14 +20,13 @@
       <!-- test hook: dev probes click it to start play without the menu (main.ts) -->
       <button id="start-btn" hidden></button>
     </div>
-    <!-- shown by the game only (Platform: a handheld held the wrong way for its Portrait / Landscape choice); hidden here
-         so a page whose styles never arrived cannot show it by mistake -->
+    <!-- shown by the game only (Platform: a phone held upright in a frame that does not turn for it); hidden here so a
+         page whose styles never arrived cannot show it by mistake -->
     <div id="rotate" hidden>
       <div class="rotate-card">
         <div class="rotate-phone"></div>
-        <p class="rotate-msg">Rotate your device to portrait</p>
-        <small class="rotate-sub">You chose to play Caer Veyr upright</small>
-        <button class="rotate-alt" type="button">Play in landscape instead</button>
+        <p class="rotate-msg">Turn your device sideways</p>
+        <small class="rotate-sub">Caer Veyr is played in landscape</small>
       </div>
     </div>
     <!-- before the game's code arrives: a plain line on the dark page; if it never arrives (a broken upload, no

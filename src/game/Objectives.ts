@@ -217,7 +217,7 @@ void main() {
     let title: string | null = null, text = '', btn: Parameters<NonNullable<typeof g.touch>['highlight']>[0] = null;
     if (teach === 'move' && (L.moved < 6 || L.looked < 1) && this.activeT > 4) {
       title = 'MOVE';
-      text = touch ? 'Drag your left thumb to move — push to the edge to sprint. Drag the empty right side to look around.'
+      text = touch ? 'Drag your left thumb to move — push to the edge to sprint. Swipe the LOOK circle, or anywhere free on the right, to look around.'
         : 'WASD to move · mouse to look · hold Shift to sprint · Space to jump';
     } else if (teach === 'combat' && g.enemies.encounters.get('E1')?.triggered) {
       // Minimal guidance: one compact card with the essentials (Guided teaches each in turn: game/Tutorial.ts)

@@ -1,6 +1,6 @@
 /* ==========================================================================================================
-   Session 16 — the Wavedash version: widescreen as the PC game, the phone's Landscape layout, and the platform's
-   pieces (HOW WOULD YOU LIKE TO PLAY?, the "Playing as" chip, the cloud save's marks and its conflict choice).
+   Session 16 — the Wavedash version: widescreen as the PC game, the phone's landscape layout, and the platform's
+   pieces (the "Playing as" chip, the cloud save's marks and its conflict choice).
    Imported last (main.ts), after style.css, menu.css, achievements.css and lore.css.
 
    Widescreen scale: Platform.uiScale → --uiz (1 at 720p, ≈1.41 at 1080p, ≈1.8 at 1440p; a phone held sideways ≈0.9;
@@ -18,10 +18,14 @@ html.view-wide .lb-sub { font-size: calc(17px * var(--uiz, 1)); }
 
 /* the title's column lives in menu.css; the deed banner on the title stays clear of it (top centre) */
 html.view-wide.menu-on .ach-host { left: 0; right: 0; justify-content: center; }
-/* a short widescreen frame (a phone held sideways, a small window): the column keeps the name, the rule and the menu —
-   the crest and the line step out, the gaps close */
-@container (max-height: 540px) {
-  html.view-wide .mm-col { gap: 3.5cqh; padding: calc(var(--sat) + 3cqh) 0 calc(var(--sab) + 4cqh); }
+/* a very short widescreen frame (Wavedash's inline player on a phone held upright, before fullscreen): the column keeps
+   the name, the rule and the menu — the crest and the line step out, the gaps close. A phone held sideways (≥300 px tall)
+   keeps the desktop composition (menu.css). */
+@container (max-height: 300px) {
+  html.view-wide .mm-col { gap: 3.5cqh; padding: calc(var(--sat) + 3cqh) 0 calc(var(--sab) + 4cqh); width: min(100cqh, 52cqw); left: calc(var(--sal) + 3cqw); }
+  html.view-wide .mm-item.mm-sec { font-size: 9px; padding-left: 0.7em; padding-right: 0.7em; }
+  html.view-wide .mm-item.mm-min { font-size: 8px; padding-left: 0.6em; padding-right: 0.6em; }
+  html.view-wide .mm-pair { gap: 4px; }
   html.view-wide .mm-crest, html.view-wide .mm-tag { display: none; }
   html.view-wide .mm-rule { margin: 1.4cqh 0 0; }
   html.view-wide .mm-foot { display: none; }
@@ -56,10 +60,11 @@ html.view-wide.input-touch #hud .state-badge { left: auto; right: calc(var(--sar
 html.view-wide.input-touch #hud .objective { left: calc(var(--sal) + 18px); top: calc(var(--sat) + 60px); max-width: 34%; font-size: 13px; }
 html.view-wide.input-touch #hud .boss { top: calc(var(--sat) + 14px); width: 40%; }
 html.view-wide.input-touch #hud .boss-name { font-size: 11px; letter-spacing: 5px; }
-html.view-wide.input-touch #hud .message { top: 22%; max-width: 46%; font-size: 19px; letter-spacing: 0.2em; }
-html.view-wide.input-touch #hud .subtitle { bottom: calc(var(--sab) + 4%); width: 42%; }
-html.view-wide.input-touch #hud .subtitle span { font-size: 16px; }
-html.view-wide.input-touch #hud .tutorial { top: 14%; width: min(48%, 540px); }
+html.view-wide.input-touch #hud .message { top: 22%; max-width: 46%; font-size: 17px; letter-spacing: 0.2em; }
+html.view-wide.input-touch #hud .subtitle { bottom: calc(var(--sab) + 4%); width: 40%; }
+html.view-wide.input-touch #hud .subtitle span { font-size: 15px; }
+html.view-wide.input-touch #hud .tutorial { top: 12%; width: min(40%, 500px); padding: 6px 14px 8px; }
+html.view-wide.input-touch #hud .tutorial span { font-size: 14px; line-height: 1.4; }
 html.view-wide.input-touch #hud .gift { top: 30%; }
 html.view-wide.input-touch #hud .gift-tip { bottom: calc(var(--sab) + 17%); top: auto; max-width: 40%; }
 html.view-wide.input-touch #hud .prompt { bottom: auto; top: 40%; max-width: 46%; }
@@ -67,65 +72,27 @@ html.view-wide.input-touch #hud .channel { top: 54%; width: 30%; }
 html.view-wide.input-touch #hud .deny { top: 62%; max-width: 50%; }
 /* the deed's banner: top-right under the pause seal, a little smaller, clear of the centred floor title and prompts */
 html.view-wide.input-touch .ach-host, html.view-wide.input-touch.menu-on .ach-host { top: calc(var(--sat) + 56px); right: calc(var(--sar) + 12px); left: auto; justify-content: flex-end; }
-html.view-wide.input-touch .ach-toast { zoom: calc(var(--uiz, 1) * 0.85); width: 320px; }
+html.view-wide.input-touch .ach-toast { zoom: calc(var(--uiz, 1) * 0.78); width: 330px; }
 
-/* the two-thumb layout (TouchControls LANDSCAPE): ATTACK under the resting right thumb, HEAVY to its left, GUARD up-left
-   between them (slides onto either), JUMP above ATTACK, the blue SHIFT lozenge up-left of JUMP; the LOOK ring marks the
-   free middle where the right thumb turns the camera; the stick's ring sits under the left thumb */
-html.view-wide .t-cluster { width: calc(340 * var(--u)); height: calc(320 * var(--u)); }
-html.view-wide .t-light { --d: 98; --r: 84; --b: 90; }
-html.view-wide .t-heavy { --d: 74; --r: 196; --b: 58; }
-html.view-wide .t-guard { --d: 70; --r: 204; --b: 158; }
-html.view-wide .t-jump { --d: 74; --r: 72; --b: 206; }
-html.view-wide .t-shift { --d: 56; --r: 162; --b: 248; }
-html.view-wide .t-look-hint { right: calc(var(--sar) + 292 * var(--u)); bottom: calc(var(--sab) + 40 * var(--u)); width: calc(96 * var(--u)); height: calc(96 * var(--u)); }
-html.view-wide .t-stick-home { left: calc(var(--sal) + 62 * var(--u)); bottom: calc(var(--sab) + 52 * var(--u)); }
+/* the two-thumb layout (TouchControls LANDSCAPE — the playtest sketch): the right thumb rests on the LOOK pad in the
+   lower-right corner (swipe it — or anywhere free on the screen — to turn the camera) and the verbs sit in an arc round
+   its upper-left: ATTACK low on the left, HEAVY up-left, GUARD on top (slides onto HEAVY = kick, ATTACK = bash), JUMP
+   above the pad and the blue SHIFT lozenge above JUMP. The stick's ring sits under the left thumb. Centres (--r, --b)
+   from the corner and diameters (--d) in u (1 u ≈ 1 px on a phone ≈400 px tall); every seal clears its neighbours and
+   the pad by ≥9 u. */
+html.view-wide .t-cluster { width: calc(212 * var(--u)); height: calc(262 * var(--u)); }
+html.view-wide .t-light { --d: 62; --r: 173; --b: 47; }
+html.view-wide .t-heavy { --d: 56; --r: 166; --b: 121; }
+html.view-wide .t-guard { --d: 52; --r: 113; --b: 166; }
+html.view-wide .t-jump { --d: 56; --r: 44; --b: 166; }
+html.view-wide .t-shift { --d: 50; --r: 44; --b: 231; }
+html.view-wide .t-btn span { font-size: calc(6.8 * var(--u)); }
+html.view-wide .t-light span { font-size: calc(7.6 * var(--u)); }
+html.view-wide .t-look-hint { right: calc(var(--sar) + 26 * var(--u)); bottom: calc(var(--sab) + 24 * var(--u)); width: calc(112 * var(--u)); height: calc(112 * var(--u));
+  border: 1.5px solid rgba(216,179,106,0.26); background: radial-gradient(circle, rgba(20,16,12,0.04) 40%, rgba(20,16,12,0.3) 100%); }
+html.view-wide .t-look-hint.learned { border-color: rgba(216,179,106,0.16); }
+html.view-wide .t-stick-home { left: calc(var(--sal) + 56 * var(--u)); bottom: calc(var(--sab) + 44 * var(--u)); width: calc(108 * var(--u)); height: calc(108 * var(--u)); }
 html.view-wide .t-pause { top: calc(var(--sat) + 10px); right: calc(var(--sar) + 14px); }
-
-/* ---------------------------------------------------------------- HOW WOULD YOU LIKE TO PLAY? (ui/DisplayChoice.ts) */
-.dc { position: fixed; inset: 0; z-index: 140; display: flex; align-items: center; justify-content: center; overflow: auto;
-  padding: calc(var(--sat) + 16px) calc(var(--sar) + 16px) calc(var(--sab) + 16px) calc(var(--sal) + 16px);
-  background: radial-gradient(ellipse 75% 60% at 50% 42%, #1d0b0b 0%, #0b0506 58%, #030203 100%);
-  color: var(--parch, #efe4cc); font-family: 'EB Garamond', Georgia, serif; opacity: 0; transition: opacity 0.6s ease; -webkit-user-select: none; user-select: none; }
-.dc.in { opacity: 1; }
-.dc.out { opacity: 0; pointer-events: none; }
-.dc-veil { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 48%, transparent 40%, rgba(0,0,0,0.65) 100%); }
-.dc-card { position: relative; width: 100%; max-width: 660px; display: flex; flex-direction: column; align-items: center; text-align: center; }
-.dc-crest { width: clamp(42px, 11vmin, 72px); aspect-ratio: 1; margin-bottom: 1.6vmin; filter: drop-shadow(0 0 12px rgba(200,60,40,0.35)); }
-.dc-crest .sg-track, .dc-crest .sg-prog { display: none; }
-.dc-title { margin: 0; font: 600 clamp(18px, 5.2vmin, 34px)/1.15 'Cormorant Garamond', 'EB Garamond', Georgia, serif; letter-spacing: 0.2em; margin-right: -0.2em; text-transform: uppercase; text-wrap: balance;
-  color: #e8cf94; background: linear-gradient(180deg, #fbecc4 10%, #d8b36a 58%, #8f6d34 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 18px rgba(220,140,80,0.22)) drop-shadow(0 2px 2px rgba(0,0,0,0.9)); }
-.dc-rule { display: flex; align-items: center; gap: 0.9em; margin: 1.8vmin 0 3vmin; color: var(--gold); font-size: 9px; }
-.dc-rule i { display: block; width: clamp(40px, 14vmin, 110px); height: 1px; background: linear-gradient(90deg, transparent, rgba(216,179,106,0.75)); }
-.dc-rule i:last-child { background: linear-gradient(270deg, transparent, rgba(216,179,106,0.75)); }
-.dc-options { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(10px, 3vmin, 22px); width: 100%; }
-.dc-opt { display: flex; flex-direction: column; align-items: center; gap: 0.55em; padding: clamp(14px, 3.2vmin, 24px) clamp(10px, 2.4vmin, 18px) clamp(14px, 3vmin, 22px);
-  font-family: inherit; color: inherit; cursor: pointer; background: rgba(255,255,255,0.02); border: 1px solid rgba(216,179,106,0.26);
-  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.dc-opt:hover, .dc-opt.focus, .dc-opt:active { border-color: rgba(216,179,106,0.85); background: linear-gradient(180deg, rgba(120,26,26,0.26), rgba(40,10,10,0.3));
-  box-shadow: inset 0 0 0 1px rgba(216,179,106,0.22), 0 0 26px rgba(179,36,42,0.28); }
-.dc-opt b { font: 600 clamp(15px, 4.2vmin, 22px)/1 'Cormorant Garamond', 'EB Garamond', Georgia, serif; letter-spacing: 0.26em; margin-right: -0.26em; text-transform: uppercase; color: #f1dfb2; }
-.dc-line { font-size: clamp(12px, 3.1vmin, 15px); line-height: 1.4; color: #b7a98c; font-style: italic; }
-/* the device, drawn with its layout: the stick under the left thumb, the seals under the right */
-.dc-device { display: grid; place-items: center; height: clamp(68px, 19vmin, 112px); margin-bottom: 0.3em; }
-.dc-screen { position: relative; display: block; border: 2px solid #d8b36a; border-radius: 7px; box-shadow: 0 0 16px rgba(216,150,80,0.18);
-  background: radial-gradient(ellipse at 50% 30%, #2a1410 0%, #120807 70%); }
-.portrait .dc-screen { height: 100%; aspect-ratio: 1 / 2; }
-.landscape .dc-screen { height: 50%; aspect-ratio: 2 / 1; }
-.dc-stick { position: absolute; border-radius: 50%; border: 1.5px dashed rgba(216,179,106,0.7); aspect-ratio: 1; }
-.portrait .dc-stick { left: 10%; bottom: 7%; width: 34%; }
-.landscape .dc-stick { left: 6%; bottom: 12%; width: 17%; }
-.dc-seals { position: absolute; aspect-ratio: 1; }
-.portrait .dc-seals { right: 7%; bottom: 7%; width: 42%; }
-.landscape .dc-seals { right: 4%; bottom: 10%; width: 21%; }
-.dc-seals i { position: absolute; border-radius: 50%; background: radial-gradient(circle at 50% 38%, #8e2a22, #2a0907); box-shadow: 0 0 0 1.5px rgba(236,206,142,0.85); }
-.dc-seals i:nth-child(1) { right: 6%; bottom: 6%; width: 46%; height: 46%; }
-.dc-seals i:nth-child(2) { left: 0; bottom: 4%; width: 30%; height: 30%; }
-.dc-seals i:nth-child(3) { right: 12%; top: 0; width: 30%; height: 30%; }
-.dc-opt:hover .dc-screen, .dc-opt.focus .dc-screen { box-shadow: 0 0 22px rgba(255,190,110,0.45); }
-.dc-note { margin: 3vmin 0 0; font-size: clamp(11px, 2.9vmin, 14px); color: #8f8168; font-style: italic; letter-spacing: 0.04em; }
-@media (max-width: 330px) { .dc-options { grid-template-columns: 1fr; } }
 
 /* ---------------------------------------------------------------- "Playing as" (the title, on Wavedash) */
 .mm-id { position: absolute; top: calc(var(--sat) + 3.2cqh); right: calc(var(--sar) + 2.6cqw); display: flex; align-items: center; gap: 10px; text-align: left;
@@ -157,16 +124,10 @@ html.view-portrait .mm-id-av b { font-size: 15px; }
 html.view-portrait .mm-id-text > b { font-size: 14px; max-width: 11em; }
 html.view-portrait .mm-id-cloud { font-size: 10.5px; }
 @container (max-height: 540px) { html.view-wide .mm-id { top: calc(var(--sat) + 10px); } }
+@container (max-height: 300px) { html.view-wide .mm-id > * { zoom: calc(var(--uiz, 1) * 0.8); } }
 
-/* ---------------------------------------------------------------- Settings: Display, Fullscreen, the cloud line */
+/* ---------------------------------------------------------------- Settings: Fullscreen, the cloud line */
 .mm-h4.mm-h4-first { margin-top: 4px; }
-.mm-seg-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0.6em 0; border-bottom: 1px solid rgba(216,179,106,0.08); }
-.mm-seg-row > span { color: #cdbf9f; }
-.mm-seg { display: inline-flex; flex: none; border: 1px solid rgba(216,179,106,0.3); }
-.mm-seg button { font: 500 0.82em/1 'EB Garamond', Georgia, serif; letter-spacing: 0.18em; text-transform: uppercase; color: #9d8f74; background: none; border: 0;
-  padding: 0.75em 1em 0.7em 1.15em; cursor: pointer; touch-action: manipulation; }
-.mm-seg button + button { border-left: 1px solid rgba(216,179,106,0.2); }
-.mm-seg button.on { color: #1d0f08; background: linear-gradient(180deg, #f1dca6, #c9a257); }
 .mm-cloud-line { margin: 14px 0 0; font-style: italic; font-size: 0.88em; color: #8f8168; }
 .mm-cloud-line:empty { display: none; }
 .mm-cloud-line.offline, .mm-cloud-line.conflict { color: #e2a476; }

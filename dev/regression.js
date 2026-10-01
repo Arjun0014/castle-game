@@ -122,13 +122,33 @@ function touchLayout() {
   const guard = R(btn('block')), attack = R(btn('light')), heavy = R(btn('heavy'));
   const c = (r) => [r.left + r.width / 2, r.top + r.height / 2];
   if (wide) {
-    // Attack under the resting right thumb (lower-right corner), Heavy left of it, Guard up-left between them within a
-    // thumb's slide of both (bash / kick)
-    const [ax, ay] = c(attack), [hx, hy] = c(heavy), [gx, gy] = c(guard);
+    // the playtest sketch: the LOOK pad in the lower-right corner under the resting right thumb, the verbs in an arc round
+    // its upper-left — Attack low on the left, Heavy above it, Guard on top, Jump above the pad, Shift above Jump — every
+    // seal clear of the pad and of each other (≥ 6 u of air), Guard within a slide of Heavy
+    const pad = R(root.querySelector('.t-look-hint')), jump = R(btn('jump')), shift = R(btn('shift'));
+    const [px, py] = c(pad), [ax, ay] = c(attack), [hx, hy] = c(heavy), [gx, gy] = c(guard), [jx, jy] = c(jump), [sx, sy] = c(shift);
     const u = Math.min(stage.width, stage.height) / 400;
-    check('Touch (landscape): right thumb cluster (Attack lower-right, Heavy left, Guard up-left within a slide)',
-      attack.right > stage.right - stage.width * 0.1 && attack.bottom > stage.bottom - stage.height * 0.2 && hx < ax && gx < ax && gy < hy && Math.hypot(gx - ax, gy - ay) < 160 * u && Math.hypot(gx - hx, gy - hy) < 130 * u,
-      { attack: c(attack).map(Math.round), heavy: c(heavy).map(Math.round), guard: c(guard).map(Math.round) });
+    check('Touch (landscape): LOOK pad in the lower-right corner', pad.right > stage.right - stage.width * 0.08 && pad.bottom > stage.bottom - stage.height * 0.12 && pad.width > attack.width * 1.5,
+      { pad: [Math.round(pad.left), Math.round(pad.top), Math.round(pad.width)] });
+    check('Touch (landscape): the arc (Attack left-low, Heavy above it, Guard on top, Jump over the pad, Shift over Jump)',
+      ax < px && ay > py - pad.height * 0.2 && hy < ay && hx < px && gy < hy && gx > hx && jy < py && Math.abs(jx - px) < pad.width * 0.5 && sy < jy && Math.abs(sx - jx) < 12 * u && Math.hypot(gx - hx, gy - hy) < 110 * u,
+      { pad: [px, py].map(Math.round), attack: [ax, ay].map(Math.round), heavy: [hx, hy].map(Math.round), guard: [gx, gy].map(Math.round), jump: [jx, jy].map(Math.round), shift: [sx, sy].map(Math.round) });
+    const seals = want.map((a) => [a, R(btn(a))]);
+    const air = (a, b) => Math.hypot(c(a)[0] - c(b)[0], c(a)[1] - c(b)[1]) - a.width / 2 - b.width / 2;
+    let tight = [];
+    for (const [a, r] of seals) { if (air(r, pad) < 6 * u) tight.push(a + '~pad'); }
+    for (let i = 0; i < seals.length; i++) for (let j = i + 1; j < seals.length; j++) if (air(seals[i][1], seals[j][1]) < 6 * u) tight.push(seals[i][0] + '~' + seals[j][0]);
+    check('Touch (landscape): every seal clear of the pad and its neighbours', tight.length === 0, { tight });
+    // a swipe that starts on the pad turns the camera (the pad is only a mark: the stage's look role takes it)
+    const t = g.touch, lb = g.input.virtualLook;
+    if (t) {
+      const ev = (type, x, y) => root.dispatchEvent(new PointerEvent(type, { pointerId: 77, pointerType: 'touch', clientX: x, clientY: y, bubbles: true, cancelable: true, isPrimary: false }));
+      const target = document.elementFromPoint(px, py);
+      const x0 = lb.dx;
+      ev('pointerdown', px, py); ev('pointermove', px + 30 * u, py); ev('pointermove', px + 60 * u, py - 6 * u); ev('pointerup', px + 60 * u, py - 6 * u);
+      t.flushLook(0.2); t.flushLook(0.2);
+      check('Touch (landscape): a swipe on the LOOK pad turns the camera', !target?.closest('.t-btn') && lb.dx - x0 > 0.01, { target: target?.className || target?.id, dx: +(lb.dx - x0).toFixed(3) });
+    }
   } else {
     check('Touch: right thumb cluster (Attack on the right edge, Guard lower-left of it)', attack.right > stage.right - stage.width * 0.1 && guard.bottom > attack.bottom && guard.left < attack.left, { attack: [Math.round(attack.left), Math.round(attack.top)], guard: [Math.round(guard.left), Math.round(guard.top)] });
   }

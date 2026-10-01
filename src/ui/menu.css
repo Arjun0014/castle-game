@@ -143,7 +143,7 @@ html.menu-on #hud, html.menu-on #touch { visibility: hidden; }
 .mm-item.mm-sec > span { margin-right: -0.24em; }
 .mm-sec .mm-dev { flex: none; width: 1.3em; height: 1.3em; color: #c9a768; opacity: 0.75; transition: color 0.25s, opacity 0.25s, filter 0.25s; }
 .mm-sec.focus .mm-dev { color: #ffe3a6; opacity: 1; filter: drop-shadow(0 0 5px rgba(255,180,100,0.75)); }
-.mm-item.mm-sec small.mm-tally { display: inline; margin: 0 0 0 0.15em; font: italic 400 0.72em/1 'EB Garamond', Georgia, serif; letter-spacing: 0.04em; color: #a8946c; }
+.mm-item.mm-sec small.mm-tally { display: inline; white-space: nowrap; margin: 0 0 0 0.15em; font: italic 400 0.72em/1 'EB Garamond', Georgia, serif; letter-spacing: 0.04em; color: #a8946c; }
 .mm-item.mm-sec::before, .mm-item.mm-sec::after, .mm-item.mm-min::before, .mm-item.mm-min::after { display: none; }
 .mm-item.mm-sec.focus { letter-spacing: 0.26em; }
 .mm-minor { display: flex; justify-content: center; align-items: center; margin-top: 0.2cqh; }
@@ -161,7 +161,9 @@ html.input-touch .mm-keys { display: none; }
    centred over the name, ECHOES OF between two hairlines, CAER VEYR, the rule and the line, then the menu under it (the way
    in, the book and the deeds, the quiet row); the group sits balanced in the height of the frame. The castle and the
    heroine fill the right. The column and the type are sized against the frame's HEIGHT (so 16:9, 16:10 and 21:9 of one
-   height read the same), and never wider than ~half the frame (4:3 keeps the name inside its column). */
+   height read the same), and never wider than ~half the frame (4:3 keeps the name inside its column). A phone held
+   sideways (≈360-430 px tall) gets the same composition scaled down — the floors below only keep the menu's words
+   readable and tappable there; platform.css closes it up for frames under 300 px. */
 .mm-col { display: contents; }
 html.view-wide .mm-shade { background: linear-gradient(90deg, rgba(4,2,2,0.9) 0%, rgba(4,2,2,0.7) 28%, rgba(4,2,2,0.25) 48%, rgba(4,2,2,0.04) 64%, rgba(4,2,2,0.3) 100%),
   linear-gradient(180deg, rgba(4,2,2,0.5) 0%, transparent 25%, transparent 70%, rgba(4,2,2,0.7) 100%); }
@@ -170,20 +172,20 @@ html.view-wide .mm-col { position: absolute; left: calc(var(--sal) + 5cqw); top:
 html.view-wide .mm-col > * { pointer-events: auto; }
 html.view-wide .mm-head { position: relative; left: auto; right: auto; top: auto; width: 100%; }
 html.view-wide .mm-head::before { top: 46%; width: 118%; height: 92%; }
-html.view-wide .mm-crest { width: clamp(40px, 7.8cqh, 118px); margin-bottom: 2cqh; }
-html.view-wide .mm-t-over { gap: 0.8em; margin-bottom: 1.1cqh; font-size: clamp(10px, 2.15cqh, 31px); }
-html.view-wide .mm-t-over i { width: clamp(22px, 6.5cqh, 96px); }
-html.view-wide .mm-t-main { font-size: clamp(40px, min(11.2cqh, 6.1cqw), 176px); }
-html.view-wide .mm-rule { margin: 2.6cqh 0 1.8cqh; font-size: clamp(8px, 1.15cqh, 15px); }
-html.view-wide .mm-rule i { width: clamp(40px, 12cqh, 170px); }
-html.view-wide .mm-tag { padding: 0; font-size: clamp(12px, 2.05cqh, 29px); }
+html.view-wide .mm-crest { width: clamp(24px, 7.8cqh, 118px); margin-bottom: 2cqh; }
+html.view-wide .mm-t-over { gap: 0.8em; margin-bottom: 1.1cqh; font-size: clamp(7.5px, 2.15cqh, 31px); }
+html.view-wide .mm-t-over i { width: clamp(16px, 6.5cqh, 96px); }
+html.view-wide .mm-t-main { font-size: clamp(22px, min(11.2cqh, 6.1cqw), 176px); }
+html.view-wide .mm-rule { margin: 2.6cqh 0 1.8cqh; font-size: clamp(6px, 1.15cqh, 15px); }
+html.view-wide .mm-rule i { width: clamp(30px, 12cqh, 170px); }
+html.view-wide .mm-tag { padding: 0; font-size: clamp(8.5px, 2.05cqh, 29px); }
 html.view-wide .mm-list { position: relative; left: auto; right: auto; bottom: auto; width: 100%; }
-html.view-wide .mm-item { font-size: clamp(14px, 2.5cqh, 36px); padding: 0.5em 2.1em; }
+html.view-wide .mm-item { font-size: clamp(12px, 2.5cqh, 36px); padding: 0.5em 2.1em; }
 html.view-wide .mm-item small { margin-top: 0.5em; }
 html.view-wide .mm-pair { gap: clamp(6px, 3cqh, 44px); margin-top: 1.2cqh; }
-html.view-wide .mm-item.mm-sec { font-size: clamp(12px, 1.95cqh, 28px); padding: 0.75em 0.9em; }
+html.view-wide .mm-item.mm-sec { font-size: clamp(10.5px, 1.95cqh, 28px); padding: 0.75em 0.9em; }
 html.view-wide .mm-minor { margin-top: 0.4cqh; gap: clamp(2px, 0.6cqh, 10px); }
-html.view-wide .mm-item.mm-min { font-size: clamp(10.5px, 1.6cqh, 23px); padding: 0.8em 0.95em; }
+html.view-wide .mm-item.mm-min { font-size: clamp(9.5px, 1.6cqh, 23px); padding: 0.8em 0.95em; }
 html.view-wide .mm-foot { left: calc(var(--sal) + 5cqw); right: auto; width: min(80cqh, 46cqw); text-align: center; bottom: calc(var(--sab) + 3.4cqh);
   font-size: clamp(9.5px, 1.4cqh, 17px); }
 

@@ -1,4 +1,4 @@
-import { Platform, type DisplayPref } from '../platform/Platform';
+import { Platform } from '../platform/Platform';
 import { CREDITS } from '../data/credits';
 import type { Settings, SettingsData } from '../game/Settings';
 import { saveLabel, type Guidance, type SaveData } from '../game/Save';
@@ -24,7 +24,7 @@ import '@fontsource/cormorant-garamond/latin-700.css';
  *
  * Session 16 (Wavedash): Continue names the floor AND the Blood Sigil and can change under the title (a newer cloud copy
  * arrives: setSave); a quiet "Playing as" chip shows the Wavedash player (name + avatar, nothing outside Wavedash) with
- * the cloud save's state; Settings gains Display (a phone's Portrait / Landscape), Fullscreen and the cloud line.
+ * the cloud save's state; Settings gains Display (Fullscreen) and the cloud line.
  */
 export type UiSound = 'move' | 'select' | 'back';
 
@@ -97,14 +97,11 @@ export function wireTabs(root: HTMLElement) {
 }
 
 /**
- * Display (session 16): a phone or tablet chooses Portrait or Landscape (the layout follows at once; picking Landscape is
- * a tap, so fullscreen and the orientation lock are asked for in it); Fullscreen wherever the page can ask for it — on
- * Wavedash through the platform (its overlay stays on top), elsewhere the browser's own.
+ * Display (session 16): Fullscreen wherever the page can ask for it — on Wavedash through the platform (its overlay stays
+ * on top), elsewhere the browser's own. (Phones play landscape only: there is no Portrait / Landscape choice.)
  */
 function displayHTML() {
   const rows: string[] = [];
-  if (Platform.handheld) rows.push(`<div class="mm-seg-row" data-key="display"><span>Display mode</span>
-    <div class="mm-seg" role="radiogroup"><button type="button" data-v="portrait">Portrait</button><button type="button" data-v="landscape">Landscape</button></div></div>`);
   if (Platform.canFullscreen) rows.push('<div class="mm-toggle" data-key="fullscreen" role="switch" tabindex="-1"><span>Fullscreen</span><b></b></div>');
   return rows.length ? `<h4 class="mm-h4 mm-h4-first">Display</h4>${rows.join('')}<h4 class="mm-h4">Sound &amp; camera</h4>` : '';
 }
@@ -129,25 +126,12 @@ export function settingsHTML() {
 
 export function wireSettings(root: HTMLElement, settings: Settings, sound: (k: UiSound) => void, cloud?: CloudSave) {
   const paintPlatform = () => {
-    const seg = root.querySelector<HTMLElement>('.mm-seg-row[data-key="display"]');
-    if (seg) {
-      const cur: DisplayPref = Platform.displayPref ?? (Platform.isPortrait ? 'portrait' : 'landscape');
-      seg.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.classList.toggle('on', b.dataset.v === cur));
-    }
     const fs = root.querySelector<HTMLElement>('.mm-toggle[data-key="fullscreen"]');
     if (fs) { const on = Platform.isFullscreen(); fs.classList.toggle('on', on); fs.querySelector('b')!.textContent = on ? 'On' : 'Off'; }
     const line = root.querySelector<HTMLElement>('.mm-cloud-line');
     const w = cloudWords(cloud);
     if (line) { line.textContent = w ? w.text : ''; line.className = 'mm-cloud-line' + (w ? ' ' + w.cls : ''); }
   };
-  root.querySelectorAll<HTMLButtonElement>('.mm-seg-row[data-key="display"] button').forEach((b) => b.addEventListener('click', () => {
-    const p = b.dataset.v as DisplayPref;
-    Platform.setDisplayPref(p);
-    // a tap: ask for fullscreen + the orientation now (optional; the rotate card covers a refusal)
-    void Platform.enterImmersive();
-    sound('select');
-    paintPlatform();
-  }));
   root.querySelector('.mm-toggle[data-key="fullscreen"]')?.addEventListener('click', () => {
     sound('select');
     void Platform.setFullscreen(!Platform.isFullscreen()).then(() => setTimeout(paintPlatform, 120));

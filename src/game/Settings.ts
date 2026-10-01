@@ -10,8 +10,6 @@ import { LocalStore } from '../platform/Storage';
  *   subtitles                       the heroine's lines on screen (the opening film keeps its own subtitles)
  *   look                            camera sensitivity (mouse and touch swipes)
  *   shake                           camera shake / punch strength
- *
- * The phone's Portrait / Landscape choice lives with the platform (Platform.displayPref) but shows in the same panel.
  */
 export interface SettingsData {
   master: number;

@@ -1,6 +1,5 @@
 import { Wave } from './Wavedash';
 import { LocalStore, deviceId } from './Storage';
-import { Platform, type DisplayPref } from './Platform';
 import { Save, validateSave, saveRank, saveStamp, type SaveData } from '../game/Save';
 import type { Achievements } from '../game/Achievements';
 import type { Settings, SettingsData } from '../game/Settings';
@@ -15,7 +14,8 @@ import { LOOK_KEY } from '../ui/TouchControls';
  * The file (a "bundle", format below) carries everything a player would miss on another device: the Continue point
  * (game/Save.ts v2: floor, Blood Sigil, what that floor remembers, guidance, lessons learned, bestiary, deaths, play
  * time, finished), the achievement store (deeds, counters, memory traces, chronicle pages — merged, never replaced), the
- * settings, the phone's Portrait / Landscape choice and the touch HUD's learned LOOK hint. Achievements additionally live
+ * settings and the touch HUD's learned LOOK hint (a bundle from the build that still had a Portrait / Landscape choice
+ * carries a `display` preference too: it is ignored). Achievements additionally live
  * in Wavedash's own achievement system (platform/WavedashStats.ts).
  *
  * NEVER BLINDLY OVERWRITE. Each copy of the progress carries a stamp (savedAt + device). This browser remembers the
@@ -44,8 +44,6 @@ const ASIDE_KEY = 'caer-veyr-save:set-aside';
 export interface CloudPrefs {
   settings: Partial<SettingsData>;
   settingsAt: number;
-  display: DisplayPref | null;
-  displayAt: number;
   lookLearned: boolean;
 }
 export interface CloudBundle {
@@ -82,7 +80,7 @@ export function validateBundle(raw: unknown): CloudBundle | null {
     progress: validateSave(b.progress), achievements: b.achievements ?? null,
     prefs: {
       settings: (p.settings && typeof p.settings === 'object') ? p.settings : {}, settingsAt: Number(p.settingsAt) || 0,
-      display: p.display === 'portrait' || p.display === 'landscape' ? p.display : null, displayAt: Number(p.displayAt) || 0, lookLearned: !!p.lookLearned,
+      lookLearned: !!p.lookLearned,
     },
   };
 }
@@ -184,7 +182,6 @@ export class CloudSave {
     Save.onWrite((_d, why) => { this.dirty = true; void this.upload(why); });
     this.o.achievements.listen(() => { this.dirty = true; this.later(); });
     this.o.settings.onChange(() => { if (this.o.settings.updatedAt > this.lastSync) { this.dirty = true; this.later(); } });
-    Platform.onDisplayPref(() => { this.dirty = true; this.later(); });
     Wave.onConnection((on) => { if (on && (this.meta.pending || this.status === 'offline')) void this.upload('reconnect'); });
     window.addEventListener('online', () => { if (this.meta.pending) void this.upload('reconnect'); });
     // no event came (the backend never dropped, only storage failed): try again now and then while something waits
@@ -267,7 +264,7 @@ export class CloudSave {
     return {
       format: CLOUD_FORMAT, version: CLOUD_VERSION, savedAt: Date.now(), device: deviceId(),
       progress, achievements: this.o.achievements.data,
-      prefs: { settings: { ...s.data }, settingsAt: s.updatedAt, display: Platform.displayPref, displayAt: Platform.displayAt, lookLearned: LocalStore.get(LOOK_KEY) === '1' },
+      prefs: { settings: { ...s.data }, settingsAt: s.updatedAt, lookLearned: LocalStore.get(LOOK_KEY) === '1' },
     };
   }
 
@@ -275,16 +272,15 @@ export class CloudSave {
   private differs(b: CloudBundle) {
     const me = this.compose(b.progress);
     return JSON.stringify(me.achievements) !== JSON.stringify(b.achievements) || me.prefs.settingsAt !== b.prefs.settingsAt
-      || me.prefs.display !== b.prefs.display || me.prefs.lookLearned !== b.prefs.lookLearned;
+      || me.prefs.lookLearned !== b.prefs.lookLearned;
   }
 
-  /** what every copy shares: deeds and counts merged; the newer settings and display choice taken */
+  /** what every copy shares: deeds and counts merged; the newer settings taken */
   private adoptShared(b: CloudBundle | null) {
     if (!b) return;
     if (b.achievements) this.o.achievements.merge(b.achievements);
     const p = b.prefs, s = this.o.settings;
     if (p.settingsAt > s.updatedAt) { s.restore(p.settings, p.settingsAt); this.note('settings from the cloud'); }
-    if (p.display && p.displayAt > Platform.displayAt && Platform.handheld) Platform.setDisplayPref(p.display, true, p.displayAt);
     if (p.lookLearned) LocalStore.set(LOOK_KEY, '1');
   }
 

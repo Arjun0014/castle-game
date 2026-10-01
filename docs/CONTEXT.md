@@ -32,12 +32,13 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 ending card). "The castle remembers" stays the world's creed and a recurring phrase (dialogue, loading labels, the
 respawn card, the opening film and the Remotion trailer) — it is no longer the game's name.
 **Current implementation priority:** session 16 = THE WAVEDASH VERSION (§10 Session 16): widescreen is the desktop default
-(HUD + menus scale with the frame, ultrawide capped), phones choose PORTRAIT or LANDSCAPE (a new two-thumb landscape touch
-layout + camera; Settings → Display; no reload), the Wavedash SDK (load progress, `init()` once, player identity,
+(HUD + menus scale with the frame, ultrawide capped), phones and tablets play LANDSCAPE only (the two-thumb touch layout from
+the player's own sketch + the `wideTouch` camera; the first build's Portrait / Landscape choice is gone), the Wavedash SDK (load progress, `init()` once, player identity,
 achievements + stats mirrored from the game's own system, cloud saves `saves/main.json` with conflict safety, platform
 fullscreen) behind one facade — the same `dist/` still runs on itch as a local game. Saves now resume at Blood Sigils.
-**LIVE ON WAVEDASH (2026-10-01): https://wavedash.com/games/echoes-of-caer-veyr** — build #1 published, store page complete
-(§10 Session 16 → "The Wavedash release"). Next: §8 Session 16 (a real phone, Safari, host fullscreen on a real monitor).
+**LIVE ON WAVEDASH (2026-10-01): https://wavedash.com/games/echoes-of-caer-veyr** — build #2 (the phone fixes) published,
+store page complete, mobile layout **Wide** (§10 Session 16 → "The Wavedash release", "Phones: landscape only"). Next: §8
+Session 16 (the new touch layout on a real phone, Safari, host fullscreen on a real monitor).
 Session 15 = MAIN MENU LIFE, ACHIEVEMENTS and the LORE EXPERIENCE (§10 Session 15):
 the title heroine turned toward the player with a menu-idle director (the new Mixamo clips + unused Great Sword idles,
 a procedural glance), 26 achievements (toasts in play, a panel, localStorage), and the narrated 12-page chronicle
@@ -159,15 +160,15 @@ Actual animation files must be inspected before final mapping.
   - view: `wide` or `portrait`, re-evaluated on every resize, switchable while the game runs (never a reload).
     **Desktop: `wide` by default** (Wavedash, any landscape window, 16:9 / 16:10 / 21:9); a desktop window or embed
     clearly taller than wide (w/h < 0.8; back to wide above 0.9) gets the jam's portrait layout — itch's 720×1280 frame
-    is unchanged. **Phone / tablet: the player's choice** — PORTRAIT or LANDSCAPE, asked once (the HOW WOULD YOU LIKE TO
-    PLAY? card), kept locally and in the cloud save, Settings → Display changes it; before the choice the layout follows
-    how the device is held. `?view=wide|portrait` pins it for tests.
+    is unchanged. **Phone / tablet: always `wide`** (landscape only since the user's phone test; there is no choice and no
+    Settings → Display mode any more). On Wavedash the "Wide" mobile layout turns its own frame for a phone held upright,
+    so the game always gets a landscape frame there. `?view=wide|portrait` pins it for tests.
   - input: `kbm` or `touch`, from real device capability (coarse primary pointer + touch points = handheld → touch),
     then from what the player actually uses (a touch `pointerdown` → touch HUD; a gameplay key or a real mouse press/move
     → keyboard/mouse). Never from the aspect ratio. `?input=touch|kbm` pins it for tests.
 - Camera profiles (`CameraRig.CAM_PROFILES`): `wide` (desktop), `wideTouch` (a handheld held sideways), `portrait`.
-- A handheld held the wrong way for its chosen mode gets the rotate card ("Rotate your device to portrait / landscape",
-  a one-tap "Play in … instead"; the game pauses). Desktops never see it; nor does a handheld that has not chosen yet.
+- A handheld held upright in a frame that does NOT turn for it (itch, the bare page) gets the turn card ("Turn your device
+  sideways · Caer Veyr is played in landscape"; the game pauses). Desktops and Wavedash's turned frame never show it.
 - Automated runs stay silent (`?mute`, `?autopilot`, `?bench`, webdriver); normal play has full audio + ambience.
 - ElevenLabs stays build-time only (`.env` is git-ignored; nothing VITE_-prefixed).
 
@@ -499,7 +500,7 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **itch ZIP audit (s15)** | DONE, VERIFIED | `tools/audit_itch.py` runs in `npm run package:itch`; extracted ZIP played at 720×1280 under an itch-style sub-path |
 | **Enemy audit (s10)** | DONE, VERIFIED (`dev/auditProbe.js`, all floors) | 4 blind perched archers relocated at load (`checkPerches`), perched archers no longer slide down ramps, bats' swoop counter leak fixed, blind flyer spawns moved (`checkFlyers`), F3 respawn crash fixed; slot rotation fair in every big fight |
 | **Widescreen desktop default (s16)** | DONE, VERIFIED (Chromium 153 + Firefox 155, 1366×768 / 1920×1080 / 2560×1440 / 3440×1440) | `Platform.ts` view logic + `--uiz`, `ui/platform.css` (zoomed HUD widgets / panels / toasts / chapter card, height-based title), `CameraRig` `maxHFov` (21:9 → 100° across, no stretch), threat chevrons in every layout |
-| **Phone Portrait / Landscape (s16)** | DONE, VERIFIED (emulated phones 393×852 ↔ 852×393, tablet 1180×820) | `ui/DisplayChoice.ts`, Settings → Display, rotate card both ways, `wideTouch` camera, landscape two-thumb layout; multitouch (stick + camera, camera + attack); switching without a reload. **No real phone yet** |
+| **Phones: landscape only (s16, after the phone test)** | DONE, VERIFIED (emulated 852×393, 740×360, the 393×221 inline frame; the live Wavedash page as a phone, upright and sideways) | The Portrait / Landscape choice removed (`ui/DisplayChoice.ts` deleted, no Settings → Display mode), the turn card for an upright phone outside Wavedash, the sketch's touch layout (LOOK pad + arc), smaller phone text, the PC title composition on phones. **The new layout not yet on a real phone** |
 | **Wavedash SDK (s16)** | DONE, VERIFIED against `dev/wavedashMock.js` only | `platform/Wavedash.ts` (facade), `WavedashStats.ts`, `CloudSave.ts`, `data/wavedash.ts`; `wavedash.toml`. **`wavedash dev` NOT run (the CLI is not signed in; no game ID)** |
 | **Sigil saves (s16)** | DONE, VERIFIED (mock + local) | `game/Save.ts` v2 (checkpoint), `Game.captureCheckpoint / resumeAt`, `Checkpoints.capture / restore`, `EnemyManager.restoreCleared`, `Tutorial.resumeFrom` |
 
@@ -671,13 +672,14 @@ filling over the 0.28 s hold threshold once their hold move is unlocked, solid w
 over 5 s) / the Crownbreaker charges; a gold "HOLD" tag + breathing rim while its unlock tip is pending. Guard +
 Attack = bash (second finger or slide), Guard + Heavy = kick; auto-crouch; interact card at 372 u; pause top-right.
 
-**Touch, LANDSCAPE (session 16; `html.view-wide.input-touch`, `ui/platform.css` + `TouchControls.LANDSCAPE`)** — u = the
-stage's SHORT side / 400 (≈ 0.98 on an 852×393 phone, capped 1.45 on tablets), positions (r, b) from the bottom-right:
-ATTACK ⌀98 (84, 90) under the resting right thumb · HEAVY ⌀74 (196, 58) to its left · GUARD ⌀70 (204, 158) up-left
-between them (slide onto Attack = bash, onto Heavy = kick, as in portrait) · JUMP ⌀74 (72, 206) above Attack · SHIFT
-lozenge ⌀56 (162, 248) up-left of Jump. Stick zone = left 40 % below the top 28 % (floating, rim = sprint), its home ring
-at (62, 52) u from the bottom-left; everything else turns the camera (the middle band is verified button-free), the LOOK
-ring at (292, 40) u from the bottom-right. No Dodge, no lock-on (soft combat camera). The contextual button stays between
+**Touch, LANDSCAPE (session 16, re-laid after the user's phone test from their sketch; `html.view-wide`, `ui/platform.css`
++ `TouchControls.LANDSCAPE`)** — u = the stage's SHORT side / 400 (≈ 0.98 on an 852×393 phone, capped 1.45 on tablets),
+centres (r, b) from the bottom-right: the LOOK pad ⌀112 (82, 80) under the resting right thumb (a mark only — a swipe
+anywhere free turns the camera), the verbs in an arc round its upper-left: ATTACK ⌀62 (173, 47) low on the left · HEAVY
+⌀56 (166, 121) above it · GUARD ⌀52 (113, 166) on top (slide onto Heavy = kick, onto Attack = bash) · JUMP ⌀56 (44, 166)
+above the pad · SHIFT lozenge ⌀50 (44, 231) above Jump; every seal ≥ 9 u clear of the pad and its neighbours (the
+regression checks ≥ 6 u). Stick zone = left 40 % below the top 28 % (floating, radius 0.14 × short side, rim = sprint),
+its home ring ⌀108 at (56, 44) u from the bottom-left. No Dodge, no lock-on (soft combat camera). The contextual button stays between
 the thumbs (30–66 % across, 18–58 % down). Swipe gain is per short side, so one thumb turns the camera the same in both
 modes. HUD: vitals top-left, PRESENT/PAST badge top-right beside the pause seal, boss bar top-centre, subtitles and the
 ability tip in the band between the thumbs, floor title 22 %, prompts 40 %, deed banner top-right under the pause seal.
@@ -788,8 +790,9 @@ A parry staggers the attacker and grants +12 resonance.
 3. **Still open on the uploaded build**: fullscreen through the host (Settings → Fullscreen and the Wavedash button), Esc /
    leaving fullscreen pausing the game once, the overlay on top, 1920×1080 and 2560×1440 on real monitors, Safari (Ogg Opus
    audio — the docs warn Safari lacks OGG; WebKit was not tested here).
-4. **A real phone**: the HOW WOULD YOU LIKE TO PLAY? card, landscape thumbs (reach of GUARD / SHIFT, the LOOK ring's place),
-   camera feel (`wideTouch` in `CameraRig`), orientation lock / the rotate card inside Wavedash's frame, notch safe areas.
+4. **A real phone** (the user's own test found the first build's problems — now fixed, see §10 "Phones: landscape only"):
+   the sketch layout under real thumbs (reach of GUARD / SHIFT from the LOOK pad, the 6-10 u gaps), the smaller words
+   (uiScale 0.73 at 393 px tall — legible?), camera feel (`wideTouch`), Wavedash's turned frame while held upright, notches.
 
 **Session 15 follow-ups — need the user's real phone / ears:**
 1. **The narration by ear** (the first thing to hear): the clone vs the original "Cthulu female" timbre, the whispers under
@@ -1063,6 +1066,7 @@ package itself (`@wvdsh/sdk-js` 1.3.54: its `StatsManager` and `FileSystemManage
   behind the pause card (`html.paused`).
 
 **2. Phones: PORTRAIT or LANDSCAPE** (`ui/DisplayChoice.ts`, `Platform.displayPref`, `TouchControls.ts`, `ui/platform.css`).
+*Superseded the same day: phones play landscape only — see "Phones: landscape only" at the end of this session.*
 - First start on a handheld (after loading, before the title): HOW WOULD YOU LIKE TO PLAY? — two cards drawn like the
   chapter card, each showing the device with its layout (stick under the left thumb, seals under the right). The choice is
   kept (`caer-veyr:display` + its time, and in the cloud save) and Settings → Display (handhelds only) changes it any time.
@@ -1189,7 +1193,7 @@ browse daemon was stuck on a stale lock) unless noted, always `?mute`:
 - **Store metadata** (Developer Portal → Metadata; portal-only, the CLI has no metadata command): description =
   `wavedash/store/description.txt` (1250 chars); cover art (the split castle, title text only); the 10 s preview video
   (below); tags (max 5): Action, Hack and Slash, Third Person, Dark Fantasy, Time Manipulation; input Keyboard + Mouse and
-  Touch; mobile layout **Tall** (the game itself asks Portrait / Landscape); English; developer + publisher AJ_Insanity;
+  Touch; mobile layout **Tall** at first (then **Wide** — "Phones: landscape only" below); English; developer + publisher AJ_Insanity;
   release date automatic. Saved and re-read after a reload; the "Complete your store listing" banner cleared.
 - **The preview video** (Wavedash keeps the first 10 s, no sound; 16:9): 1920×1080, 30 fps, exactly 10.0 s — a light-cut
   chain into cinematic finishers in the Great Hall (E13), a Whirlwind through the guards, then the Gate Warden's finisher
@@ -1207,6 +1211,40 @@ browse daemon was stuck on a stale lock) unless noted, always `?mute`:
   3 stats, one save) stays in the playtest sandbox; `wavedash clear-playtest-data` removes it.
 - Clean logged-out browser: the public page answers 200 with the cover, the description, the five tags, developer /
   publisher, "Released October 1, 2026", no page errors.
+
+#### Phones: landscape only (2026-10-01, after the user's phone test)
+**What the user saw** on a real phone with mobile layout Tall: choosing LANDSCAPE showed the rotate card sideways, and
+turning the phone turned it again — Wavedash's Tall layout keeps the game's frame upright (it turns the frame back), so
+the game never got a landscape frame. Also: the touch seals too big and badly spaced, the LOOK ring adrift mid-screen, the
+lesson cards / spoken lines / deed banners too big, and the phone title not laid out like the PC one.
+**Measured on the live host** (`wd_public_mobile.mjs`: a fresh logged-out Chrome emulating a Pixel, every frame, OOPIFs
+included): on the public page a phone gets the game inline at 393×221 (16:9) under the hero; the host's Fullscreen with
+mobile layout **Wide** gives the iframe 852×393 and, held upright, turns it with `matrix(0, 1, -1, 0, 393, 0)` — the
+game always gets a landscape frame. (The user had switched the portal to Wide already; the dev-portal playtest page is
+desktop-only chrome with a 16:9 box and a Fullscreen button.)
+**Changes** (build #2 `mn74jn6byz11wrn51s11swpjt58ff0ey`, release `rx77s96ceqc1vsf98f7e0nqkbs8fe628`, published):
+- `platform/Platform.ts`: a handheld is always `wide`; `displayPref` / `setDisplayPref` / `onDisplayPref` / the choosing
+  flag removed; the rotate card only asks to turn an upright phone sideways (no "play in … instead"); the orientation lock
+  asks for landscape; touch UI scale `clamp(0.66, h / 540, 1.3)` (0.73 at 393 px tall, was 0.91).
+- `ui/DisplayChoice.ts` deleted (+ its `.dc` CSS); Settings → Display keeps Fullscreen only; `CloudSave` no longer carries a
+  `display` preference (an old bundle's is ignored); `index.html` / `style.css` turn card one way.
+- `ui/platform.css` + `TouchControls.ts`: the sketch's layout (§7 Touch, LANDSCAPE); stick radius 0.14 × short side.
+- Phone words: lesson card 40 % wide (14 px × uiz), spoken lines 15 px, floor title 17 px, deed banner × 0.78 uiz; the
+  move / look lessons now name the LOOK circle (`Objectives.ts`, `Tutorial.ts`).
+- Title: the wide column keeps the PC composition at phone heights (lower floors in `menu.css`: crest ≥ 24 px, name ≥ 22,
+  items ≥ 12 / 10.5 / 9.5); the closed-up layout only under 300 px tall (Wavedash's inline 221 px frame), where the
+  column widens to 52 % and the rows shrink so nothing clips; the deeds tally never wraps.
+- Store description's last line: "…or on your phone held sideways." (`wavedash/store/description.txt` + the portal; the
+  user's own tags Action, Adventure, Strategy, Fighting, Story Rich and the Wide layout left as they set them).
+**Tests:** `npx tsc --noEmit` clean; `dev/regression.js` — phone sideways 852×393 **52/52** (new: LOOK pad in the corner, the
+arc order, every seal ≥ 6 u clear, a swipe that starts on the pad turns the camera), portrait touch (`?view=portrait`,
+375×812) **49/49**, desktop wide + `?wdmock&saves` 44/45 then **45/45** (the miss: "F1 E3 no stalls with a moving hero",
+enemy timing under load — kbm, untouched by this change); Guided tutorial probe on the sideways phone **23/23**; screens at
+852×393, 740×360, 393×221 and upright 393×852 (turn card); the production build on an emulated phone; build #2 playtest on
+desktop (init, player, cloud "→ remote" + re-upload, stats ready, Continue · Blood Sigil 1, 2/26); the LIVE page as a
+phone (`wd_public_play.mjs`): Fullscreen → New Game → Minimal → the film skipped → play in `wide` / `wideTouch`, seals
+61/55/55/51/49 px, a real touch swipe on the LOOK pad turned the camera 1.67 rad, a tap on ATTACK attacked.
+**Not tested:** a real phone (the user's next test), iOS Safari.
 
 ### Session 15 (2026-09-30) — the living title screen, achievements, the narrated lore book
 
