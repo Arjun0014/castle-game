@@ -1051,6 +1051,14 @@ package itself (`@wvdsh/sdk-js` 1.3.54: its `StatsManager` and `FileSystemManage
 - Ultrawide: `CamProfile.maxHFov` (wide 100°, wideTouch 98°) narrows the vertical FOV so a 21:9 frame gets wider, not
   fisheye (3440×1440 → vFOV 53°, hFOV 100°); the title lens is capped at 92° across.
 - Off-screen threat chevrons now in every layout (they were portrait-only); verified 3 markers with a fight behind her.
+- The widescreen title (redone after the user's review — "the left side looks really bad"): ONE column in the left third
+  (`.mm-col`, `ui/menu.css`; `display: contents` in portrait, whose layout is unchanged), everything on its centre line —
+  the crest centred over the name, ECHOES OF between two hairlines, CAER VEYR, the rule (two hairlines + lozenge), the
+  line, then the menu (Continue / New Game, Lore · Achievements, Controls · Settings · Credits) with even tiers; the group
+  is centred in the height (7 cqh between the name and the menu), the keys hint centred under the column. Column width
+  min(80 cqh, 46 cqw), the name min(11.2 cqh, 6.1 cqw): checked at 1366×768, 1920×1080, 2560×1440, 3440×1440, 1280×1024
+  and a phone held sideways (crest and line step out under 540 px of height). Continue (when there is one) has the
+  first focus again.
 - Audited in widescreen: title, gameplay HUD, combat, a mini-boss cinematic finisher (Gate Warden, letterbox + shot), the
   Last Crown (boss bar, arena), achievements toast + panel, lore book, pause + settings, chapter card, the film (9:16,
   centred in its glow), subtitles, threat markers. Paused: the floor title / prompts / subtitles / tutorial card step back
