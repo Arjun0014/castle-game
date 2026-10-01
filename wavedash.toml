@@ -8,6 +8,6 @@
 # game_id: the game's ID from the Developer Portal (or `wavedash project list --team-id <TEAM_ID>`). It can also come
 # from the environment for one run: WAVEDASH_GAME_ID=<id> npm run wavedash:dev
 # The same dist/ is the itch.io build (npm run package:itch zips it): the game detects Wavedash at runtime.
-game_id = "YOUR_GAME_ID_HERE"
+game_id = "j975yjkh8eqvxd9dpbc78ecvj98fedtr"
 upload_dir = "./dist"
 entrypoint = "index.html"

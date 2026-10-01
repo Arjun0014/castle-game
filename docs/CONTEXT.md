@@ -36,7 +36,8 @@ respawn card, the opening film and the Remotion trailer) — it is no longer the
 layout + camera; Settings → Display; no reload), the Wavedash SDK (load progress, `init()` once, player identity,
 achievements + stats mirrored from the game's own system, cloud saves `saves/main.json` with conflict safety, platform
 fullscreen) behind one facade — the same `dist/` still runs on itch as a local game. Saves now resume at Blood Sigils.
-Next: §8 Session 16 (Wavedash CLI sign-in + game ID → `wavedash dev`, an uploaded build, a real phone).
+**LIVE ON WAVEDASH (2026-10-01): https://wavedash.com/games/echoes-of-caer-veyr** — build #1 published, store page complete
+(§10 Session 16 → "The Wavedash release"). Next: §8 Session 16 (a real phone, Safari, host fullscreen on a real monitor).
 Session 15 = MAIN MENU LIFE, ACHIEVEMENTS and the LORE EXPERIENCE (§10 Session 15):
 the title heroine turned toward the player with a menu-idle director (the new Mixamo clips + unused Great Sword idles,
 a procedural glance), 26 achievements (toasts in play, a panel, localStorage), and the narrated 12-page chronicle
@@ -780,16 +781,13 @@ A parry staggers the attacker and grants +12 resonance.
 # 8. Next Concrete Tasks
 
 **Session 16 follow-ups — need the user (do these first):**
-1. **Wavedash CLI**: `! wavedash auth login` (browser), `wavedash update` (0.1.95 installed, 0.1.98 out), put the game's ID in
-   `wavedash.toml` (`game_id`, or `WAVEDASH_GAME_ID`), import `wavedash/achievements-import.json` in the Developer Portal
-   (Achievements → Add achievement → Import JSON; icons: `wavedash/icons/<ID>.png`, or the `--image` lines in
-   `wavedash/cli-commands.txt`).
-2. **`npm run wavedash:dev`** (the sandbox): the loading bar → reveal, "Playing as" + avatar (does the CDN avatar load under
-   COEP?), `__wave.stats.debug()` ready + a deed reaching the portal, `__wave.cloud.debug()` synced, `saves/main.json` in the
-   sandbox; `wavedash clear-playtest-data --saves` + a private window = a new device restoring.
-3. **An uploaded build** (`npm run wavedash:push`, then publish or playtest): fullscreen through the host (the sandbox always
-   answers false), Esc / leaving fullscreen pausing the game once, the overlay on top, 1920×1080 and 2560×1440 on real
-   monitors, Safari (Ogg Opus audio — the docs warn Safari lacks OGG; WebKit was not tested here).
+1. ~~Wavedash CLI, game ID, achievements import~~ — DONE (CLI 0.1.98 signed in, `game_id` in `wavedash.toml`, 26
+   achievements with icons + 10 stats in the portal).
+2. ~~The SDK on a real Wavedash host~~ — DONE on the uploaded build's playtest (identity + avatar, stats, achievements, cloud
+   save upload and a new-device restore; §10 Session 16 → "The Wavedash release").
+3. **Still open on the uploaded build**: fullscreen through the host (Settings → Fullscreen and the Wavedash button), Esc /
+   leaving fullscreen pausing the game once, the overlay on top, 1920×1080 and 2560×1440 on real monitors, Safari (Ogg Opus
+   audio — the docs warn Safari lacks OGG; WebKit was not tested here).
 4. **A real phone**: the HOW WOULD YOU LIKE TO PLAY? card, landscape thumbs (reach of GUARD / SHIFT, the LOOK ring's place),
    camera feel (`wideTouch` in `CameraRig`), orientation lock / the rotate card inside Wavedash's frame, notch safe areas.
 
@@ -1174,10 +1172,41 @@ browse daemon was stuck on a stale lock) unless noted, always `?mute`:
   device (game storage wiped, cloud kept) → Continue from the cloud, the deed and its count restored silently (0 banners);
   Settings → Fullscreen through the SDK (on / off). Guided resume: CP1 → TWO MEMORIES, CP2 → CROUCH, CP3 → no lessons.
 - Production preview (no Wavedash): local guest game, no chip, `?wdmock` ignored, widescreen title; 720×1280 frame → portrait.
-- **NOT tested**: `wavedash dev` and an uploaded Wavedash build (the CLI is not signed in and there is no game ID), the real
-  avatar CDN under COEP, host fullscreen, a real phone (landscape ergonomics, orientation lock inside Wavedash's frame, notch
-  safe areas), Safari / WebKit, pointer-lock Esc pause (headless has no pointer lock).
+- **NOT tested**: `wavedash dev` (the uploaded build's playtest was used instead), host fullscreen, a real phone (landscape
+  ergonomics, orientation lock inside Wavedash's frame, notch safe areas), Safari / WebKit, pointer-lock Esc pause.
 **Needs the user:** §8 Session 16.
+
+#### The Wavedash release (2026-10-01, same session)
+- **Project**: team CommendableBard71, game "ECHOES OF CAER VEYR", ID `j975yjkh8eqvxd9dpbc78ecvj98fedtr` (now in
+  `wavedash.toml`), slug `echoes-of-caer-veyr`. Public page: https://wavedash.com/games/echoes-of-caer-veyr.
+- **Build #1** `mn72s8k20tvpysp8fvtq751zxx8fev56` = `npm run build:wavedash` of `58adca9` (the widescreen title column),
+  pushed with `wavedash build push`; **published** with `wavedash publish <id> --yes --title "Echoes of Caer Veyr 1.0" …`
+  → release `rx75w1xdr6xe8fy51x018vxa3h8fet8d`.
+- **Achievements**: the 26 from `wavedash/achievements-import.json` (4 hidden) + the 10 stats; every icon uploaded with
+  `wavedash achievement update --id <_id> --image wavedash/icons/<ID>.png` (CLI `achievement list --json` gives the `_id`s).
+  The icons are now masked to round transparent corners (Pillow) — the first unmasked THE_LAST_BLOW upload answered 500
+  "Image transform failed" until re-saved. The public Achievements tab lists 22 named + 4 hidden, all icons loading.
+- **Store metadata** (Developer Portal → Metadata; portal-only, the CLI has no metadata command): description =
+  `wavedash/store/description.txt` (1250 chars); cover art (the split castle, title text only); the 10 s preview video
+  (below); tags (max 5): Action, Hack and Slash, Third Person, Dark Fantasy, Time Manipulation; input Keyboard + Mouse and
+  Touch; mobile layout **Tall** (the game itself asks Portrait / Landscape); English; developer + publisher AJ_Insanity;
+  release date automatic. Saved and re-read after a reload; the "Complete your store listing" banner cleared.
+- **The preview video** (Wavedash keeps the first 10 s, no sound; 16:9): 1920×1080, 30 fps, exactly 10.0 s — a light-cut
+  chain into cinematic finishers in the Great Hall (E13), a Whirlwind through the guards, then the Gate Warden's finisher
+  in the torchlight; no HUD words. Made with `dev/trailerDirector.js` (deterministic, scripted, recipe in its header);
+  the 27 MB mp4 itself is not committed (it lives on Wavedash).
+- **Playtest of the uploaded build** (logged-in Chrome, game silenced in every frame — the host iframe cannot take `?mute`
+  and automation mode would stop saves persisting): Wavedash's GPU advisory → "Skip for now"; load bar → title, `init()`
+  once, "Playing as aj_insanity" with the real avatar (loads under COEP) and the cloud-save time; stats probe ready (all
+  10 identifiers known); New Game → Minimal Guidance → the film (muted) → skipped → Floor 1. A real E1 fight (2 kills, 1
+  natural finisher), kneel at CP1, the first shift at the gate → on Wavedash: ECHOES_RELEASED 2, FINISHERS 1, TIME_SHIFTS 1,
+  THE_LAST_BLOW + WHICH_MEMORY_WILL_ANSWER unlocked; cloud log "sigil: uploaded". Reload → "Continue · Floor I ·
+  Inheritance · Blood Sigil 1", Achievements 2/26, cloud "→ same". The game frame's storage wiped (a new device) → reload
+  → "local none · cloud … → remote", Continue + 2/26 + the stats restored; Continue → the Floor I chapter card at 100%.
+  Not entered from there (a real key would take pointer lock in the shared browser). The playtest data (2 achievements,
+  3 stats, one save) stays in the playtest sandbox; `wavedash clear-playtest-data` removes it.
+- Clean logged-out browser: the public page answers 200 with the cover, the description, the five tags, developer /
+  publisher, "Released October 1, 2026", no page errors.
 
 ### Session 15 (2026-09-30) — the living title screen, achievements, the narrated lore book
 
