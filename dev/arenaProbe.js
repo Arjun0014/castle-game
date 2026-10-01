@@ -43,7 +43,7 @@ export async function run() {
     const fighting = await until(() => a.phase === 'fight' && !g.rig.cine, 9000);
     const boss = g.enemies.boss;
     seen.push(`${n}:${name}`);
-    check(`wave ${n}: a guardian's entrance, name and fight`, titled && fighting && !!boss && boss.alive && boss.maxHp > 0, { name, boss: boss?.arch.id, hp: boss?.maxHp });
+    check(`wave ${n}: a guardian's entrance, name and fight`, titled && fighting && !!boss && boss.alive && boss.maxHp > 0, { name, titled: !!titled, fighting, phase: a.phase, boss: boss?.arch.id, hp: boss?.maxHp, voidKills: kills.filter((k) => k.voidDeath).map((k) => k.arch), log: a.log.slice(-3) });
     if (n === 5) {
       const was = a.alive.length;
       boss.hp = boss.maxHp * 0.5;

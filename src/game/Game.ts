@@ -1095,6 +1095,9 @@ export class Game {
   /** the Esc that released the pointer (main.ts paused on that) must not also un-pause a moment later */
   pauseKeyHold = 0;
   togglePause(on?: boolean) {
+    // the arena's fall and its results card are never paused over — whatever asks (a hidden tab, a lost pointer, a key,
+    // the touch seal): the card is its own stop
+    if ((on ?? !this.paused) && this.arena && !this.arena.playing) return;
     this.paused = on ?? !this.paused;
     this.hud.pauseEl.classList.toggle('on', this.paused);
     this.onPause?.(this.paused);

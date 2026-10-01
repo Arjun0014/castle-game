@@ -36,7 +36,7 @@ respawn card, the opening film and the Remotion trailer) — it is no longer the
 the player's own sketch + the `wideTouch` camera; the first build's Portrait / Landscape choice is gone), the Wavedash SDK (load progress, `init()` once, player identity,
 achievements + stats mirrored from the game's own system, cloud saves `saves/main.json` with conflict safety, platform
 fullscreen) behind one facade — the same `dist/` still runs on itch as a local game. Saves now resume at Blood Sigils.
-**LIVE ON WAVEDASH (2026-10-02): https://wavedash.com/games/echoes-of-caer-veyr** — build #6 (the Endless Arena + its fixes) published,
+**LIVE ON WAVEDASH (2026-10-02): https://wavedash.com/games/echoes-of-caer-veyr** — build #8 (the Endless Arena + its fixes) published,
 store page complete, mobile layout **Wide** (§10 Session 16 → "The Wavedash release", "Phones: landscape only"). Next: §8
 Session 16 (the new touch layout on a real phone, Safari, host fullscreen on a real monitor).
 **Session 17 = THE ENDLESS ARENA** (§10 Session 17), live as build #5: title → ENDLESS ARENA → endless waves in Floor III's
@@ -1117,6 +1117,23 @@ phone) reads NEW GAME | ENDLESS ARENA | LORE | ACHIEVEMENTS ….
 Build #6 `mn71j14q6jy3ccp4zne3g9g5bx8fe9dp` published (release `rx75bxywaeswnv49d4zw24gbjs8ffsdn`).
 Tests: story regressions desktop 45/45, phone 52/52; `dev/arenaProbe.js` 13/13; the death flow (quiet spawns — no rings; a lost pointer in the fall: no pause, the card
 up; Esc on the card: nothing, no reload; Enter after a second: a new run); the panel online (mock) / local / phone 852×393.
+
+#### The arena's death, properly (2026-10-02, build #8)
+The user, again: "when I die I see a box for a split second and then it turns to black". Filmed (scratchpad
+`death_seq.mjs`: a real death, a frame every ~120 ms, the card's / the page's / the fade's opacity each frame): the card
+came up at ~3.1 s and the WHOLE PAGE faded out over 0.8 s. Cause: build #5's "hide the touch controls behind the card"
+put the class `arena-results` on <html> — the card's own class, whose rule starts at opacity 0 with a transition — so the
+page itself faded to transparent the moment the card appeared (black here; WHITE on Wavedash, where the host page shows
+through the iframe — the user's first "white screen"). Fixed: the page flag is `html.arena-over`, the card's rules are
+`div.arena-results` only. Also found on the real host: something still paused behind the card (the hidden-tab check) →
+`Game.togglePause` itself refuses to pause while `!arena.playing` (one guard for every source: hidden tab, lost
+pointer, the key, the touch seal, the turn card); a death by falling left the respawn's black on → the arena lifts it
+0.9 s into the fall; the card's gold corners in a scrolling box raised scrollbars → `overflow: visible`; each Wavedash
+build is served from its own origin, so the local arena record starts over with every release → on Wavedash the
+results' personal-best line and the title's "Best" line answer from the leaderboard (`submit` / `mine`).
+Verified: frames locally (an enemy's blow and a fall), the real host (page 1, card 1, not paused, no scrollbars, "Your
+best · 601" from the board), `dev/arenaProbe.js` 13/13. Build #8 `mn78engd6mvj995bhznmxhypy58fepcj` published (release
+`rx75tcgyjr31jhmvcevv7z1c1n8ff8av`); the playtest leaderboard cleared again.
 
 ### Session 16 (2026-10-01) — the Wavedash version: widescreen PC game, phone Portrait / Landscape, the Wavedash SDK
 

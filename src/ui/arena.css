@@ -11,7 +11,7 @@ html.arena-on #hud .objective { display: none; }
   font-family: 'EB Garamond', Georgia, serif; text-shadow: 0 1px 3px #000, 0 0 12px rgba(0,0,0,0.8); opacity: 0; transition: opacity .6s; }
 html.arena-on .arena-hud { opacity: 1; }
 #hud.cine .arena-hud, html.paused .arena-hud { opacity: 0; }
-.arena-hud, .arena-results, .mm-arena-best, .mm-arena-board, .mm-arena-sub { font-variant-numeric: lining-nums tabular-nums; font-feature-settings: 'lnum' 1, 'tnum' 1; }
+div.arena-hud, div.arena-results, .mm-arena-best, .mm-arena-board, .mm-arena-sub { font-variant-numeric: lining-nums tabular-nums; font-feature-settings: 'lnum' 1, 'tnum' 1; }
 .ah-wave { display: flex; align-items: baseline; gap: 8px; }
 .ah-wave small { font-size: 11px; letter-spacing: 0.34em; text-transform: uppercase; color: #a88c5a; }
 .ah-wave b { font: 500 28px/1 'EB Garamond', Georgia, serif; color: #f1dfb2; letter-spacing: 0.04em; }
@@ -52,10 +52,12 @@ html.view-portrait .arena-title h2 { font-size: clamp(26px, 8.4cqw, 44px); lette
 html.view-portrait .arena-title p { font-size: clamp(13px, 3.6cqw, 16px); }
 
 /* ---------------------------------------------------------------- the end of a run */
-.arena-results { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0;
+/* (div.: the card only — the page's own end-of-run flag is html.arena-over) */
+div.arena-results { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0;
   transition: opacity .8s ease; background: radial-gradient(ellipse at 50% 45%, rgba(20,6,6,0.55), rgba(0,0,0,0.86)); font-family: 'EB Garamond', Georgia, serif; color: #efe4cc; }
-.arena-results.on { opacity: 1; pointer-events: auto; }
-.ar-card { position: relative; width: 560px; max-width: calc(100% - 32px); max-height: calc(100% - 24px); overflow: auto; padding: 26px 34px 24px; text-align: center;
+div.arena-results.on { opacity: 1; pointer-events: auto; }
+/* (no scrolling box: the gold corner marks sit 4 px outside it, and in a scrolling box they raised scrollbars) */
+.ar-card { position: relative; width: 560px; max-width: calc(100% - 32px); overflow: visible; padding: 26px 34px 24px; text-align: center;
   background: linear-gradient(180deg, rgba(26,12,10,0.94), rgba(10,6,6,0.96)); border: 1px solid rgba(216,179,106,0.35); box-shadow: 0 0 60px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(0,0,0,0.6); }
 .ar-card::before, .ar-card::after { content: ''; position: absolute; width: 14px; height: 14px; border: 1.5px solid #d8b36a; }
 .ar-card::before { left: -4px; top: -4px; border-right: 0; border-bottom: 0; }
@@ -92,7 +94,7 @@ html.view-portrait .arena-title p { font-size: clamp(13px, 3.6cqw, 16px); }
 .ar-again:hover { background: linear-gradient(180deg, #fff0c4, #ddb468); }
 .ar-title { color: #cdb98e; background: rgba(0,0,0,0.35); border: 1px solid rgba(216,179,106,0.4); }
 .ar-title:hover { color: #f3dca0; border-color: #d8b36a; }
-html.view-wide #hud .ar-card { zoom: var(--uiz, 1); max-width: calc(100% / var(--uiz, 1) - 32px); max-height: calc(100% / var(--uiz, 1) - 24px); }
+html.view-wide #hud .ar-card { zoom: var(--uiz, 1); max-width: calc(100% / var(--uiz, 1) - 32px); }
 /* a phone held sideways: the card in two columns (the run on the left, the board on the right) so it fits the height */
 @container (max-height: 540px) {
   html.view-wide .ar-card { width: 760px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; align-items: start; padding: 18px 24px 16px; text-align: center; }
@@ -133,4 +135,4 @@ html.view-portrait .ar-main b { font-size: 36px; }
   .mm-arena-board li { padding: 3px 4px; font-size: 14px; }
 }
 /* the end-of-run card owns the screen: the thumbs' controls step away while it is up */
-html.arena-results #touch { visibility: hidden; }
+html.arena-over #touch { visibility: hidden; }

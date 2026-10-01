@@ -118,7 +118,7 @@ export class Arena {
     this.ward.geometry.dispose();
     (this.ward.material as THREE.Material).dispose();
     this.hudEl.remove(); this.titleEl.remove(); this.resultsEl.remove();
-    document.documentElement.classList.remove('arena-on', 'arena-results');
+    document.documentElement.classList.remove('arena-on', 'arena-over');
   }
 
   private note(s: string) { this.log.push(`${this.g.t.toFixed(1)} ${s}`); if (this.log.length > 80) this.log.shift(); }
@@ -175,6 +175,9 @@ export class Arena {
         this.entrance(dt);
         break;
       case 'down':
+        // a fall into the abyss ends in the respawn's black (Game.fallRespawn — there is no respawn here): the chamber
+        // comes back behind the card
+        if (this.phaseT > 0.9) this.g.hud.fade(false);
         if (this.phaseT > 2.2) this.showResults();
         break;
     }
@@ -555,13 +558,15 @@ export class Arena {
         <h2>You have fallen</h2>
         <div class="ar-rule"><i></i><b>◆</b><i></i></div>
         <div class="ar-main"><div><small>Wave</small><b>${run.wave}</b></div><div><small>Score</small><b>${fmt(run.score)}</b></div></div>
-        ${best ? '<p class="ar-best">A new personal best</p>' : prev ? `<p class="ar-prev">Your best · ${fmt(prev.score)} · wave ${prev.wave}</p>` : ''}
+        <div class="ar-pb">${online ? '' : best ? '<p class="ar-best">A new personal best</p>' : prev ? `<p class="ar-prev">Your best · ${fmt(prev.score)} · wave ${prev.wave}</p>` : ''}</div>
         <p class="ar-line">Echoes released ${run.kills} · Guardians felled ${this.guardians} · ${Math.floor(secs / 60)}m ${String(secs % 60).padStart(2, '0')}s</p>
         <div class="ar-board">${online ? '<h3>Top runs</h3><p class="ar-wait">Loading the leaderboard…</p>' : this.localBoard(run)}</div>
         <div class="ar-actions"><button class="ar-again" type="button">Fight again</button><button class="ar-title" type="button">Return to title</button></div>
       </div>`;
     this.resultsEl.classList.add('on');
-    document.documentElement.classList.add('arena-results');
+    // (the page's flag has its own name: `arena-results` is the card's class, and the card's styles start at opacity 0 —
+    // on <html> they faded the whole page out the moment the card came up)
+    document.documentElement.classList.add('arena-over');
     document.exitPointerLock?.();
     const again = this.resultsEl.querySelector('.ar-again') as HTMLButtonElement;
     const title = this.resultsEl.querySelector('.ar-title') as HTMLButtonElement;
@@ -597,7 +602,13 @@ export class Arena {
     const meIn = top.some((r) => r.me);
     const rows = top.map((r) => `<li class="${r.me ? 'me' : ''}"><span class="r">${r.rank}</span><span class="n">${esc(r.name)}</span><span class="w">${r.wave ? 'W' + r.wave : ''}</span><span class="s">${fmt(r.score)}</span></li>`).join('');
     const rank = this.last.rank;
-    const foot = !meIn && rank ? `<p class="ar-rank">Your rank · #${rank}${sub && !sub.improved ? ` · this run #${sub.runRank}` : ''}</p>` : sub?.improved ? '<p class="ar-rank">A new best on the leaderboard</p>' : '';
+    const foot = !meIn && rank ? `<p class="ar-rank">Your rank · #${rank}${sub && !sub.improved ? ` · this run #${sub.runRank}` : ''}</p>` : '';
+    // on Wavedash the leaderboard holds her best (this device's record starts over with every release: each build is
+    // served from its own origin) — the personal-best line answers from it
+    const pb = this.resultsEl.querySelector('.ar-pb') as HTMLElement | null;
+    if (pb) pb.innerHTML = sub?.improved ? '<p class="ar-best">A new personal best</p>'
+      : sub ? `<p class="ar-prev">Your best · ${fmt(sub.best)}</p>`
+        : mine ? `<p class="ar-prev">Your best · ${fmt(mine.score)}${mine.wave ? ` · wave ${mine.wave}` : ''}</p>` : '';
     host.innerHTML = `<h3>Top runs</h3><ol>${rows || '<li class="empty">No runs yet.</li>'}</ol>${foot}`;
   }
 
@@ -620,7 +631,7 @@ export class Arena {
     if (this.phase !== 'results') return;
     window.removeEventListener('keydown', this.onKey, true);
     this.resultsEl.classList.remove('on');
-    document.documentElement.classList.remove('arena-results');
+    document.documentElement.classList.remove('arena-over');
     // every body back to its rest (the dormant ARENA fight), the run's fights forgotten
     for (const list of g.enemies.arenaPool.values()) for (const e of list) { if (e.alive) e.vanish(); e.encounter = 'ARENA'; }
     for (const id of [...g.enemies.encounters.keys()]) if (id.startsWith('AW')) g.enemies.encounters.delete(id);

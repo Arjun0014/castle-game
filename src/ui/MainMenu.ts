@@ -337,6 +337,8 @@ export class MainMenu {
     root.querySelector('.mm-begin')!.addEventListener('click', () => this.begin());
     root.querySelector('.mm-arena-go')!.addEventListener('click', () => this.enterArena());
     this.paintArenaBest();
+    // on Wavedash the leaderboard keeps her best across releases (this device's record starts over with each build)
+    if (Leaderboards.online) void Leaderboards.mine().then((m) => { if (m) this.paintArenaBest(m); });
     root.querySelectorAll<HTMLButtonElement>('.mm-back').forEach((b) => b.addEventListener('click', () => this.closePanel()));
     root.addEventListener('pointerdown', () => this.gesture(), true);
     window.addEventListener('keydown', this.onKey, true);
