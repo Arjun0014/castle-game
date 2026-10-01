@@ -151,34 +151,41 @@ html.menu-on #hud, html.menu-on #touch { visibility: hidden; }
 .mm-item.mm-min { padding: 0.75em 0.85em; font-size: clamp(10.5px, 3.05cqw, 13.5px); letter-spacing: 0.26em; color: rgba(239,228,204,0.5); }
 .mm-item.mm-min > span { margin-right: -0.26em; }
 .mm-item.mm-min.focus { letter-spacing: 0.28em; }
-html.view-wide .mm-pair, html.view-wide .mm-minor { justify-content: flex-start; margin-left: 0.55em; }
-html.view-wide .mm-item.mm-sec { font-size: clamp(13px, 1.25cqw, 18px); padding-left: 0.7em; }
-html.view-wide .mm-item.mm-min { font-size: clamp(11px, 1.02cqw, 14px); padding-left: 0.7em; }
-html.view-wide .mm-item.mm-sec > span::after, html.view-wide .mm-item.mm-min > span::after { left: 0; right: 20%; }
 .mm-foot { position: absolute; left: 0; right: 0; bottom: calc(var(--sab) + 2.6cqh); text-align: center; font-size: clamp(9.5px, 2.6cqw, 11px); letter-spacing: 0.22em; color: rgba(190,175,145,0.5); }
 html.input-touch .mm-keys { display: none; }
 #menu.panel-on .mm-list { opacity: 0; pointer-events: none; }
 #menu.panel-on .mm-head { opacity: 0.18; filter: blur(2px); }
 #menu.panel-on .mm-foot { opacity: 0; }
 
-/* widescreen (?view=wide): the name and the menu on the left third, the castle on the right */
-html.view-wide .mm-shade { background: linear-gradient(90deg, rgba(4,2,2,0.9) 0%, rgba(4,2,2,0.62) 30%, rgba(4,2,2,0.05) 62%, rgba(4,2,2,0.3) 100%),
+/* widescreen (the PC game; a phone held sideways): ONE column in the left third, everything on its centre line — the crest
+   centred over the name, ECHOES OF between two hairlines, CAER VEYR, the rule and the line, then the menu under it (the way
+   in, the book and the deeds, the quiet row); the group sits balanced in the height of the frame. The castle and the
+   heroine fill the right. The column and the type are sized against the frame's HEIGHT (so 16:9, 16:10 and 21:9 of one
+   height read the same), and never wider than ~half the frame (4:3 keeps the name inside its column). */
+.mm-col { display: contents; }
+html.view-wide .mm-shade { background: linear-gradient(90deg, rgba(4,2,2,0.9) 0%, rgba(4,2,2,0.7) 28%, rgba(4,2,2,0.25) 48%, rgba(4,2,2,0.04) 64%, rgba(4,2,2,0.3) 100%),
   linear-gradient(180deg, rgba(4,2,2,0.5) 0%, transparent 25%, transparent 70%, rgba(4,2,2,0.7) 100%); }
-html.view-wide .mm-head { left: 7cqw; right: auto; top: 13cqh; align-items: flex-start; text-align: left; }
-html.view-wide .mm-title { align-items: flex-start; }
-html.view-wide .mm-t-main { font-size: clamp(46px, 6.6cqw, 118px); }
-html.view-wide .mm-t-over { font-size: clamp(11px, 1.35cqw, 20px); }
-html.view-wide .mm-t-over i:first-child { display: none; }
-html.view-wide .mm-head::before { left: 36%; width: 135%; }
-html.view-wide .mm-crest { width: clamp(46px, 5cqw, 72px); }
-html.view-wide .mm-rule i:first-child { display: none; }
-html.view-wide .mm-tag { padding: 0; font-size: clamp(13px, 1.3cqw, 18px); }
-html.view-wide .mm-list { left: 7cqw; right: auto; bottom: 14cqh; align-items: flex-start; }
-html.view-wide .mm-item { font-size: clamp(15px, 1.55cqw, 23px); padding: 0.62em 1.2em 0.62em 1.9em; text-align: left; }
-html.view-wide .mm-item::after { display: none; }
-html.view-wide .mm-item::before { left: 0.2em; }
-html.view-wide .mm-item > span::after { left: 0; right: 30%; background: linear-gradient(90deg, rgba(200,40,40,0.95), transparent); }
-html.view-wide .mm-foot { left: 7cqw; right: auto; text-align: left; bottom: 5cqh; }
+html.view-wide .mm-col { position: absolute; left: calc(var(--sal) + 5cqw); top: 0; bottom: 0; width: min(80cqh, 46cqw); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 7cqh; padding: calc(var(--sat) + 5cqh) 0 calc(var(--sab) + 9cqh); pointer-events: none; }
+html.view-wide .mm-col > * { pointer-events: auto; }
+html.view-wide .mm-head { position: relative; left: auto; right: auto; top: auto; width: 100%; }
+html.view-wide .mm-head::before { top: 46%; width: 118%; height: 92%; }
+html.view-wide .mm-crest { width: clamp(40px, 7.8cqh, 118px); margin-bottom: 2cqh; }
+html.view-wide .mm-t-over { gap: 0.8em; margin-bottom: 1.1cqh; font-size: clamp(10px, 2.15cqh, 31px); }
+html.view-wide .mm-t-over i { width: clamp(22px, 6.5cqh, 96px); }
+html.view-wide .mm-t-main { font-size: clamp(40px, min(11.2cqh, 6.1cqw), 176px); }
+html.view-wide .mm-rule { margin: 2.6cqh 0 1.8cqh; font-size: clamp(8px, 1.15cqh, 15px); }
+html.view-wide .mm-rule i { width: clamp(40px, 12cqh, 170px); }
+html.view-wide .mm-tag { padding: 0; font-size: clamp(12px, 2.05cqh, 29px); }
+html.view-wide .mm-list { position: relative; left: auto; right: auto; bottom: auto; width: 100%; }
+html.view-wide .mm-item { font-size: clamp(14px, 2.5cqh, 36px); padding: 0.5em 2.1em; }
+html.view-wide .mm-item small { margin-top: 0.5em; }
+html.view-wide .mm-pair { gap: clamp(6px, 3cqh, 44px); margin-top: 1.2cqh; }
+html.view-wide .mm-item.mm-sec { font-size: clamp(12px, 1.95cqh, 28px); padding: 0.75em 0.9em; }
+html.view-wide .mm-minor { margin-top: 0.4cqh; gap: clamp(2px, 0.6cqh, 10px); }
+html.view-wide .mm-item.mm-min { font-size: clamp(10.5px, 1.6cqh, 23px); padding: 0.8em 0.95em; }
+html.view-wide .mm-foot { left: calc(var(--sal) + 5cqw); right: auto; width: min(80cqh, 46cqw); text-align: center; bottom: calc(var(--sab) + 3.4cqh);
+  font-size: clamp(9.5px, 1.4cqh, 17px); }
 
 /* ---------------------------------------------------------------- panels (menu + pause) */
 .mm-panel { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none;

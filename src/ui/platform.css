@@ -16,25 +16,17 @@ html.view-wide .mm-frame { zoom: var(--uiz, 1); width: min(92%, 660px); max-heig
 html.view-wide .lb-head, html.view-wide .lb-bar { zoom: var(--uiz, 1); }
 html.view-wide .lb-sub { font-size: calc(17px * var(--uiz, 1)); }
 
-/* the title in widescreen: sized against the frame's HEIGHT (16:9, 16:10 and 21:9 of one height read the same) */
-html.view-wide .mm-crest { width: clamp(40px, 9cqh, 132px); }
-html.view-wide .mm-t-main { font-size: clamp(40px, 11.7cqh, 190px); }
-html.view-wide .mm-t-over { font-size: clamp(10px, 2.4cqh, 36px); }
-html.view-wide .mm-tag { font-size: clamp(12px, 2.3cqh, 32px); }
-html.view-wide .mm-rule { font-size: clamp(8px, 1.25cqh, 16px); }
-html.view-wide .mm-item { font-size: clamp(14px, 2.75cqh, 40px); }
-html.view-wide .mm-item.mm-sec { font-size: clamp(12px, 2.22cqh, 32px); }
-html.view-wide .mm-item.mm-min { font-size: clamp(10.5px, 1.82cqh, 26px); }
-html.view-wide .mm-foot { font-size: clamp(9.5px, 1.5cqh, 18px); }
+/* the title's column lives in menu.css; the deed banner on the title stays clear of it (top centre) */
 html.view-wide.menu-on .ach-host { left: 0; right: 0; justify-content: center; }
-/* a short widescreen frame (a phone held sideways, a small window): the name and the menu keep clear of each other */
+/* a short widescreen frame (a phone held sideways, a small window): the column keeps the name, the rule and the menu —
+   the crest and the line step out, the gaps close */
 @container (max-height: 540px) {
-  html.view-wide .mm-head { top: calc(var(--sat) + 6cqh); }
+  html.view-wide .mm-col { gap: 3.5cqh; padding: calc(var(--sat) + 3cqh) 0 calc(var(--sab) + 4cqh); }
   html.view-wide .mm-crest, html.view-wide .mm-tag { display: none; }
-  html.view-wide .mm-rule { margin: 1.2cqh 0 0; }
-  html.view-wide .mm-list { bottom: calc(var(--sab) + 6cqh); }
+  html.view-wide .mm-rule { margin: 1.4cqh 0 0; }
   html.view-wide .mm-foot { display: none; }
-  html.view-wide .mm-item { padding-top: 0.5em; padding-bottom: 0.5em; }
+  html.view-wide .mm-item { padding-top: 0.42em; padding-bottom: 0.42em; }
+  html.view-wide .mm-item.mm-sec, html.view-wide .mm-item.mm-min { padding-top: 0.6em; padding-bottom: 0.6em; }
 }
 
 /* the chapter card in a short widescreen frame (a phone held sideways): everything closer, so the card fits the height

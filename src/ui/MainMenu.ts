@@ -272,6 +272,7 @@ export class MainMenu {
     root.className = 'mm hidden';
     root.innerHTML = `
       <div class="mm-shade"></div>
+      <div class="mm-col">
       <div class="mm-head">
         <div class="mm-crest">${sigilSVG('mm')}</div>
         <h1 class="mm-title" aria-label="Echoes of Caer Veyr">
@@ -294,6 +295,7 @@ export class MainMenu {
           <button class="mm-item mm-min" data-act="credits" data-row="${r0 + 2}" data-col="2"><span>Credits</span></button>
         </div>
       </nav>
+      </div>
       <div class="mm-foot"><span class="mm-keys">↑ ↓ ← → choose · Enter confirm · Esc back</span></div>
       ${chip}
       ${this.panelHTML('guidance', 'New game', `
@@ -322,6 +324,9 @@ export class MainMenu {
     h.cloud?.listenStatus(() => this.paintCloud());
     this.paintCloud();
     this.setSave(h.save);
+    // the first thing offered: Continue when there is a journey to continue, else New Game
+    this.focusIdx = 0;
+    this.paintFocus();
     this.renderAch = wireAchievements(this.panels.get('achievements')!.querySelector('.mm-body') as HTMLElement, h.achievements, h.sound);
     this.tally();
     this.items().forEach((b, i) => {
