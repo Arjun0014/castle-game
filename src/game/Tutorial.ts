@@ -395,7 +395,7 @@ export class Tutorial {
     // two misses: say so for a moment, then the next lesson (no gold "done" flash — it was not done)
     if (this.moveOnT > 0) { this.cue = 'MOVING ON'; if ((this.moveOnT -= dt) <= 0) { this.next(); L = this.lessons[this.i]; this.cue = ''; } }
     this.prevState = p.state;
-    if (!L) { this.dispose(); return; }
+    if (!L) { g.learned.tutorial = true; this.dispose(); return; }
 
     // slow motion (eased; a beat overrides)
     if (this.beatT > 0) { this.beatT -= dt; this.wantScale = Math.min(this.wantScale, this.beatScale); }
@@ -485,4 +485,22 @@ export class Tutorial {
 
   /** current lesson id (tests) */
   get lesson() { return this.lessons[this.i]?.id ?? null; }
+
+  /**
+   * Continue from a Blood Sigil (session 16): the lessons pick up where she wakes instead of from "move". CP1 (the blood
+   * rite) → TWO MEMORIES; CP2 (the barracks, both shift lessons behind her) → CROUCH; CP3 and beyond → nothing is left to
+   * teach: returns false (the caller ends the tutorial). Later lessons still skip themselves on their own facts.
+   */
+  resumeFrom(cid: string): boolean {
+    const from = RESUME_AT[cid];
+    if (!from) return false;
+    const k = this.lessons.findIndex((l) => l.id === from);
+    if (k < 0) return false;
+    this.i = k - 1;
+    this.next();
+    return true;
+  }
 }
+
+/** the first lesson of a Guided game continued from each Floor I sigil before the tutorial's end (CP3) */
+const RESUME_AT: Record<string, string> = { CP1: 'memories', CP2: 'crouch' };

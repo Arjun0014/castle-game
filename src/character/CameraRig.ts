@@ -22,6 +22,8 @@ export interface CamProfile {
   fov: number;              // vertical FOV (deg) at the reference aspect
   minHFov: number;          // widen vertical FOV until the horizontal FOV reaches this (deg); 0 = off
   maxFov: number;
+  /** narrow the vertical FOV so the horizontal one never exceeds this (deg; ultrawide / a phone held sideways); 0 = off */
+  maxHFov: number;
   distance: number;
   combatDistance: number;
   maxPull: number;          // extra pull-back in large fights (m)
@@ -37,13 +39,25 @@ export interface CamProfile {
   lowCeilingPitch: number;  // how far the camera may drop its pitch to stay behind the hero under low ceilings
 }
 
-export const CAM_PROFILES: Record<ViewProfile, CamProfile> = {
+/**
+ * 'wide' = keyboard + mouse widescreen (desktop, Wavedash); 'wideTouch' = a phone / tablet held sideways (Display:
+ * Landscape): a touch screen is small and the thumbs cover its lower corners, so the camera stands a little farther back
+ * and higher, nearly centred behind her (the soft combat camera keeps fights framed), with the portrait camera's
+ * low-ceiling care; 'portrait' = the jam build's tall frame.
+ */
+export type CamProfileId = ViewProfile | 'wideTouch';
+
+export const CAM_PROFILES: Record<CamProfileId, CamProfile> = {
   wide: {
-    fov: 58, minHFov: 0, maxFov: 58, distance: 4.4, combatDistance: 3.9, maxPull: 0, shoulder: 0.45, height: 1.55,
+    fov: 58, minHFov: 0, maxFov: 58, maxHFov: 100, distance: 4.4, combatDistance: 3.9, maxPull: 0, shoulder: 0.45, height: 1.55,
     pitch: 0.28, pitchMin: -0.55, pitchMax: 1.05, lockPitch: 0.22, lensShift: 0, lensShiftTouch: 0, lookDrop: 0.1, lowCeilingPitch: 0,
   },
+  wideTouch: {
+    fov: 58, minHFov: 0, maxFov: 58, maxHFov: 98, distance: 4.95, combatDistance: 4.75, maxPull: 1.3, shoulder: 0.26, height: 1.6,
+    pitch: 0.33, pitchMin: -0.45, pitchMax: 1.08, lockPitch: 0.27, lensShift: 0.03, lensShiftTouch: 0.03, lookDrop: 0.05, lowCeilingPitch: 0.26,
+  },
   portrait: {
-    fov: 66, minHFov: 44, maxFov: 78, distance: 5.7, combatDistance: 6.1, maxPull: 2.2, shoulder: 0.0, height: 1.65,
+    fov: 66, minHFov: 44, maxFov: 78, maxHFov: 0, distance: 5.7, combatDistance: 6.1, maxPull: 2.2, shoulder: 0.0, height: 1.65,
     pitch: 0.38, pitchMin: -0.3, pitchMax: 1.1, lockPitch: 0.34, lensShift: 0.12, lensShiftTouch: 0.035, lookDrop: 0.0, lowCeilingPitch: 0.34,
   },
 };
@@ -88,8 +102,15 @@ export class CameraRig {
 
   constructor(public camera: THREE.PerspectiveCamera) {}
 
-  setProfile(view: ViewProfile) {
-    this.profile = CAM_PROFILES[view];
+  profileId: CamProfileId | null = null;
+  /**
+   * Switch camera profile. `keep` (a view change while playing: a phone turned to landscape in Settings, a desktop window
+   * dragged tall): her yaw stays and the pitch is only clamped into the new range — the boom then eases to its new length.
+   */
+  setProfile(id: CamProfileId, keep = false) {
+    this.profileId = id;
+    this.profile = CAM_PROFILES[id];
+    if (keep) { this.pitch = THREE.MathUtils.clamp(this.pitch, this.profile.pitchMin, this.profile.pitchMax); return; }
     this.pitch = this.profile.pitch;
     this.curDist = this.profile.distance;
   }
@@ -102,6 +123,11 @@ export class CameraRig {
     if (p.minHFov > 0) {
       const needed = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(p.minHFov) / 2) / aspect));
       fov = Math.min(p.maxFov, Math.max(fov, needed));
+    }
+    if (p.maxHFov > 0) {
+      // ultrawide / a phone held sideways: the frame gets wider, not more distorted
+      const cap = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(p.maxHFov) / 2) / aspect));
+      fov = Math.min(fov, cap);
     }
     this.baseFov = fov;
     this.camera.aspect = aspect;

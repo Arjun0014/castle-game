@@ -1,5 +1,6 @@
 import { ACHIEVEMENTS, ACH_BY_ID, LORE_PAGES, TRACE_TOTAL, type AchievementDef } from '../data/achievements';
 import type { Signals } from './Signals';
+import { LocalStore } from '../platform/Storage';
 
 /**
  * Achievement progress (session 15): what is unlocked (and when), the cumulative counters, the memory traces read and
@@ -8,17 +9,29 @@ import type { Signals } from './Signals';
  *
  * Triggers come from gameplay signals (game/Signals.ts) — `bind(signals, view)` once per Game; the title screen feeds
  * the chronicle (lorePage) and the secret (menuIdle). Every unlock fires `onUnlock` (the toast) exactly once.
+ *
+ * Session 16 (Wavedash): this stays the game's one achievement system. platform/WavedashStats.ts mirrors it onto
+ * Wavedash achievements + stats (`listen`), and deeds or counts earned on another device come back through `adopt` /
+ * `adoptCounter` / `merge` — silently: a deed is announced once, where it was done. Four more cumulative counters feed
+ * Wavedash stats only (bosses and mini-bosses felled, Crownbreakers, Whirlwinds, endings reached).
  */
 const KEY = 'caer-veyr:achievements:v1';
 
 export interface AchStore {
   v: 1;
   unlocked: Record<string, number>;
-  counters: { kills: number; finishers: number; parries: number; shifts: number };
+  counters: Counters;
   traces: string[];
   lore: number[];
 }
-const empty = (): AchStore => ({ v: 1, unlocked: {}, counters: { kills: 0, finishers: 0, parries: 0, shifts: 0 }, traces: [], lore: [] });
+export interface Counters { kills: number; finishers: number; parries: number; shifts: number; bosses: number; crownbreakers: number; whirlwinds: number; completions: number }
+export type CounterKey = keyof Counters;
+export const COUNTER_KEYS: CounterKey[] = ['kills', 'finishers', 'parries', 'shifts', 'bosses', 'crownbreakers', 'whirlwinds', 'completions'];
+const emptyCounters = (): Counters => ({ kills: 0, finishers: 0, parries: 0, shifts: 0, bosses: 0, crownbreakers: 0, whirlwinds: 0, completions: 0 });
+const empty = (): AchStore => ({ v: 1, unlocked: {}, counters: emptyCounters(), traces: [], lore: [] });
+
+/** what changed (platform/WavedashStats.ts mirrors it; platform/CloudSave.ts schedules an upload) */
+export type AchEvent = { type: 'unlock'; id: string; quiet: boolean } | { type: 'counter'; key: CounterKey } | { type: 'collection' } | { type: 'reset' };
 
 /** what the tracker reads from the running game (kept narrow: Achievements never imports Game) */
 export interface AchView {
@@ -39,20 +52,22 @@ export class Achievements {
     this.persist = persist;
     this.data = empty();
     if (persist) {
-      try {
-        const raw = localStorage.getItem(KEY);
-        if (raw) {
-          const d = JSON.parse(raw) as Partial<AchStore>;
-          if (d && d.v === 1) this.data = { ...empty(), ...d, counters: { ...empty().counters, ...(d.counters ?? {}) } } as AchStore;
-        }
-      } catch { /* private mode / blocked storage: play on without saving */ }
+      const d = sanitize(LocalStore.getJSON<Partial<AchStore>>(KEY));
+      if (d) this.data = d;
     }
   }
 
   private save() {
     if (!this.persist) return;
-    try { localStorage.setItem(KEY, JSON.stringify(this.data)); } catch { /* storage full or blocked */ }
+    LocalStore.setJSON(KEY, this.data);
   }
+
+  private subs = new Set<(e: AchEvent) => void>();
+  /** every change (unlocks, counters, traces / pages) */
+  listen(f: (e: AchEvent) => void) { this.subs.add(f); return () => this.subs.delete(f); }
+  private tell(e: AchEvent) { for (const f of this.subs) { try { f(e); } catch (err) { console.warn('[ach] listener', err); } } }
+  /** while set, goals reached by adopted counts unlock without a toast (another device earned them) */
+  private quiet = false;
 
   has(id: string) { return id in this.data.unlocked; }
   get count() { return Object.keys(this.data.unlocked).filter((id) => ACH_BY_ID.has(id)).length; }
@@ -61,7 +76,7 @@ export class Achievements {
   /** progress of a cumulative achievement: [value, goal] */
   progress(a: AchievementDef): [number, number] | null {
     if (!a.goal || !a.counter) return null;
-    const c = this.data.counters as Record<string, number>;
+    const c = this.data.counters as unknown as Record<string, number>;
     const v = a.counter === 'traces' ? this.data.traces.length : a.counter === 'lore' ? this.data.lore.length : c[a.counter] ?? 0;
     return [Math.min(v, a.goal), a.goal];
   }
@@ -72,7 +87,48 @@ export class Achievements {
     this.data.unlocked[id] = Date.now();
     this.save();
     this.log.push({ id, at: Date.now() });
-    this.onUnlock?.(a);
+    if (!this.quiet) this.onUnlock?.(a);
+    this.tell({ type: 'unlock', id, quiet: this.quiet });
+    return true;
+  }
+
+  // ------------------------------------------------------------------ another device's progress (session 16)
+  /** a deed already earned elsewhere (Wavedash says so): kept, never announced */
+  adopt(id: string, at = Date.now()) {
+    if (!ACH_BY_ID.has(id) || this.has(id)) return false;
+    this.data.unlocked[id] = at;
+    this.save();
+    this.tell({ type: 'unlock', id, quiet: true });
+    return true;
+  }
+  /** a cumulative count from elsewhere: the larger one wins (counts only grow); goals it completes unlock quietly */
+  adoptCounter(k: CounterKey, v: number) {
+    if (!(v > this.data.counters[k])) return false;
+    this.data.counters[k] = Math.floor(v);
+    this.save();
+    this.quiet = true;
+    try { this.checkGoals(); } finally { this.quiet = false; }
+    this.tell({ type: 'counter', key: k });
+    return true;
+  }
+  /** Fold in another copy of the store (a cloud save): deeds and pages / traces united, counts maxed. Quiet. */
+  merge(other: unknown) {
+    const o = sanitize(other);
+    if (!o) return false;
+    const d = this.data;
+    let changed = false;
+    for (const [id, t] of Object.entries(o.unlocked)) {
+      if (!ACH_BY_ID.has(id)) continue;
+      if (!(id in d.unlocked) || t < d.unlocked[id]) { d.unlocked[id] = t; changed = true; }   // the earliest date it was done
+    }
+    for (const k of COUNTER_KEYS) if (o.counters[k] > d.counters[k]) { d.counters[k] = o.counters[k]; changed = true; }
+    for (const t of o.traces) if (!d.traces.includes(t)) { d.traces.push(t); changed = true; }
+    for (const n of o.lore) if (!d.lore.includes(n)) { d.lore.push(n); changed = true; }
+    if (!changed) return false;
+    this.save();
+    this.quiet = true;
+    try { this.checkGoals(); } finally { this.quiet = false; }
+    this.tell({ type: 'collection' });
     return true;
   }
 
@@ -83,16 +139,21 @@ export class Achievements {
       if (p && p[0] >= p[1]) this.unlock(a.id);
     }
   }
-  private bump(k: keyof AchStore['counters'], n = 1) {
+  private bump(k: CounterKey, n = 1) {
     this.data.counters[k] += n;
     this.save();
     this.checkGoals();
+    this.tell({ type: 'counter', key: k });
   }
 
-  /** Clear everything (the Achievements panel's reset). */
+  /**
+   * Clear everything (the Achievements panel's reset). On Wavedash the platform keeps its own record — deeds earned
+   * there come back on the next sync (a game cannot take a Wavedash achievement away).
+   */
   reset() {
     this.data = empty();
     this.save();
+    this.tell({ type: 'reset' });
   }
 
   // ------------------------------------------------------------------ the title screen
@@ -101,6 +162,7 @@ export class Achievements {
     this.data.lore.push(n);
     this.save();
     this.checkGoals();
+    this.tell({ type: 'collection' });
   }
 
   // ------------------------------------------------------------------ gameplay triggers
@@ -130,6 +192,8 @@ export class Achievements {
         this.wardenHp = null;
       }
       if (arch === 'kingsguard' || arch === 'goblin_king' || arch === 'widow_mother' || arch === 'maw') this.unlock(arch);
+      // bosses and mini-bosses felled (the Last Crown ends through boss:dead, below)
+      if (d.boss) this.bump('bosses');
     });
     signals.on('finisher', () => { this.bump('finishers'); this.unlock('finisher'); });
     signals.on('parry', () => { this.bump('parries'); this.unlock('parry'); });
@@ -149,13 +213,17 @@ export class Achievements {
     });
     signals.on('ability', (d) => {
       const t = now();
-      if (d.id === 'crownbreaker' && d.phase === 'release') { this.cbUntil = t + 1.8; this.cbKills = 0; }
-      if (d.id === 'whirlwind' && d.phase === 'start') { this.whirlOn = true; this.whirlKills = 0; }
+      if (d.id === 'crownbreaker' && d.phase === 'release') { this.cbUntil = t + 1.8; this.cbKills = 0; this.bump('crownbreakers'); }
+      if (d.id === 'whirlwind' && d.phase === 'start') { this.whirlOn = true; this.whirlKills = 0; this.bump('whirlwinds'); }
       if (d.id === 'whirlwind' && d.phase === 'end') { this.whirlOn = false; this.whirlUntil = t + 0.8; }
     });
     signals.on('boss:start', (d) => { if (d.id === 'gate_warden') this.wardenHp = view.hp(); });
     signals.on('hero:death', () => { this.wardenHp = null; });
-    signals.on('boss:dead', (d) => { if (d.id === 'last_crown') this.unlock('ending'); });
+    signals.on('boss:dead', (d) => {
+      if (d.id !== 'last_crown') return;
+      this.bump('bosses');
+      this.completed();
+    });
     signals.on('trace', (d) => {
       const f = view.floorId();
       const key = `${f}:${d.tid}`;
@@ -164,6 +232,7 @@ export class Achievements {
       this.data.traces.push(key);
       this.save();
       this.checkGoals();
+      this.tell({ type: 'collection' });
     });
     signals.on('floor:arrive', (d) => {
       this.floorDeaths = d.deaths;
@@ -172,11 +241,19 @@ export class Achievements {
     });
     signals.on('floor:leave', (d) => {
       if (d.deaths === this.floorDeaths) this.unlock('unremembered');
-      if (d.id === 3 && !d.next) this.unlock('ending');
+      if (d.id === 3 && !d.next) this.completed();
     });
     this.view = view;
   }
   private view: AchView | null = null;
+  /** the game was ended in this session (the Last Crown's death and the floor's end both say so: count it once) */
+  private ended = false;
+  private completed() {
+    this.unlock('ending');
+    if (this.ended) return;
+    this.ended = true;
+    this.bump('completions');
+  }
 
   /** per frame in play: the Gate Warden fight is "untouched" only while her health never drops */
   update() {
@@ -185,4 +262,19 @@ export class Achievements {
     if (hp < this.wardenHp - 0.01) this.wardenHp = null;
     else this.wardenHp = Math.max(this.wardenHp, hp);
   }
+}
+
+/** a stored / downloaded achievement store, checked field by field (unknown or broken data never gets in) */
+function sanitize(raw: unknown): AchStore | null {
+  const d = raw as Partial<AchStore> | null;
+  if (!d || typeof d !== 'object' || d.v !== 1) return null;
+  const out = empty();
+  if (d.unlocked && typeof d.unlocked === 'object') {
+    for (const [id, t] of Object.entries(d.unlocked)) if (typeof t === 'number' && t > 0) out.unlocked[id] = t;
+  }
+  const c = (d.counters ?? {}) as Partial<Counters>;
+  for (const k of COUNTER_KEYS) { const v = Number(c[k]); if (v > 0 && Number.isFinite(v)) out.counters[k] = Math.floor(v); }
+  if (Array.isArray(d.traces)) out.traces = [...new Set(d.traces.filter((x): x is string => typeof x === 'string'))];
+  if (Array.isArray(d.lore)) out.lore = [...new Set(d.lore.filter((n): n is number => typeof n === 'number' && n >= 1 && n <= LORE_PAGES))];
+  return out;
 }

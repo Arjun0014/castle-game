@@ -1,7 +1,10 @@
-import { Platform } from '../platform/Platform';
+import { Platform, type DisplayPref } from '../platform/Platform';
 import { CREDITS } from '../data/credits';
 import type { Settings, SettingsData } from '../game/Settings';
-import type { Guidance, SaveData } from '../game/Save';
+import { saveLabel, type Guidance, type SaveData } from '../game/Save';
+import type { Player } from '../platform/Wavedash';
+import type { CloudSave, CloudStatus } from '../platform/CloudSave';
+import { CLOUD_GLYPH } from './SaveIndicator';
 import { sigilSVG } from './LoadingScreen';
 import { ACHIEVEMENTS, ACH_GROUPS } from '../data/achievements';
 import type { Achievements } from '../game/Achievements';
@@ -18,6 +21,10 @@ import '@fontsource/cormorant-garamond/latin-700.css';
  * Session 15: three tiers so the list stays short — the way in (Continue / New Game), the book and the deeds (Lore ·
  * Achievements, a pair with their devices), and the quiet row (Controls · Settings · Credits). The keyboard moves by
  * row (↑/↓) and along a row (←/→). Lore opens the narrated chronicle (ui/LoreBook.ts, main.ts); Achievements a panel.
+ *
+ * Session 16 (Wavedash): Continue names the floor AND the Blood Sigil and can change under the title (a newer cloud copy
+ * arrives: setSave); a quiet "Playing as" chip shows the Wavedash player (name + avatar, nothing outside Wavedash) with
+ * the cloud save's state; Settings gains Display (a phone's Portrait / Landscape), Fullscreen and the cloud line.
  */
 export type UiSound = 'move' | 'select' | 'back';
 
@@ -25,17 +32,28 @@ interface MenuHooks {
   settings: Settings;
   save: SaveData | null;
   onNewGame(guidance: Guidance): void;
-  onContinue(): void;
+  onContinue(save: SaveData): void;
   sound(kind: UiSound): void;
   /** first user gesture on the menu (resume the audio context for the menu's sounds) */
   onGesture(): void;
   /** Lore: open the chronicle (main.ts → LoreBook) */
   onLore(): void;
   achievements: Achievements;
+  /** the Wavedash player (null outside Wavedash: a local game, no chip) */
+  player?: Player | null;
+  cloud?: CloudSave;
 }
 
-const ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III' };
-const FLOOR_NAME: Record<number, string> = { 1: 'Inheritance', 2: 'Complicity', 3: 'The Crownheart' };
+/** the cloud save's state in words (the title chip, Settings) */
+export function cloudWords(c: CloudSave | undefined): { cls: CloudStatus; text: string } | null {
+  if (!c?.enabled) return null;
+  const at = c.lastSync ? new Date(c.lastSync).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+  const text: Record<CloudStatus, string> = {
+    local: 'Saved on this device', checking: 'Checking the cloud save…', saving: 'Saving to the cloud…',
+    synced: at ? `Cloud save · ${at}` : 'Cloud save', offline: 'Offline · saved on this device', conflict: 'Two saves disagree',
+  };
+  return { cls: c.status, text: text[c.status] };
+}
 
 // ------------------------------------------------------------------ shared panel content
 const KBM: [string, string][] = [
@@ -78,6 +96,19 @@ export function wireTabs(root: HTMLElement) {
   }));
 }
 
+/**
+ * Display (session 16): a phone or tablet chooses Portrait or Landscape (the layout follows at once; picking Landscape is
+ * a tap, so fullscreen and the orientation lock are asked for in it); Fullscreen wherever the page can ask for it — on
+ * Wavedash through the platform (its overlay stays on top), elsewhere the browser's own.
+ */
+function displayHTML() {
+  const rows: string[] = [];
+  if (Platform.handheld) rows.push(`<div class="mm-seg-row" data-key="display"><span>Display mode</span>
+    <div class="mm-seg" role="radiogroup"><button type="button" data-v="portrait">Portrait</button><button type="button" data-v="landscape">Landscape</button></div></div>`);
+  if (Platform.canFullscreen) rows.push('<div class="mm-toggle" data-key="fullscreen" role="switch" tabindex="-1"><span>Fullscreen</span><b></b></div>');
+  return rows.length ? `<h4 class="mm-h4 mm-h4-first">Display</h4>${rows.join('')}<h4 class="mm-h4">Sound &amp; camera</h4>` : '';
+}
+
 const SLIDERS: { key: keyof SettingsData; label: string; min: number; max: number; step: number; pct?: boolean }[] = [
   { key: 'master', label: 'Master volume', min: 0, max: 1, step: 0.05, pct: true },
   { key: 'score', label: 'Music', min: 0, max: 1.5, step: 0.05, pct: true },
@@ -89,15 +120,42 @@ const SLIDERS: { key: keyof SettingsData; label: string; min: number; max: numbe
 ];
 
 export function settingsHTML() {
-  return SLIDERS.map((s) => `
+  return displayHTML() + SLIDERS.map((s) => `
     <label class="mm-slider" data-key="${s.key}"><span>${s.label}</span>
       <input type="range" min="${s.min}" max="${s.max}" step="${s.step}"><output></output></label>`).join('')
     + `<div class="mm-toggle" data-key="subtitles" role="switch" tabindex="-1"><span>Subtitles</span><b></b></div>
-       <button class="mm-reset" type="button">Restore defaults</button>`;
+       <button class="mm-reset" type="button">Restore defaults</button><p class="mm-cloud-line"></p>`;
 }
 
-export function wireSettings(root: HTMLElement, settings: Settings, sound: (k: UiSound) => void) {
+export function wireSettings(root: HTMLElement, settings: Settings, sound: (k: UiSound) => void, cloud?: CloudSave) {
+  const paintPlatform = () => {
+    const seg = root.querySelector<HTMLElement>('.mm-seg-row[data-key="display"]');
+    if (seg) {
+      const cur: DisplayPref = Platform.displayPref ?? (Platform.isPortrait ? 'portrait' : 'landscape');
+      seg.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.classList.toggle('on', b.dataset.v === cur));
+    }
+    const fs = root.querySelector<HTMLElement>('.mm-toggle[data-key="fullscreen"]');
+    if (fs) { const on = Platform.isFullscreen(); fs.classList.toggle('on', on); fs.querySelector('b')!.textContent = on ? 'On' : 'Off'; }
+    const line = root.querySelector<HTMLElement>('.mm-cloud-line');
+    const w = cloudWords(cloud);
+    if (line) { line.textContent = w ? w.text : ''; line.className = 'mm-cloud-line' + (w ? ' ' + w.cls : ''); }
+  };
+  root.querySelectorAll<HTMLButtonElement>('.mm-seg-row[data-key="display"] button').forEach((b) => b.addEventListener('click', () => {
+    const p = b.dataset.v as DisplayPref;
+    Platform.setDisplayPref(p);
+    // a tap: ask for fullscreen + the orientation now (optional; the rotate card covers a refusal)
+    void Platform.enterImmersive();
+    sound('select');
+    paintPlatform();
+  }));
+  root.querySelector('.mm-toggle[data-key="fullscreen"]')?.addEventListener('click', () => {
+    sound('select');
+    void Platform.setFullscreen(!Platform.isFullscreen()).then(() => setTimeout(paintPlatform, 120));
+  });
+  Platform.onChange(paintPlatform);
+  cloud?.listenStatus(paintPlatform);
   const paint = () => {
+    paintPlatform();
     for (const s of SLIDERS) {
       const el = root.querySelector<HTMLElement>(`.mm-slider[data-key="${s.key}"]`)!;
       const inp = el.querySelector('input')!, out = el.querySelector('output')!;
@@ -197,10 +255,18 @@ export class MainMenu {
   private gestured = false;
   private open = false;
   private renderAch: () => void = () => {};
+  private save: SaveData | null;
 
   constructor(stage: HTMLElement, private h: MenuHooks) {
-    const r0 = h.save ? 1 : 0;
-    const cont = h.save ? `<button class="mm-item" data-act="continue" data-row="0"><span>Continue</span><small>Floor ${ROMAN[h.save.floor]} · ${FLOOR_NAME[h.save.floor]}</small></button>` : '';
+    this.save = h.save;
+    // Continue is always there (hidden without a save) so a cloud copy arriving under the title can bring it in
+    const cont = `<button class="mm-item" data-act="continue" data-row="0" hidden><span>Continue</span><small></small></button>`;
+    const r0 = 1;
+    const p = h.player;
+    const chip = p ? `<div class="mm-id">
+        <span class="mm-id-av">${p.avatar ? `<img alt="" referrerpolicy="no-referrer" src="${encodeURI(p.avatar)}">` : ''}<b>${esc(p.name.slice(0, 1).toUpperCase())}</b></span>
+        <span class="mm-id-text"><small>Playing as</small><b>${esc(p.name)}</b><i class="mm-id-cloud"><span class="mm-id-glyph">${CLOUD_GLYPH}</span><em></em></i></span>
+      </div>` : '';
     const root = this.root = document.createElement('div');
     root.id = 'menu';
     root.className = 'mm hidden';
@@ -229,8 +295,10 @@ export class MainMenu {
         </div>
       </nav>
       <div class="mm-foot"><span class="mm-keys">↑ ↓ ← → choose · Enter confirm · Esc back</span></div>
+      ${chip}
       ${this.panelHTML('guidance', 'New game', `
         <p class="mm-lead">How much should the castle teach you?</p>
+        <p class="mm-replace" hidden></p>
         <div class="mm-choices">
           <button class="mm-choice on" data-guide="guided"><b>Guided</b><span>The castle teaches each skill in turn — moving, the sword, guard and parry, the Blood Sigils, Resonance, the time shift, crouching — pausing to let you try each one.</span></button>
           <button class="mm-choice" data-guide="minimal"><b>Minimal guidance</b><span>For those who know a blade. Objectives, the way forward and how the castle's two memories work — no combat lessons.</span></button>
@@ -244,7 +312,16 @@ export class MainMenu {
     this.list = root.querySelector('.mm-list')!;
     root.querySelectorAll<HTMLElement>('.mm-panel').forEach((p) => this.panels.set(p.dataset.panel!, p));
     wireTabs(this.panels.get('controls')!);
-    wireSettings(this.panels.get('settings')!, h.settings, h.sound);
+    wireSettings(this.panels.get('settings')!, h.settings, h.sound, h.cloud);
+    // the avatar: Wavedash's CDN picture, or the initial when it cannot be shown (cross-origin rules, no picture)
+    const img = root.querySelector<HTMLImageElement>('.mm-id-av img');
+    if (img) {
+      img.addEventListener('load', () => root.querySelector('.mm-id-av')!.classList.add('pic'));
+      img.addEventListener('error', () => img.remove());
+    }
+    h.cloud?.listenStatus(() => this.paintCloud());
+    this.paintCloud();
+    this.setSave(h.save);
     this.renderAch = wireAchievements(this.panels.get('achievements')!.querySelector('.mm-body') as HTMLElement, h.achievements, h.sound);
     this.tally();
     this.items().forEach((b, i) => {
@@ -268,7 +345,36 @@ export class MainMenu {
       <div class="mm-body">${body}</div></div></section>`;
   }
 
-  private items() { return [...this.list.querySelectorAll<HTMLButtonElement>('.mm-item')]; }
+  private items() { return [...this.list.querySelectorAll<HTMLButtonElement>('.mm-item')].filter((b) => !b.hidden); }
+
+  /** Continue's save (null hides it) — at build, and whenever a newer cloud copy is adopted under the title */
+  setSave(s: SaveData | null) {
+    this.save = s;
+    const b = this.list.querySelector<HTMLButtonElement>('[data-act="continue"]')!;
+    const was = this.items()[this.focusIdx];
+    b.hidden = !s;
+    if (s) { const l = saveLabel(s); b.querySelector('small')!.textContent = `${l.floor} · ${l.where}`; }
+    // New Game says what it replaces (at the first Blood Sigil of the new journey)
+    const note = this.root.querySelector<HTMLElement>('.mm-replace');
+    if (note) {
+      note.hidden = !s;
+      if (s) note.textContent = `Your saved journey — ${saveLabel(s).floor} — is replaced when the new one reaches its first Blood Sigil.`;
+    }
+    const items = this.items();
+    this.focusIdx = Math.max(0, was ? items.indexOf(was) : 0);
+    if (!was || this.focusIdx < 0) this.focusIdx = 0;
+    this.paintFocus();
+  }
+
+  private paintCloud() {
+    const el = this.root.querySelector<HTMLElement>('.mm-id-cloud');
+    if (!el) return;
+    const w = cloudWords(this.h.cloud);
+    el.hidden = !w;
+    if (!w) return;
+    el.className = 'mm-id-cloud ' + w.cls;
+    el.querySelector('em')!.textContent = w.text;
+  }
 
   show() {
     this.open = true;
@@ -297,7 +403,7 @@ export class MainMenu {
 
   private activate(act: string) {
     this.gesture();
-    if (act === 'continue') { this.h.sound('select'); this.h.onContinue(); return; }
+    if (act === 'continue') { if (!this.save) return; this.h.sound('select'); this.h.onContinue(this.save); return; }
     if (act === 'new') { this.openPanel('guidance'); return; }
     if (act === 'lore') { this.h.sound('select'); this.h.onLore(); return; }
     if (act === 'achievements') this.renderAch();
@@ -361,18 +467,20 @@ export class MainMenu {
       if (body && (k === 'ArrowUp' || k === 'KeyW')) body.scrollBy({ top: -80, behavior: 'smooth' });
       return;
     }
-    // rows (↑/↓) and places along a row (←/→): the pair and the quiet row are rows of two and three
+    // rows (↑/↓) and places along a row (←/→): the pair and the quiet row are rows of two and three; a hidden
+    // Continue is not a row
     const items = this.items();
     const cur = items[this.focusIdx];
     const row = Number(cur.dataset.row ?? 0), col = Number(cur.dataset.col ?? 0);
-    const rows = Math.max(...items.map((b) => Number(b.dataset.row ?? 0))) + 1;
+    const rowList = [...new Set(items.map((b) => Number(b.dataset.row ?? 0)))].sort((a, b) => a - b);
+    const ri = rowList.indexOf(row), n = rowList.length;
     const at = (r: number, c: number) => {
       const inRow = items.filter((b) => Number(b.dataset.row ?? 0) === r);
       return items.indexOf(inRow[Math.min(c, inRow.length - 1)]);
     };
     let next = this.focusIdx;
-    if (k === 'ArrowUp' || k === 'KeyW') next = at((row + rows - 1) % rows, col);
-    else if (k === 'ArrowDown' || k === 'KeyS') next = at((row + 1) % rows, col);
+    if (k === 'ArrowUp' || k === 'KeyW') next = at(rowList[(ri + n - 1) % n], col);
+    else if (k === 'ArrowDown' || k === 'KeyS') next = at(rowList[(ri + 1) % n], col);
     else if (k === 'ArrowLeft' || k === 'KeyA') next = at(row, Math.max(0, col - 1));
     else if (k === 'ArrowRight' || k === 'KeyD') next = at(row, col + 1);
     else if (k === 'Enter' || k === 'NumpadEnter' || k === 'Space') { this.activate(cur.dataset.act!); return; }
@@ -388,7 +496,7 @@ export class PauseMenu {
   onQuit?: () => void;
 
   private renderAch: () => void;
-  constructor(host: HTMLElement, settings: Settings, private sound: (k: UiSound) => void, achievements: Achievements) {
+  constructor(host: HTMLElement, settings: Settings, private sound: (k: UiSound) => void, achievements: Achievements, cloud?: CloudSave) {
     const root = this.root = document.createElement('div');
     root.className = 'pm';
     root.innerHTML = `
@@ -403,14 +511,14 @@ export class PauseMenu {
           <button class="mm-item" data-act="achievements"><span>Achievements</span></button>
           <button class="mm-item" data-act="quit"><span>Quit to title</span></button>
         </nav>
-        <p class="pm-note">Progress is kept at the start of each floor.</p>
+        <p class="pm-note">Progress is kept at each Blood Sigil and each floor${cloud?.enabled ? ' — and in your Wavedash cloud save' : ''}.</p>
       </div>
       <section class="mm-panel" data-panel="controls"><div class="mm-frame"><header><h2>Controls</h2><button class="mm-back" type="button">Back</button></header><div class="mm-body">${controlsHTML(Platform.isTouch)}</div></div></section>
       <section class="mm-panel" data-panel="settings"><div class="mm-frame"><header><h2>Settings</h2><button class="mm-back" type="button">Back</button></header><div class="mm-body">${settingsHTML()}</div></div></section>
       <section class="mm-panel" data-panel="achievements"><div class="mm-frame"><header><h2>Achievements</h2><button class="mm-back" type="button">Back</button></header><div class="mm-body"></div></div></section>`;
     host.appendChild(root);
     wireTabs(root.querySelector('[data-panel="controls"]') as HTMLElement);
-    wireSettings(root.querySelector('[data-panel="settings"]') as HTMLElement, settings, sound);
+    wireSettings(root.querySelector('[data-panel="settings"]') as HTMLElement, settings, sound, cloud);
     this.renderAch = wireAchievements(root.querySelector('[data-panel="achievements"] .mm-body') as HTMLElement, achievements, sound);
     root.querySelectorAll<HTMLButtonElement>('.pm-list .mm-item').forEach((b) => {
       b.addEventListener('pointerenter', () => { root.querySelectorAll('.pm-list .mm-item').forEach((x) => x.classList.toggle('focus', x === b)); });
@@ -432,7 +540,14 @@ export class PauseMenu {
 
   private act(a: string) {
     if (a === 'resume') { this.sound('select'); this.onResume?.(); return; }
-    if (a === 'quit') { this.sound('back'); this.onQuit?.(); return; }
+    if (a === 'quit') {
+      this.sound('back');
+      // the save and its upload take a moment: say so on the button
+      const q = this.root.querySelector('[data-act="quit"] span');
+      if (q) q.textContent = 'Saving…';
+      this.onQuit?.();
+      return;
+    }
     this.sound('select');
     if (a === 'achievements') this.renderAch();
     this.panel = a;
@@ -448,3 +563,6 @@ export class PauseMenu {
     this.root.querySelectorAll('.mm-panel').forEach((p) => p.classList.remove('on'));
   }
 }
+
+/** text into HTML (a player's name comes from the platform) */
+function esc(s: string) { return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!)); }

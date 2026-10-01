@@ -174,8 +174,11 @@ export async function run() {
     inp.setVirtual('forward', true);
     await expect('climb', 14, () => { g.player.yaw = Math.PI; g.rig.snapBehind(Math.PI); }, 'climb the Past stair');
     inp.setVirtual('forward', false);
-    // kneel at CP3
+    // kneel at CP3 — the probe walks past fights a player would have had: the Echoes still chasing her are released first
+    // (a sigil refuses while engaged Echoes are near — session 16; this stalled the probe since the session-14 waves)
     const cp3 = g.checkpoints.sigilPos('CP3');
+    for (const e of g.enemies.enemies) if (e.alive && e.triggered && e.pos.distanceTo(cp3) < 20) { e.die(); g.enemies.onKill(e); }
+    await until(() => !g.enemies.engagedNear(cp3, 12), 3);
     g.player.teleport(cp3.clone(), g.player.yaw);
     await expect('cp3', 10, (i) => { if (i % 30 === 0) inp.tapVirtual('interact'); }, 'kneel at CP3');
     texts.end = card();

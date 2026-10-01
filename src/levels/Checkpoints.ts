@@ -5,6 +5,7 @@ import type { Marker } from './Level';
 import { Hints } from '../ui/Hints';
 import { ATMO_UNIFORMS } from '../vfx/Atmosphere';
 import { Platform } from '../platform/Platform';
+import type { CheckpointState } from '../game/Save';
 
 interface Save { cid: string; pos: THREE.Vector3; yaw: number; state: TimeState; charge: number; }
 
@@ -160,12 +161,40 @@ export class Checkpoints {
     } else {
       g.hud.message('CHECKPOINT ANCHORED', first ? 'The castle will remember you here' : 'Health restored', 2.4);
     }
-    this.save = { cid: m.name, pos: m.pos.clone().add(new THREE.Vector3(0, 0.05, 1.2)), yaw: g.player.yaw, state: g.time.state, charge: g.time.charge };
-    // make sure the respawn spot is standable in the saved state; otherwise use the sigil centre
-    const w = g.level.collision;
-    if (w.overlap(this.save.pos, 0.35, 1.8, this.save.state) > 0.05 || !w.hasFooting(this.save.pos, 1, this.save.state)) this.save.pos = m.pos.clone().add(new THREE.Vector3(0, 0.05, 0));
+    this.save = this.anchor(m, g.player.yaw, g.time.state, g.time.charge);
     Platform.haptic(24);
     g.signals.emit('sigil:activate', { cid: m.name, first, firstEver, rite });
+  }
+
+  /** the respawn spot of a sigil: just in front of it if she can stand there in that memory, else its centre */
+  private anchor(m: Marker, yaw: number, state: TimeState, charge: number): Save {
+    const w = this.g.level.collision;
+    let pos = m.pos.clone().add(new THREE.Vector3(0, 0.05, 1.2));
+    if (w.overlap(pos, 0.35, 1.8, state) > 0.05 || !w.hasFooting(pos, 1, state)) pos = m.pos.clone().add(new THREE.Vector3(0, 0.05, 0));
+    return { cid: m.name, pos, yaw, state, charge };
+  }
+
+  /** what this floor's sigils remember of her (game/Save.ts CheckpointState; null before the first sigil) */
+  capture(): Pick<CheckpointState, 'cid' | 'state' | 'charge' | 'yaw' | 'sigils' | 'traces'> | null {
+    const s = this.save;
+    if (!s) return null;
+    return { cid: s.cid, state: s.state, charge: Math.round(s.charge), yaw: +s.yaw.toFixed(3), sigils: [...this.activated], traces: [...this.readTraces] };
+  }
+
+  /**
+   * Continue from a saved Blood Sigil (session 16): the sigils she lit and the memories she read come back, the saved
+   * sigil holds her progress, and she wakes there exactly as after a death (Game.resumeAt restores the rest first).
+   */
+  restore(cp: CheckpointState): boolean {
+    for (const t of cp.traces) if (this.traces.some((m) => m.name === t)) this.readTraces.add(t);
+    for (const s of cp.sigils) if (this.sigils.some((m) => m.name === s)) this.activated.add(s);
+    const m = this.sigils.find((x) => x.name === cp.cid);
+    if (!m) return false;
+    this.activated.add(m.name);
+    Checkpoints.everActivated = true;
+    this.save = this.anchor(m, cp.yaw ?? this.g.player.yaw, cp.state, Math.max(cp.charge, this.g.time.unlocked ? 100 : 0));
+    this.respawn();
+    return true;
   }
 
   respawn() {

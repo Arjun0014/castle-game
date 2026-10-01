@@ -115,7 +115,9 @@ export class HUD {
    */
   setThreats(list: Threat[]) {
     const w = Platform.width, h = Platform.height;
-    const rx = w * 0.5 - 22, ry = h * 0.5 - 30;
+    // widescreen: the chevrons grow with the UI scale (1080p / 1440p), never below their portrait size
+    const k = Math.max(1, Platform.uiScale);
+    const rx = w * 0.5 - 22 * k, ry = h * 0.5 - 30 * k;
     for (let i = 0; i < this.threatEls.length; i++) {
       const el = this.threatEls[i];
       const t = list[i];
@@ -123,7 +125,7 @@ export class HUD {
       const ang = Math.atan2(t.y, t.x);
       const x = w * 0.5 + Math.cos(ang) * rx;
       const y = h * 0.5 + Math.sin(ang) * ry;
-      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(ang * 180 / Math.PI).toFixed(1)}deg)`;
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(ang * 180 / Math.PI).toFixed(1)}deg)${k !== 1 ? ` scale(${k.toFixed(2)})` : ''}`;
       el.className = 'offscreen on' + (t.ranged ? ' ranged' : '') + (t.hot ? ' hot' : '');
     }
   }
@@ -244,10 +246,10 @@ export class HUD {
   guide(dir: { x: number; y: number } | null) {
     const el = this.guideEl;
     if (!dir) { el.classList.remove('on'); return; }
-    const w = Platform.width, h = Platform.height;
+    const w = Platform.width, h = Platform.height, k = Math.max(1, Platform.uiScale);
     const ang = Math.atan2(dir.y, dir.x);
-    const x = w * 0.5 + Math.cos(ang) * (w * 0.5 - 26), y = h * 0.5 + Math.sin(ang) * (h * 0.5 - 34);
-    el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(ang * 180 / Math.PI).toFixed(1)}deg)`;
+    const x = w * 0.5 + Math.cos(ang) * (w * 0.5 - 26 * k), y = h * 0.5 + Math.sin(ang) * (h * 0.5 - 34 * k);
+    el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(ang * 180 / Math.PI).toFixed(1)}deg)${k !== 1 ? ` scale(${k.toFixed(2)})` : ''}`;
     el.classList.add('on');
   }
 

@@ -24,7 +24,9 @@ export interface Learned { moved: number; looked: number; hits: number; guarded:
   /** floor rewards performed at least once (their unlock tip stays until then) */
   crownbreaker: boolean; whirlwind: boolean;
   /** the contextual button has been used once (its lesson on the first Blood Sigil is over) */
-  interactTap?: boolean }
+  interactTap?: boolean;
+  /** the Guided tutorial ran to its end (a resumed save never starts it again) */
+  tutorial?: boolean }
 
 export class Objectives {
   private list: ObjectiveDef[];

@@ -5,7 +5,7 @@ import { Input } from './Input';
 import { Level, type Marker } from '../levels/Level';
 import { MaterialLibrary, type TimeState } from '../levels/Materials';
 import { Player } from '../character/Player';
-import { CameraRig } from '../character/CameraRig';
+import { CameraRig, type CamProfileId } from '../character/CameraRig';
 import { HUD } from '../ui/HUD';
 import { TimeSystem, PER_SHIFT } from '../time/TimeSystem';
 import { EnemyManager } from '../enemies/EnemyManager';
@@ -40,7 +40,7 @@ import { Finishers } from '../combat/Finishers';
 import { Lift } from '../levels/Lift';
 import { Crownheart, AbyssEmbers } from '../vfx/Crownheart';
 import { Tutorial } from './Tutorial';
-import type { Guidance } from './Save';
+import type { Guidance, CheckpointState } from './Save';
 import { LOOPING } from '../data/animationManifest';
 import { MenuIdle, MENU_PACK_IDS } from '../character/MenuIdle';
 
@@ -186,8 +186,7 @@ export class Game {
     this.hud = new HUD(hudRoot);
     if (this.perfHud) this.hud.debugEl.classList.add('on', 'perf');
     this.rig = new CameraRig(this.camera);
-    this.rig.setProfile(Platform.view);
-    this.fogShift = this.rig.profile.distance - 4.4;
+    this.applyView();
     if (opts.stage) {
       this.touch = new TouchControls(opts.stage, this.input);
       this.touch.onPause = () => { if (this.started && !this.finished) this.togglePause(); };
@@ -224,10 +223,31 @@ export class Game {
     Platform.onChange(() => {
       this.input.autoCrouch = Platform.isTouch;
       if (Platform.isTouch) document.exitPointerLock?.();
+      this.applyView();
       this.resize();
     });
     this.resize();
     (window as any).__game = this;
+  }
+
+  /**
+   * The camera profile follows the layout (Platform.view) and the input: desktop widescreen, a phone held sideways
+   * (wideTouch) or the portrait frame. Called at start and whenever the view or input mode changes — mid-game too.
+   */
+  applyView() {
+    const id: CamProfileId = Platform.isPortrait ? 'portrait' : Platform.isTouch ? 'wideTouch' : 'wide';
+    if (id === this.rig.profileId) return;
+    this.rig.setProfile(id, this.rig.profileId !== null);
+    this.setFogShift(this.rig.profile.distance - 4.4);
+  }
+
+  /** Move the fog by the camera's distance difference from the widescreen tuning (keeps the hero's surroundings equally smoky). */
+  private setFogShift(v: number) {
+    const d = v - this.fogShift;
+    if (!d) return;
+    const f = this.scene.fog as THREE.Fog | null;
+    if (f) { f.near += d; f.far += d; }
+    this.fogShift = v;
   }
 
   /**
@@ -249,6 +269,7 @@ export class Game {
     this.renderer.setPixelRatio(this.pixelRatio());
     this.renderer.setSize(w, h);
     this.rig.applyViewport(w, h, Platform.isTouch);
+    if (this.menuIdle) this.menuCamera();
   }
 
   /**
@@ -798,18 +819,57 @@ export class Game {
     this.started = true;
     if (this.announcedFloor !== this.floorId) {
       this.announcedFloor = this.floorId;
+      // a Continue mid-floor keeps the death count she had when she first came here (resumeAt)
+      this.arriveDeaths = this.resumeArriveDeaths ?? this.deaths;
+      this.resumeArriveDeaths = null;
       // reached by the King's lift: the arrival shot (the hero stands on the cage at the spawn)
       if (this.arrivedByLift) { this.arrivedByLift = false; this.heart?.setState(this.time.state); for (const l of this.lifts) l.arrive(); }
       else this.heart?.setState(this.time.state);
       // after the floor's title card: the reward this floor's arrival brings (none on Floor 1)
       this.schedule(4.2, () => this.announceAbilities());
       this.onFloorArrive?.(this.floorId);
-      this.signals.emit('floor:arrive', { id: this.floorId, deaths: this.deaths });
+      this.signals.emit('floor:arrive', { id: this.floorId, deaths: this.arriveDeaths });
     }
     this.clock.start();
     this.renderer.setAnimationLoop(() => this.frame());
   }
   private announcedFloor = -1;
+  /** deaths when she arrived on this floor */
+  arriveDeaths = 0;
+  private resumeArriveDeaths: number | null = null;
+
+  /** The floor's progress for a save (game/Save.ts): the last Blood Sigil and what the floor remembers; null before one. */
+  captureCheckpoint(): CheckpointState | null {
+    const c = this.checkpoints?.capture();
+    if (!c) return null;
+    return {
+      ...c, unlocked: this.time.unlocked, shifts: this.time.shiftCount, cleared: this.enemies.clearedIds(), flags: [...this.level.flags],
+      arriveDeaths: this.arriveDeaths,
+    };
+  }
+
+  /**
+   * Continue from a Blood Sigil (session 16; the floor freshly built, play not started): what the floor remembers is put
+   * back — fractures broken, encounters cleared, sigils lit, memories read, shifting learned — and she wakes at the sigil
+   * as after a death. Returns false when the sigil is not on this floor (an older or newer build): she starts at the
+   * floor's beginning instead.
+   */
+  resumeAt(cp: CheckpointState): boolean {
+    this.time.unlocked = cp.unlocked || this.time.unlocked;
+    this.time.shiftCount = Math.max(this.time.shiftCount, cp.shifts);
+    for (const f of cp.flags) this.level.setFlag(f);
+    this.enemies.restoreCleared(cp.cleared);
+    if (cp.arriveDeaths !== undefined) this.resumeArriveDeaths = cp.arriveDeaths;
+    const ok = this.checkpoints.restore(cp);
+    this.player.lastSafe.copy(this.player.pos);
+    // Guided on Floor I: the lessons resume where she wakes, or are over (CP3 is the tutorial's last sigil)
+    if (this.tutorial && !(ok && this.tutorial.resumeFrom(cp.cid))) {
+      this.learned.tutorial = true;
+      this.tutorial.dispose();
+      this.tutorial = null;
+    }
+    return ok;
+  }
   /** game time of this floor's ability reveal (-1 = none yet); the persistent tip follows it */
   private abilityRevealAt = -1;
   /**
@@ -902,7 +962,7 @@ export class Game {
   setGuidance(g: Guidance) {
     this.guidance = g;
     this.tutorial?.dispose();
-    this.tutorial = g === 'guided' && this.floorId === 1 ? new Tutorial(this) : null;
+    this.tutorial = g === 'guided' && this.floorId === 1 && !this.learned.tutorial ? new Tutorial(this) : null;
   }
 
   // ------------------------------------------------------------------ title screen backdrop
@@ -942,11 +1002,18 @@ export class Game {
     this.menuT = 0;
     this.menuIdle = new MenuIdle(this.player.anim, this.player.model);
     this.enemies.menuVisibility(this.player.pos);
-    this.camera.clearViewOffset();
-    this.camera.fov = Platform.isPortrait ? 62 : 44;
-    this.camera.updateProjectionMatrix();
+    this.menuCamera();
     this.clock.start();
     this.renderer.setAnimationLoop(() => this.menuFrame());
+  }
+  /** the title's lens (no gameplay lens shift); re-applied after a resize or a view change while the title shows */
+  private menuCamera() {
+    this.camera.clearViewOffset();
+    this.camera.aspect = Platform.width / Platform.height;
+    // widescreen: 44° tall, but never wider than ~92° across (ultrawide, a phone held sideways)
+    const cap = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(92) / 2) / this.camera.aspect));
+    this.camera.fov = Platform.isPortrait ? 62 : Math.min(44, cap);
+    this.camera.updateProjectionMatrix();
   }
   private menuFrame() {
     const dt = Math.min(this.clock.getDelta(), 1 / 20);
@@ -990,7 +1057,7 @@ export class Game {
     dt = Math.min(dt, 1 / 20);
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = this.fpsN / this.fpsAcc; this.fpsAcc = 0; this.fpsN = 0; }
-    if (this.input.wasPressed('pause') && !(this.paused && this.pauseBack?.())) this.togglePause();
+    if (this.input.wasPressed('pause') && performance.now() > this.pauseKeyHold && !(this.paused && this.pauseBack?.())) this.togglePause();
     if (this.input.wasPressed('debug')) { this.debug = !this.debug; this.hud.debugEl.classList.toggle('on', this.debug); }
     this.perf.beginStep();
     if (!this.paused) this.step(dt);
@@ -1003,6 +1070,8 @@ export class Game {
     this.input.endFrame(dt);
   }
 
+  /** the Esc that released the pointer (main.ts paused on that) must not also un-pause a moment later */
+  pauseKeyHold = 0;
   togglePause(on?: boolean) {
     this.paused = on ?? !this.paused;
     this.hud.pauseEl.classList.toggle('on', this.paused);
@@ -1010,9 +1079,13 @@ export class Game {
     if (this.paused) { document.exitPointerLock?.(); this.touch?.releaseAll(); this.input.releaseAll(); }
   }
 
-  /** Portrait: pull the camera back when a fight crowds the narrow frame (a melee pack, a boss). */
+  /**
+   * Portrait (and a phone held sideways, a little): pull the camera back when a fight crowds the frame (a melee pack, a
+   * boss). The desktop widescreen profile has no pull (maxPull 0).
+   */
   private fightPull() {
-    if (!Platform.isPortrait || !this.enemies.inCombat) return 0;
+    const k = Platform.isPortrait ? 1 : Platform.isTouchWide ? 0.6 : 0;
+    if (!k || !this.enemies.inCombat) return 0;
     let near = 0;
     const b = this.enemies.boss;
     // a boss anywhere in a 16 m fight (the Last Crown fights at range) widens the frame
@@ -1021,7 +1094,7 @@ export class Game {
       if (e.arch.boss) boss = true;
       else if (!e.isRanged) near++;
     }
-    return Math.max(0, near - 1) * 0.45 + (boss ? 1.1 : 0);
+    return (Math.max(0, near - 1) * 0.45 + (boss ? 1.1 : 0)) * k;
   }
 
   private threatList: Threat[] = [];
@@ -1029,14 +1102,15 @@ export class Game {
   private _tv = new THREE.Vector3();
   private _tp = new THREE.Vector3();
   /**
-   * Off-screen threat markers (portrait): engaged enemies outside the frame, placed on the stage edge in the
-   * direction you would turn to face them (radar mapping: screen-up = camera forward). Telegraphing or aiming
-   * enemies glow hot; archers are tinted so the long-range threat is always accounted for.
+   * Off-screen threat markers: engaged enemies outside the frame, placed on the stage edge in the direction you would
+   * turn to face them (radar mapping: screen-up = camera forward). Telegraphing or aiming enemies glow hot; archers are
+   * tinted so the long-range threat is always accounted for. Session 16: in every layout (they began as portrait-only;
+   * the widescreen frame is wider, but an archer behind you is still behind you).
    */
   private updateThreats() {
     const out = this.threatList;
     out.length = 0;
-    if (Platform.isPortrait && this.started && this.player.alive) {
+    if (this.started && this.player.alive) {
       const fwd = this.rig.forward(this._tv);
       const fx = fwd.x, fz = fwd.z;
       const pp = this.player.pos;

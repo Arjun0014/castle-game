@@ -22,6 +22,10 @@
     "assets:ktx2": "node tools/build_ktx2.mjs",
     "assets:sfx": "node tools/elevenlabs_sfx.mjs",
     "package:itch": "npm run build && python tools/zip_itch.py && python tools/audit_itch.py",
+    "build:wavedash": "npm run build && python tools/audit_dist.py dist",
+    "wavedash:dev": "npm run build:wavedash && wavedash dev",
+    "wavedash:push": "npm run build:wavedash && wavedash build push -m \"Echoes of Caer Veyr\"",
+    "wavedash:defs": "node --experimental-strip-types tools/wavedash/build_defs.mjs",
     "predev:lan": "node tools/build_floor_manifest.mjs",
     "dev:lan": "vite --host 0.0.0.0 --port 5173 --strictPort",
     "preview:lan": "vite preview --host 0.0.0.0 --port 4173 --strictPort",
@@ -43,6 +47,7 @@
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/extensions": "^4.5.1",
     "@types/three": "^0.186.0",
+    "@wvdsh/sdk-js": "^1.3.54",
     "ktx2-encoder": "^0.6.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.1"

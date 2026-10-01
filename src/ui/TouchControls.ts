@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Action, Input } from '../game/Input';
 import { Platform } from '../platform/Platform';
+import { LocalStore } from '../platform/Storage';
 
 /**
  * Touch HUD (shown only while Platform.inputMode === 'touch'). Layout (session 9: the camera pocket grew ~40 %
@@ -103,13 +104,24 @@ function face(b: typeof BUTTONS[number]): string {
   </svg>`;
 }
 
+/**
+ * Landscape (Display: Landscape, session 16) — two thumbs on a phone held sideways. The left thumb owns a floating stick
+ * anywhere in the left 40 % below the top 28 %; the right thumb rests on ATTACK in the lower-right corner with HEAVY to
+ * its left, GUARD up-left between them (Guard → slide onto Attack = bash, onto Heavy = kick, as in portrait), JUMP above
+ * Attack and the rare blue SHIFT lozenge up-left of Jump. Everything else — the whole middle and the upper right — turns
+ * the camera; a dashed LOOK ring marks the spot the right thumb reaches first. No Dodge button (as in portrait), no
+ * lock-on (the soft combat camera frames fights). Positions: style.css `html.view-wide.input-touch .t-*`.
+ */
+const LANDSCAPE = { stick: { x: 0.4, y: 0.28 }, cta: { x0: 0.3, x1: 0.66, y0: 0.18, y1: 0.58 } };
+const PORTRAIT_STICK = { x: 0.46, y: 0.42 };
+
 /** touch camera: radians of yaw per stage width of slow drag (fast flicks gain up to 2x this) */
 const LOOK_GAIN = 5.2;
 /** touch look smoothing time constant (s): irons out 60-120 Hz touch-event jitter, never feels laggy */
 const LOOK_SMOOTH = 0.03;
 /** the look hint fades for good once the player has turned the camera this far (px of drag) */
 const LOOK_LEARNED_PX = 900;
-const LOOK_KEY = 'tcr-look-learned';
+export const LOOK_KEY = 'tcr-look-learned';
 
 const svg = (id: string) => `<svg class="t-glyph" viewBox="0 0 48 48" aria-hidden="true">${GLYPHS[id]}</svg>`;
 
@@ -164,7 +176,7 @@ export class TouchControls {
     this.ctaName = root.querySelector('.t-cta-name') as HTMLElement;
     this.ctaVerb = this.interactEl.querySelector('b') as HTMLElement;
     this.lookHint = root.querySelector('.t-look-hint') as HTMLElement;
-    try { this.lookLearned = localStorage.getItem(LOOK_KEY) === '1'; } catch { /* storage unavailable */ }
+    this.lookLearned = LocalStore.get(LOOK_KEY) === '1';
     this.lookHint.classList.toggle('learned', this.lookLearned);
     root.querySelectorAll<HTMLElement>('.t-btn').forEach((el) => {
       this.buttons.set(el.dataset.a as Action, el);
@@ -182,11 +194,20 @@ export class TouchControls {
     this.layout();
   }
 
+  /**
+   * Units follow the thumb, not the screen: u = the stage's SHORT side / 400 (portrait: its width; a phone held sideways:
+   * its height), so the seals are the same physical size in both modes. Landscape (session 16) re-places the cluster with
+   * CSS (`html.view-wide.input-touch`) and widens the stick's zone; see LANDSCAPE below.
+   */
   private layout() {
     this.W = this.root.clientWidth || Platform.width; this.H = this.root.clientHeight || Platform.height;
-    this.radius = Math.max(46, Math.min(72, Platform.width * 0.14));
-    this.root.style.setProperty('--tu', String(Math.max(0.82, Math.min(1.3, Platform.width / 400))));
+    const short = Math.min(Platform.width, Platform.height);
+    this.radius = Math.max(46, Math.min(72, short * (Platform.isPortrait ? 0.14 : 0.17)));
+    this.root.style.setProperty('--tu', String(Math.max(0.82, Math.min(Platform.isPortrait ? 1.3 : 1.45, short / 400))));
   }
+
+  /** the floating stick's zone, as fractions of the stage (left of x, below y) */
+  private stickZone() { return Platform.isPortrait ? PORTRAIT_STICK : LANDSCAPE.stick; }
 
   private lookHint: HTMLElement;
   private lookLearned = false;
@@ -239,10 +260,12 @@ export class TouchControls {
       if (v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15) { ax = (v.x + 1) * 0.5 * W; ay = (1 - v.y) * 0.5 * H; seen = true; }
       else { const s = v.z >= 1 ? -1 : 1; ax = W * 0.5 + Math.sign(v.x * s || 1) * W * 0.4; ay = H * 0.42; }
     }
-    // the button: ~1 button above the thing, inside the free band of the portrait frame
-    const u = W / 400;
-    const tx = THREE.MathUtils.clamp(ax, W * 0.2, W * 0.8);
-    const ty = THREE.MathUtils.clamp(ay - (this.ctaRead ? 72 : 96) * u, H * 0.2, H * 0.5);
+    // the button: ~1 button above the thing, inside the free band of the frame (portrait: the middle band; landscape:
+    // between the two thumbs' zones)
+    const u = Math.min(W, H) / 400;
+    const c = Platform.isPortrait ? { x0: 0.2, x1: 0.8, y0: 0.2, y1: 0.5 } : LANDSCAPE.cta;
+    const tx = THREE.MathUtils.clamp(ax, W * c.x0, W * c.x1);
+    const ty = THREE.MathUtils.clamp(ay - (this.ctaRead ? 72 : 96) * u, H * c.y0, H * c.y1);
     const k = this.ctaPos.x < 0 ? 1 : 1 - Math.exp(-dt * 12);
     this.ctaPos.x += (tx - this.ctaPos.x) * k;
     this.ctaPos.y += (ty - this.ctaPos.y) * k;
@@ -341,10 +364,11 @@ export class TouchControls {
     const r = this.stageRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
     // left-lower zone owns the stick (one stick finger at a time); everything else turns the camera
-    if (this.stickId < 0 && x < r.width * 0.46 && y > r.height * 0.42) {
+    const z = this.stickZone();
+    if (this.stickId < 0 && x < r.width * z.x && y > r.height * z.y) {
       const R = this.radius;
-      const ox = Math.max(R + 8, Math.min(r.width * 0.46 - R * 0.4, x));
-      const oy = Math.max(r.height * 0.42 + R * 0.5, Math.min(r.height - R - 8, y));
+      const ox = Math.max(R + 8, Math.min(r.width * z.x - R * 0.4, x));
+      const oy = Math.max(r.height * z.y + R * 0.5, Math.min(r.height - R - 8, y));
       this.stickId = e.pointerId;
       this.pointers.set(e.pointerId, { kind: 'stick', ox, oy });
       this.stickBase.style.transform = `translate(${ox - R}px, ${oy - R}px)`;
@@ -369,11 +393,14 @@ export class TouchControls {
       // resolution independent and fast (session 9 playtest: "I have to swipe too much"): a slow swipe across a
       // third of the stage already turns ~90°; quick flicks gain up to 2× more (swipe acceleration), so a short
       // thumb flick spins the camera round while slow drags stay precise. Vertical is gentler (pitch is clamped).
+      // the reference is the stage's SHORT side (portrait: its width — unchanged; landscape: its height), so one thumb's
+      // swipe turns the camera the same amount whichever way the phone is held
       const dx = e.clientX - role.x, dy = e.clientY - role.y;
       const dt = Math.max(0.004, Math.min(0.1, (e.timeStamp - role.t) / 1000));
-      const speed = Math.hypot(dx, dy) / dt / Math.max(240, Platform.width);   // stage widths per second
+      const ref = Math.max(240, Math.min(Platform.width, Platform.height));
+      const speed = Math.hypot(dx, dy) / dt / ref;   // short sides per second
       role.v += (speed - role.v) * 0.5;
-      const k = LOOK_GAIN / Math.max(240, Platform.width) * (1 + Math.min(1, Math.max(0, role.v - 0.6) / 2.4));
+      const k = LOOK_GAIN / ref * (1 + Math.min(1, Math.max(0, role.v - 0.6) / 2.4));
       this.lookBuf.dx += dx * k;
       this.lookBuf.dy += dy * k * 0.62;
       role.t = e.timeStamp;
@@ -382,7 +409,7 @@ export class TouchControls {
         if (this.lookPx > LOOK_LEARNED_PX) {
           this.lookLearned = true;
           this.lookHint.classList.add('learned');
-          try { localStorage.setItem(LOOK_KEY, '1'); } catch { /* storage unavailable */ }
+          LocalStore.set(LOOK_KEY, '1');
         }
       }
       role.x = e.clientX; role.y = e.clientY;

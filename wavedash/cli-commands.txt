@@ -1,0 +1,39 @@
+# Wavedash CLI equivalents of achievements-import.json (run from the repo root, signed in: `wavedash auth login`).
+# Stats first; a stat-triggered achievement needs the stat DOCUMENT id printed by `wavedash stat create`.
+wavedash stat create --identifier ECHOES_RELEASED --name "Echoes released"
+wavedash stat create --identifier FINISHERS --name "Cinematic finishers"
+wavedash stat create --identifier PARRIES --name "Parries"
+wavedash stat create --identifier TIME_SHIFTS --name "Time shifts"
+wavedash stat create --identifier BOSSES_FELLED --name "Bosses and mini-bosses felled"
+wavedash stat create --identifier CROWNBREAKERS --name "Crownbreakers unleashed"
+wavedash stat create --identifier WHIRLWINDS --name "Whirlwinds unleashed"
+wavedash stat create --identifier MEMORY_TRACES --name "Memory traces read"
+wavedash stat create --identifier LORE_PAGES --name "Chronicle pages turned"
+wavedash stat create --identifier GAME_COMPLETIONS --name "Endings reached"
+
+wavedash achievement create --identifier INHERITANCE --title "Inheritance" --description "Climb out of the lower keep to the Royal Floor." --image wavedash/icons/INHERITANCE.png
+wavedash achievement create --identifier COMPLICITY --title "Complicity" --description "Ride the King's lift down beneath the castle." --image wavedash/icons/COMPLICITY.png
+wavedash achievement create --identifier THE_CROWNHEART_IS_SILENT --title "The Crownheart Is Silent" --description "Break the Last Crown and end the Sundering." --secret --image wavedash/icons/THE_CROWNHEART_IS_SILENT.png
+wavedash achievement create --identifier THE_WARDEN_FALLS --title "The Warden Falls" --description "Defeat the Gate Warden in the Great Hall." --image wavedash/icons/THE_WARDEN_FALLS.png
+wavedash achievement create --identifier UNTOUCHED --title "Untouched" --description "Defeat the Gate Warden without losing a drop of blood." --image wavedash/icons/UNTOUCHED.png
+wavedash achievement create --identifier GUTTER_CROWN --title "Gutter Crown" --description "Bring down the Gutter King on the armory roof." --image wavedash/icons/GUTTER_CROWN.png
+wavedash achievement create --identifier THE_WEEPING_MOTHER --title "The Weeping Mother" --description "Find the Weeping Mother in her hidden lair — and end her grief." --secret --image wavedash/icons/THE_WEEPING_MOTHER.png
+wavedash achievement create --identifier OATH_UNSWORN --title "Oath Unsworn" --description "Defeat the Kingsguard Captain at the King's door." --image wavedash/icons/OATH_UNSWORN.png
+wavedash achievement create --identifier THE_MOUTH_BENEATH --title "The Mouth Beneath" --description "Destroy the Maw of the Crownheart in the flooded cistern." --image wavedash/icons/THE_MOUTH_BENEATH.png
+wavedash achievement create --identifier TURNED_ASIDE --title "Turned Aside" --description "Parry a blow the moment it lands." --image wavedash/icons/TURNED_ASIDE.png
+wavedash achievement create --identifier THE_UNBROKEN_GUARD --title "The Unbroken Guard" --description "Parry thirty blows." --triggered-by-stat-id <PARRIES_ID> --threshold 30 --image wavedash/icons/THE_UNBROKEN_GUARD.png
+wavedash achievement create --identifier FIVE_CUTS --title "Five Cuts" --description "Land every strike of the five-cut chain, to its two-handed cleave." --image wavedash/icons/FIVE_CUTS.png
+wavedash achievement create --identifier THE_LAST_BLOW --title "The Last Blow" --description "End an Echo with a cinematic finisher." --image wavedash/icons/THE_LAST_BLOW.png
+wavedash achievement create --identifier HEADSMAN_OF_VEYR --title "Headsman of Veyr" --description "Perform twenty-five finishers." --triggered-by-stat-id <FINISHERS_ID> --threshold 25 --image wavedash/icons/HEADSMAN_OF_VEYR.png
+wavedash achievement create --identifier NO_MERCY_IN_MEMORY --title "No Mercy in Memory" --description "Execute a staggered, wounded Echo with a heavy blow." --image wavedash/icons/NO_MERCY_IN_MEMORY.png
+wavedash achievement create --identifier CROWNBREAKER --title "Crownbreaker" --description "Destroy three Echoes with a single Crownbreaker." --image wavedash/icons/CROWNBREAKER.png
+wavedash achievement create --identifier THE_WHIRLWIND --title "The Whirlwind" --description "Destroy four Echoes in one Whirlwind." --image wavedash/icons/THE_WHIRLWIND.png
+wavedash achievement create --identifier RELEASED --title "Released" --description "Release one hundred and fifty Echoes from the Crownheart." --triggered-by-stat-id <ECHOES_RELEASED_ID> --threshold 150 --image wavedash/icons/RELEASED.png
+wavedash achievement create --identifier WHICH_MEMORY_WILL_ANSWER --title "Which Memory Will Answer" --description "Force the castle into its other memory." --image wavedash/icons/WHICH_MEMORY_WILL_ANSWER.png
+wavedash achievement create --identifier BETWEEN_TWO_BREATHS --title "Between Two Breaths" --description "Destroy an Echo within three seconds of changing memory." --image wavedash/icons/BETWEEN_TWO_BREATHS.png
+wavedash achievement create --identifier TWO_MEMORIES_ONE_STONE --title "Two Memories, One Stone" --description "Shift the castle forty times." --triggered-by-stat-id <TIME_SHIFTS_ID> --threshold 40 --image wavedash/icons/TWO_MEMORIES_ONE_STONE.png
+wavedash achievement create --identifier UNREMEMBERED --title "Unremembered" --description "Leave a floor without once being returned to a Blood Sigil." --image wavedash/icons/UNREMEMBERED.png
+wavedash achievement create --identifier THE_QUEENS_LETTER --title "The Queen's Letter" --description "Find the letter she left in her Solar — and learn who was saved." --secret --image wavedash/icons/THE_QUEENS_LETTER.png
+wavedash achievement create --identifier WHAT_THE_STONES_CONFESSED --title "What the Stones Confessed" --description "Read every memory trace in Caer Veyr." --triggered-by-stat-id <MEMORY_TRACES_ID> --threshold 20 --image wavedash/icons/WHAT_THE_STONES_CONFESSED.png
+wavedash achievement create --identifier THE_CHRONICLE_OF_CAER_VEYR --title "The Chronicle of Caer Veyr" --description "Turn every page of the illustrated chronicle." --triggered-by-stat-id <LORE_PAGES_ID> --threshold 12 --image wavedash/icons/THE_CHRONICLE_OF_CAER_VEYR.png
+wavedash achievement create --identifier PATIENCE_OF_STONE --title "Patience of Stone" --description "Leave the Uncrowned waiting before the gate for three minutes." --secret --image wavedash/icons/PATIENCE_OF_STONE.png

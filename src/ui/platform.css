@@ -1,0 +1,208 @@
+/* ==========================================================================================================
+   Session 16 — the Wavedash version: widescreen as the PC game, the phone's Landscape layout, and the platform's
+   pieces (HOW WOULD YOU LIKE TO PLAY?, the "Playing as" chip, the cloud save's marks and its conflict choice).
+   Imported last (main.ts), after style.css, menu.css, achievements.css and lore.css.
+
+   Widescreen scale: Platform.uiScale → --uiz (1 at 720p, ≈1.41 at 1080p, ≈1.8 at 1440p; a phone held sideways ≈0.9;
+   ultrawide follows its height). Widgets laid out in px and % are zoomed (CSS zoom scales px, never %); container units
+   (cqw / cqh) are NOT used inside zoomed widgets — Chromium zooms them, Firefox does not. Things the code places in
+   stage pixels (threat chevrons, the reticle, the touch HUD) are never zoomed.
+   ========================================================================================================== */
+
+/* ---------------------------------------------------------------- widescreen scale */
+html.view-wide #hud :is(.hud-bars, .state-badge, .channel, .prompt, .interact, .message, .deny, .boss, .objective, .subtitle, .tutorial, .gift, .gift-tip, .save-mark) { zoom: var(--uiz, 1); }
+html.view-wide #hud .end-card > *, html.view-wide #hud .pm-card, html.view-wide .ach-toast, html.view-wide #overlay.ld .ld-card { zoom: var(--uiz, 1); }
+html.view-wide .mm-frame { zoom: var(--uiz, 1); width: min(92%, 660px); max-height: calc(94% - var(--sat) - var(--sab)); }
+html.view-wide .lb-head, html.view-wide .lb-bar { zoom: var(--uiz, 1); }
+html.view-wide .lb-sub { font-size: calc(17px * var(--uiz, 1)); }
+
+/* the title in widescreen: sized against the frame's HEIGHT (16:9, 16:10 and 21:9 of one height read the same) */
+html.view-wide .mm-crest { width: clamp(40px, 9cqh, 132px); }
+html.view-wide .mm-t-main { font-size: clamp(40px, 11.7cqh, 190px); }
+html.view-wide .mm-t-over { font-size: clamp(10px, 2.4cqh, 36px); }
+html.view-wide .mm-tag { font-size: clamp(12px, 2.3cqh, 32px); }
+html.view-wide .mm-rule { font-size: clamp(8px, 1.25cqh, 16px); }
+html.view-wide .mm-item { font-size: clamp(14px, 2.75cqh, 40px); }
+html.view-wide .mm-item.mm-sec { font-size: clamp(12px, 2.22cqh, 32px); }
+html.view-wide .mm-item.mm-min { font-size: clamp(10.5px, 1.82cqh, 26px); }
+html.view-wide .mm-foot { font-size: clamp(9.5px, 1.5cqh, 18px); }
+html.view-wide.menu-on .ach-host { left: 0; right: 0; justify-content: center; }
+/* a short widescreen frame (a phone held sideways, a small window): the name and the menu keep clear of each other */
+@container (max-height: 540px) {
+  html.view-wide .mm-head { top: calc(var(--sat) + 6cqh); }
+  html.view-wide .mm-crest, html.view-wide .mm-tag { display: none; }
+  html.view-wide .mm-rule { margin: 1.2cqh 0 0; }
+  html.view-wide .mm-list { bottom: calc(var(--sab) + 6cqh); }
+  html.view-wide .mm-foot { display: none; }
+  html.view-wide .mm-item { padding-top: 0.5em; padding-bottom: 0.5em; }
+}
+
+/* the chapter card in a short widescreen frame (a phone held sideways): everything closer, so the card fits the height
+   (the card is zoomed: px only) */
+@container (max-height: 540px) {
+  html.view-wide #overlay.ld .ld-card { padding-top: 0; padding-bottom: 0; }
+  html.view-wide #overlay.ld .ld-chapter { font-size: 10px; }
+  html.view-wide #overlay.ld .ld-title { font-size: 30px; margin: 0.28em -0.15em 0.06em 0; }
+  html.view-wide #overlay.ld.boot .ld-title { font-size: 28px; }
+  html.view-wide #overlay.ld .ld-sub { font-size: 15px; }
+  html.view-wide #overlay.ld .ld-sigil { width: 96px; margin: 12px 0 6px; }
+  html.view-wide #overlay.ld .ld-pct { font-size: 10px; margin-top: 0.5em; }
+  html.view-wide #overlay.ld .ld-epigraph { margin-top: 26px; font-size: 14px; }
+  html.view-wide #overlay.ld .ld-step { margin-top: 12px; font-size: 10px; }
+  html.view-wide #overlay.ld .ld-detail { font-size: 11px; }
+  html.view-wide #overlay.ld .ld-prompt { margin-top: 10px; font-size: 11px; }
+}
+
+/* ---------------------------------------------------------------- touch, held sideways (Display: Landscape) */
+/* vitals top-left, the memory badge top-right beside the pause seal, the boss bar top-centre; spoken lines and cards in
+   the band between the thumbs; prompts mid-frame (the touch rules in style.css use cqh — replaced here, these widgets zoom) */
+html.view-wide.input-touch #hud .hud-bars { left: calc(var(--sal) + 18px); top: calc(var(--sat) + 12px); bottom: auto; width: 250px; }
+html.view-wide.input-touch #hud .hp-bar { height: 9px; margin-bottom: 7px; }
+html.view-wide.input-touch #hud .charge-seg { height: 10px; }
+html.view-wide.input-touch #hud .charge-label { font-size: 9px; letter-spacing: 3px; margin-top: 4px; }
+html.view-wide.input-touch #hud .state-badge { left: auto; right: calc(var(--sar) + 72px); top: calc(var(--sat) + 14px); bottom: auto; font-size: 10px; letter-spacing: 5px; padding: 3px 8px; }
+html.view-wide.input-touch #hud .objective { left: calc(var(--sal) + 18px); top: calc(var(--sat) + 60px); max-width: 34%; font-size: 13px; }
+html.view-wide.input-touch #hud .boss { top: calc(var(--sat) + 14px); width: 40%; }
+html.view-wide.input-touch #hud .boss-name { font-size: 11px; letter-spacing: 5px; }
+html.view-wide.input-touch #hud .message { top: 22%; max-width: 46%; font-size: 19px; letter-spacing: 0.2em; }
+html.view-wide.input-touch #hud .subtitle { bottom: calc(var(--sab) + 4%); width: 42%; }
+html.view-wide.input-touch #hud .subtitle span { font-size: 16px; }
+html.view-wide.input-touch #hud .tutorial { top: 14%; width: min(48%, 540px); }
+html.view-wide.input-touch #hud .gift { top: 30%; }
+html.view-wide.input-touch #hud .gift-tip { bottom: calc(var(--sab) + 17%); top: auto; max-width: 40%; }
+html.view-wide.input-touch #hud .prompt { bottom: auto; top: 40%; max-width: 46%; }
+html.view-wide.input-touch #hud .channel { top: 54%; width: 30%; }
+html.view-wide.input-touch #hud .deny { top: 62%; max-width: 50%; }
+/* the deed's banner: top-right under the pause seal, a little smaller, clear of the centred floor title and prompts */
+html.view-wide.input-touch .ach-host, html.view-wide.input-touch.menu-on .ach-host { top: calc(var(--sat) + 56px); right: calc(var(--sar) + 12px); left: auto; justify-content: flex-end; }
+html.view-wide.input-touch .ach-toast { zoom: calc(var(--uiz, 1) * 0.85); width: 320px; }
+
+/* the two-thumb layout (TouchControls LANDSCAPE): ATTACK under the resting right thumb, HEAVY to its left, GUARD up-left
+   between them (slides onto either), JUMP above ATTACK, the blue SHIFT lozenge up-left of JUMP; the LOOK ring marks the
+   free middle where the right thumb turns the camera; the stick's ring sits under the left thumb */
+html.view-wide .t-cluster { width: calc(340 * var(--u)); height: calc(320 * var(--u)); }
+html.view-wide .t-light { --d: 98; --r: 84; --b: 90; }
+html.view-wide .t-heavy { --d: 74; --r: 196; --b: 58; }
+html.view-wide .t-guard { --d: 70; --r: 204; --b: 158; }
+html.view-wide .t-jump { --d: 74; --r: 72; --b: 206; }
+html.view-wide .t-shift { --d: 56; --r: 162; --b: 248; }
+html.view-wide .t-look-hint { right: calc(var(--sar) + 292 * var(--u)); bottom: calc(var(--sab) + 40 * var(--u)); width: calc(96 * var(--u)); height: calc(96 * var(--u)); }
+html.view-wide .t-stick-home { left: calc(var(--sal) + 62 * var(--u)); bottom: calc(var(--sab) + 52 * var(--u)); }
+html.view-wide .t-pause { top: calc(var(--sat) + 10px); right: calc(var(--sar) + 14px); }
+
+/* ---------------------------------------------------------------- HOW WOULD YOU LIKE TO PLAY? (ui/DisplayChoice.ts) */
+.dc { position: fixed; inset: 0; z-index: 140; display: flex; align-items: center; justify-content: center; overflow: auto;
+  padding: calc(var(--sat) + 16px) calc(var(--sar) + 16px) calc(var(--sab) + 16px) calc(var(--sal) + 16px);
+  background: radial-gradient(ellipse 75% 60% at 50% 42%, #1d0b0b 0%, #0b0506 58%, #030203 100%);
+  color: var(--parch, #efe4cc); font-family: 'EB Garamond', Georgia, serif; opacity: 0; transition: opacity 0.6s ease; -webkit-user-select: none; user-select: none; }
+.dc.in { opacity: 1; }
+.dc.out { opacity: 0; pointer-events: none; }
+.dc-veil { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 48%, transparent 40%, rgba(0,0,0,0.65) 100%); }
+.dc-card { position: relative; width: 100%; max-width: 660px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.dc-crest { width: clamp(42px, 11vmin, 72px); aspect-ratio: 1; margin-bottom: 1.6vmin; filter: drop-shadow(0 0 12px rgba(200,60,40,0.35)); }
+.dc-crest .sg-track, .dc-crest .sg-prog { display: none; }
+.dc-title { margin: 0; font: 600 clamp(18px, 5.2vmin, 34px)/1.15 'Cormorant Garamond', 'EB Garamond', Georgia, serif; letter-spacing: 0.2em; margin-right: -0.2em; text-transform: uppercase; text-wrap: balance;
+  color: #e8cf94; background: linear-gradient(180deg, #fbecc4 10%, #d8b36a 58%, #8f6d34 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 18px rgba(220,140,80,0.22)) drop-shadow(0 2px 2px rgba(0,0,0,0.9)); }
+.dc-rule { display: flex; align-items: center; gap: 0.9em; margin: 1.8vmin 0 3vmin; color: var(--gold); font-size: 9px; }
+.dc-rule i { display: block; width: clamp(40px, 14vmin, 110px); height: 1px; background: linear-gradient(90deg, transparent, rgba(216,179,106,0.75)); }
+.dc-rule i:last-child { background: linear-gradient(270deg, transparent, rgba(216,179,106,0.75)); }
+.dc-options { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(10px, 3vmin, 22px); width: 100%; }
+.dc-opt { display: flex; flex-direction: column; align-items: center; gap: 0.55em; padding: clamp(14px, 3.2vmin, 24px) clamp(10px, 2.4vmin, 18px) clamp(14px, 3vmin, 22px);
+  font-family: inherit; color: inherit; cursor: pointer; background: rgba(255,255,255,0.02); border: 1px solid rgba(216,179,106,0.26);
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.dc-opt:hover, .dc-opt.focus, .dc-opt:active { border-color: rgba(216,179,106,0.85); background: linear-gradient(180deg, rgba(120,26,26,0.26), rgba(40,10,10,0.3));
+  box-shadow: inset 0 0 0 1px rgba(216,179,106,0.22), 0 0 26px rgba(179,36,42,0.28); }
+.dc-opt b { font: 600 clamp(15px, 4.2vmin, 22px)/1 'Cormorant Garamond', 'EB Garamond', Georgia, serif; letter-spacing: 0.26em; margin-right: -0.26em; text-transform: uppercase; color: #f1dfb2; }
+.dc-line { font-size: clamp(12px, 3.1vmin, 15px); line-height: 1.4; color: #b7a98c; font-style: italic; }
+/* the device, drawn with its layout: the stick under the left thumb, the seals under the right */
+.dc-device { display: grid; place-items: center; height: clamp(68px, 19vmin, 112px); margin-bottom: 0.3em; }
+.dc-screen { position: relative; display: block; border: 2px solid #d8b36a; border-radius: 7px; box-shadow: 0 0 16px rgba(216,150,80,0.18);
+  background: radial-gradient(ellipse at 50% 30%, #2a1410 0%, #120807 70%); }
+.portrait .dc-screen { height: 100%; aspect-ratio: 1 / 2; }
+.landscape .dc-screen { height: 50%; aspect-ratio: 2 / 1; }
+.dc-stick { position: absolute; border-radius: 50%; border: 1.5px dashed rgba(216,179,106,0.7); aspect-ratio: 1; }
+.portrait .dc-stick { left: 10%; bottom: 7%; width: 34%; }
+.landscape .dc-stick { left: 6%; bottom: 12%; width: 17%; }
+.dc-seals { position: absolute; aspect-ratio: 1; }
+.portrait .dc-seals { right: 7%; bottom: 7%; width: 42%; }
+.landscape .dc-seals { right: 4%; bottom: 10%; width: 21%; }
+.dc-seals i { position: absolute; border-radius: 50%; background: radial-gradient(circle at 50% 38%, #8e2a22, #2a0907); box-shadow: 0 0 0 1.5px rgba(236,206,142,0.85); }
+.dc-seals i:nth-child(1) { right: 6%; bottom: 6%; width: 46%; height: 46%; }
+.dc-seals i:nth-child(2) { left: 0; bottom: 4%; width: 30%; height: 30%; }
+.dc-seals i:nth-child(3) { right: 12%; top: 0; width: 30%; height: 30%; }
+.dc-opt:hover .dc-screen, .dc-opt.focus .dc-screen { box-shadow: 0 0 22px rgba(255,190,110,0.45); }
+.dc-note { margin: 3vmin 0 0; font-size: clamp(11px, 2.9vmin, 14px); color: #8f8168; font-style: italic; letter-spacing: 0.04em; }
+@media (max-width: 330px) { .dc-options { grid-template-columns: 1fr; } }
+
+/* ---------------------------------------------------------------- "Playing as" (the title, on Wavedash) */
+.mm-id { position: absolute; top: calc(var(--sat) + 3.2cqh); right: calc(var(--sar) + 2.6cqw); display: flex; align-items: center; gap: 10px; text-align: left;
+  pointer-events: none; transition: opacity 0.5s; z-index: 1; }
+html.view-wide .mm-id > * { zoom: var(--uiz, 1); }
+#menu.panel-on .mm-id { opacity: 0; }
+.mm-id-av { position: relative; flex: none; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 38%, #6e1d18, #1c0706); box-shadow: 0 0 0 1.5px rgba(236,206,142,0.85), 0 0 14px rgba(200,70,40,0.35); }
+.mm-id-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.4s; }
+.mm-id-av.pic img { opacity: 1; }
+.mm-id-av b { font: 600 19px/1 'Cormorant Garamond', 'EB Garamond', Georgia, serif; color: #f6e2b0; }
+.mm-id-av.pic b { visibility: hidden; }
+.mm-id-text { display: flex; flex-direction: column; min-width: 0; text-shadow: 0 1px 3px #000; }
+.mm-id-text small { font: 500 9px/1 'EB Garamond', Georgia, serif; letter-spacing: 0.36em; text-transform: uppercase; color: #a88c5a; }
+.mm-id-text > b { margin-top: 3px; max-width: 16em; font: 600 17px/1.1 'Cormorant Garamond', 'EB Garamond', Georgia, serif; letter-spacing: 0.06em; color: #f1dfb4;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-id-cloud { display: flex; align-items: center; gap: 5px; margin-top: 4px; font: italic 400 11.5px/1 'EB Garamond', Georgia, serif; color: #9f927a; }
+.mm-id-cloud[hidden] { display: none; }
+.mm-id-glyph { display: inline-grid; }
+.mm-id-cloud .si-ico { width: 14px; height: 14px; fill: none; stroke: #c9a768; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+.mm-id-cloud .si-mark { opacity: 0; }
+.mm-id-cloud.synced .si-mark { opacity: 1; }
+.mm-id-cloud.checking .si-ico, .mm-id-cloud.saving .si-ico { animation: si-pulse 1.1s ease-in-out infinite; }
+.mm-id-cloud.offline, .mm-id-cloud.conflict { color: #e2a476; }
+.mm-id-cloud.offline .si-ico, .mm-id-cloud.conflict .si-ico { stroke: #e0955e; }
+html.view-portrait .mm-id { right: auto; left: calc(var(--sal) + 4cqw); top: calc(var(--sat) + 1.6cqh); gap: 8px; }
+html.view-portrait .mm-id-av { width: 32px; height: 32px; }
+html.view-portrait .mm-id-av b { font-size: 15px; }
+html.view-portrait .mm-id-text > b { font-size: 14px; max-width: 11em; }
+html.view-portrait .mm-id-cloud { font-size: 10.5px; }
+@container (max-height: 540px) { html.view-wide .mm-id { top: calc(var(--sat) + 10px); } }
+
+/* ---------------------------------------------------------------- Settings: Display, Fullscreen, the cloud line */
+.mm-h4.mm-h4-first { margin-top: 4px; }
+.mm-seg-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0.6em 0; border-bottom: 1px solid rgba(216,179,106,0.08); }
+.mm-seg-row > span { color: #cdbf9f; }
+.mm-seg { display: inline-flex; flex: none; border: 1px solid rgba(216,179,106,0.3); }
+.mm-seg button { font: 500 0.82em/1 'EB Garamond', Georgia, serif; letter-spacing: 0.18em; text-transform: uppercase; color: #9d8f74; background: none; border: 0;
+  padding: 0.75em 1em 0.7em 1.15em; cursor: pointer; touch-action: manipulation; }
+.mm-seg button + button { border-left: 1px solid rgba(216,179,106,0.2); }
+.mm-seg button.on { color: #1d0f08; background: linear-gradient(180deg, #f1dca6, #c9a257); }
+.mm-cloud-line { margin: 14px 0 0; font-style: italic; font-size: 0.88em; color: #8f8168; }
+.mm-cloud-line:empty { display: none; }
+.mm-cloud-line.offline, .mm-cloud-line.conflict { color: #e2a476; }
+.mm-replace { margin: -6px 0 14px; text-align: center; font-style: italic; color: #c9a77a; font-size: 0.9em; line-height: 1.45; }
+
+/* ---------------------------------------------------------------- two memories of one journey (ui/CloudConflict.ts) */
+.cc-panel { z-index: 60; color: var(--parch, #efe4cc); font-family: 'EB Garamond', Georgia, serif; -webkit-user-select: none; user-select: none; }
+.cc-choice small { display: block; margin-bottom: 0.6em; font: 500 0.72em/1 'EB Garamond', Georgia, serif; letter-spacing: 0.34em; text-transform: uppercase; color: #b99a62; }
+.cc-choice em { display: block; margin-top: 0.55em; font-size: 0.85em; color: #9f927a; }
+.cc-choice span { display: block; }
+.cc-panel.busy .cc-keep { opacity: 0.6; pointer-events: none; }
+html.cc-on #menu { visibility: hidden; }
+
+/* ---------------------------------------------------------------- the save mark (ui/SaveIndicator.ts) */
+.save-mark { position: absolute; display: flex; align-items: center; gap: 7px; padding: 5px 12px 5px 8px; font: 500 10.5px/1 'EB Garamond', Georgia, serif;
+  letter-spacing: 0.22em; text-transform: uppercase; color: #d9c49a; background: rgba(8,6,5,0.5); border: 1px solid rgba(216,179,106,0.28); border-radius: 14px;
+  opacity: 0; transition: opacity 0.5s; pointer-events: none; z-index: 6; white-space: nowrap; right: calc(var(--sar) + 26px); bottom: calc(var(--sab) + 26px); }
+.save-mark.on { opacity: 0.92; }
+.si-ico { width: 15px; height: 15px; fill: none; stroke: #e2c27e; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; display: block; }
+.save-mark .si-mark { opacity: 0; }
+.save-mark.cloud .si-mark, .save-mark.local .si-mark { opacity: 1; }
+.save-mark.saving .si-ico { animation: si-pulse 1.1s ease-in-out infinite; }
+.save-mark.offline { color: #e8b07a; }
+.save-mark.offline .si-ico { stroke: #e8a060; }
+@keyframes si-pulse { 50% { opacity: 0.35; } }
+html.view-portrait .save-mark { right: calc(var(--sar) + 3cqw); bottom: auto; top: calc(var(--sat) + 1.6cqh + 50px); }
+html.view-wide.input-touch .save-mark { right: calc(var(--sar) + 72px); bottom: auto; top: calc(var(--sat) + 40px); }
+#hud.cine .save-mark, html.menu-on .save-mark { opacity: 0 !important; }
+
+/* paused: the moment's passing words (a floor's title, a prompt, a spoken line) step back behind the pause card */
+html.paused #hud :is(.message, .prompt, .deny, .gift, .gift-tip, .subtitle, .save-mark, .tutorial) { opacity: 0 !important; transition: opacity 0.2s; }

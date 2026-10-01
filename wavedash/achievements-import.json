@@ -1,0 +1,246 @@
+{
+  "achievements": [
+    {
+      "identifier": "INHERITANCE",
+      "display_name": "Inheritance",
+      "description": "Climb out of the lower keep to the Royal Floor.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "COMPLICITY",
+      "display_name": "Complicity",
+      "description": "Ride the King's lift down beneath the castle.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "THE_CROWNHEART_IS_SILENT",
+      "display_name": "The Crownheart Is Silent",
+      "description": "Break the Last Crown and end the Sundering.",
+      "secret": true,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "THE_WARDEN_FALLS",
+      "display_name": "The Warden Falls",
+      "description": "Defeat the Gate Warden in the Great Hall.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "UNTOUCHED",
+      "display_name": "Untouched",
+      "description": "Defeat the Gate Warden without losing a drop of blood.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "GUTTER_CROWN",
+      "display_name": "Gutter Crown",
+      "description": "Bring down the Gutter King on the armory roof.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "THE_WEEPING_MOTHER",
+      "display_name": "The Weeping Mother",
+      "description": "Find the Weeping Mother in her hidden lair — and end her grief.",
+      "secret": true,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "OATH_UNSWORN",
+      "display_name": "Oath Unsworn",
+      "description": "Defeat the Kingsguard Captain at the King's door.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "THE_MOUTH_BENEATH",
+      "display_name": "The Mouth Beneath",
+      "description": "Destroy the Maw of the Crownheart in the flooded cistern.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "TURNED_ASIDE",
+      "display_name": "Turned Aside",
+      "description": "Parry a blow the moment it lands.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "THE_UNBROKEN_GUARD",
+      "display_name": "The Unbroken Guard",
+      "description": "Parry thirty blows.",
+      "secret": false,
+      "stat_requirement": {
+        "stat": "PARRIES",
+        "threshold": 30
+      }
+    },
+    {
+      "identifier": "FIVE_CUTS",
+      "display_name": "Five Cuts",
+      "description": "Land every strike of the five-cut chain, to its two-handed cleave.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "THE_LAST_BLOW",
+      "display_name": "The Last Blow",
+      "description": "End an Echo with a cinematic finisher.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "HEADSMAN_OF_VEYR",
+      "display_name": "Headsman of Veyr",
+      "description": "Perform twenty-five finishers.",
+      "secret": false,
+      "stat_requirement": {
+        "stat": "FINISHERS",
+        "threshold": 25
+      }
+    },
+    {
+      "identifier": "NO_MERCY_IN_MEMORY",
+      "display_name": "No Mercy in Memory",
+      "description": "Execute a staggered, wounded Echo with a heavy blow.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "CROWNBREAKER",
+      "display_name": "Crownbreaker",
+      "description": "Destroy three Echoes with a single Crownbreaker.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "THE_WHIRLWIND",
+      "display_name": "The Whirlwind",
+      "description": "Destroy four Echoes in one Whirlwind.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "RELEASED",
+      "display_name": "Released",
+      "description": "Release one hundred and fifty Echoes from the Crownheart.",
+      "secret": false,
+      "stat_requirement": {
+        "stat": "ECHOES_RELEASED",
+        "threshold": 150
+      }
+    },
+    {
+      "identifier": "WHICH_MEMORY_WILL_ANSWER",
+      "display_name": "Which Memory Will Answer",
+      "description": "Force the castle into its other memory.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "BETWEEN_TWO_BREATHS",
+      "display_name": "Between Two Breaths",
+      "description": "Destroy an Echo within three seconds of changing memory.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "TWO_MEMORIES_ONE_STONE",
+      "display_name": "Two Memories, One Stone",
+      "description": "Shift the castle forty times.",
+      "secret": false,
+      "stat_requirement": {
+        "stat": "TIME_SHIFTS",
+        "threshold": 40
+      }
+    },
+    {
+      "identifier": "UNREMEMBERED",
+      "display_name": "Unremembered",
+      "description": "Leave a floor without once being returned to a Blood Sigil.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "THE_QUEENS_LETTER",
+      "display_name": "The Queen's Letter",
+      "description": "Find the letter she left in her Solar — and learn who was saved.",
+      "secret": true,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "WHAT_THE_STONES_CONFESSED",
+      "display_name": "What the Stones Confessed",
+      "description": "Read every memory trace in Caer Veyr.",
+      "secret": false,
+      "stat_requirement": {
+        "stat": "MEMORY_TRACES",
+        "threshold": 20
+      }
+    },
+    {
+      "identifier": "THE_CHRONICLE_OF_CAER_VEYR",
+      "display_name": "The Chronicle of Caer Veyr",
+      "description": "Turn every page of the illustrated chronicle.",
+      "secret": false,
+      "stat_requirement": {
+        "stat": "LORE_PAGES",
+        "threshold": 12
+      }
+    },
+    {
+      "identifier": "PATIENCE_OF_STONE",
+      "display_name": "Patience of Stone",
+      "description": "Leave the Uncrowned waiting before the gate for three minutes.",
+      "secret": true,
+      "stat_requirement": null
+    }
+  ],
+  "stats": [
+    {
+      "identifier": "ECHOES_RELEASED",
+      "display_name": "Echoes released"
+    },
+    {
+      "identifier": "FINISHERS",
+      "display_name": "Cinematic finishers"
+    },
+    {
+      "identifier": "PARRIES",
+      "display_name": "Parries"
+    },
+    {
+      "identifier": "TIME_SHIFTS",
+      "display_name": "Time shifts"
+    },
+    {
+      "identifier": "BOSSES_FELLED",
+      "display_name": "Bosses and mini-bosses felled"
+    },
+    {
+      "identifier": "CROWNBREAKERS",
+      "display_name": "Crownbreakers unleashed"
+    },
+    {
+      "identifier": "WHIRLWINDS",
+      "display_name": "Whirlwinds unleashed"
+    },
+    {
+      "identifier": "MEMORY_TRACES",
+      "display_name": "Memory traces read"
+    },
+    {
+      "identifier": "LORE_PAGES",
+      "display_name": "Chronicle pages turned"
+    },
+    {
+      "identifier": "GAME_COMPLETIONS",
+      "display_name": "Endings reached"
+    }
+  ]
+}

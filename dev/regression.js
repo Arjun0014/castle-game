@@ -108,16 +108,30 @@ function touchLayout() {
   let overlap = 0;
   for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) { const a = rects[i], b = rects[j]; if (a.left < b.right - 2 && b.left < a.right - 2 && a.top < b.bottom - 2 && b.top < a.bottom - 2) overlap++; }
   check('Touch: buttons do not overlap', overlap === 0, { overlap });
-  // the lower-right corner pocket is empty: a grid of points there hits no button
+  // the camera's free region is empty: a grid of points there hits no button (portrait: the lower-right pocket;
+  // landscape, session 16: the middle band between the stick's zone and the right thumb's cluster)
+  const wide = window.__platform?.view === 'wide';
+  const area = wide ? { x0: 0.42, x1: 0.62, y0: 0.3, y1: 0.95 } : { x0: 0.76, x1: 0.97, y0: 0.86, y1: 0.975 };
   let hitsBtn = 0, pts = 0;
-  for (let fx = 0.76; fx <= 0.97; fx += 0.035) for (let fy = 0.86; fy <= 0.975; fy += 0.02) {
+  for (let fx = area.x0; fx <= area.x1; fx += 0.035) for (let fy = area.y0; fy <= area.y1; fy += 0.02) {
     pts++;
     const el = document.elementFromPoint(stage.left + stage.width * fx, stage.top + stage.height * fy);
     if (el?.closest('.t-btn')) hitsBtn++;
   }
-  check('Touch: lower-right camera pocket is empty', hitsBtn === 0, { points: pts, onButtons: hitsBtn });
-  const guard = R(btn('block')), attack = R(btn('light'));
-  check('Touch: right thumb cluster (Attack on the right edge, Guard lower-left of it)', attack.right > stage.right - stage.width * 0.1 && guard.bottom > attack.bottom && guard.left < attack.left, { attack: [Math.round(attack.left), Math.round(attack.top)], guard: [Math.round(guard.left), Math.round(guard.top)] });
+  check(wide ? 'Touch (landscape): the middle camera band is empty' : 'Touch: lower-right camera pocket is empty', hitsBtn === 0, { points: pts, onButtons: hitsBtn });
+  const guard = R(btn('block')), attack = R(btn('light')), heavy = R(btn('heavy'));
+  const c = (r) => [r.left + r.width / 2, r.top + r.height / 2];
+  if (wide) {
+    // Attack under the resting right thumb (lower-right corner), Heavy left of it, Guard up-left between them within a
+    // thumb's slide of both (bash / kick)
+    const [ax, ay] = c(attack), [hx, hy] = c(heavy), [gx, gy] = c(guard);
+    const u = Math.min(stage.width, stage.height) / 400;
+    check('Touch (landscape): right thumb cluster (Attack lower-right, Heavy left, Guard up-left within a slide)',
+      attack.right > stage.right - stage.width * 0.1 && attack.bottom > stage.bottom - stage.height * 0.2 && hx < ax && gx < ax && gy < hy && Math.hypot(gx - ax, gy - ay) < 160 * u && Math.hypot(gx - hx, gy - hy) < 130 * u,
+      { attack: c(attack).map(Math.round), heavy: c(heavy).map(Math.round), guard: c(guard).map(Math.round) });
+  } else {
+    check('Touch: right thumb cluster (Attack on the right edge, Guard lower-left of it)', attack.right > stage.right - stage.width * 0.1 && guard.bottom > attack.bottom && guard.left < attack.left, { attack: [Math.round(attack.left), Math.round(attack.top)], guard: [Math.round(guard.left), Math.round(guard.top)] });
+  }
 }
 
 function finishers() {

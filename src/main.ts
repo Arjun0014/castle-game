@@ -11,19 +11,37 @@ import { Net } from './assets/AssetManager';
 import { Achievements } from './game/Achievements';
 import { AchievementToast } from './ui/AchievementToast';
 import { LoreBook } from './ui/LoreBook';
+import { Wave } from './platform/Wavedash';
+import { LocalStore } from './platform/Storage';
+import { CloudSave } from './platform/CloudSave';
+import { WavedashStats } from './platform/WavedashStats';
+import { askDisplay } from './ui/DisplayChoice';
+import { askConflict } from './ui/CloudConflict';
+import { SaveIndicator } from './ui/SaveIndicator';
+import './ui/platform.css';
+
+const params = new URLSearchParams(location.search);
+// dev server only: `?wdmock` stands a scripted Wavedash SDK in for the real one (dev/wavedashMock.js) — cloud saves,
+// stats, a slow stats load, offline, conflicts — so the platform paths can be tested without the CLI
+if (import.meta.env.DEV && params.has('wdmock')) { const mock = '/dev/wavedashMock.js'; await import(/* @vite-ignore */ mock); }
+// Wavedash first (platform/Wavedash.ts): the signed-in player's id scopes every local key before anything reads storage.
+// Outside Wavedash nothing changes: a local / guest game with the jam build's keys.
+Wave.attach();
+const wavePlayer = Wave.player();
+LocalStore.scope(wavePlayer?.id ?? null);
+Wave.progress(0.01);
 
 const stage = document.getElementById('stage')!;
 // the code has arrived: the plain boot line in index.html gives way to the loading card
 (window as any).__booted = true;
 document.getElementById('boot-note')?.remove();
-// portrait stage + input mode first: the renderer sizes itself from the stage
+// stage layout + input mode first: the renderer sizes itself from the stage
 Platform.init(stage, document.getElementById('rotate')!);
 const app = document.getElementById('app')!;
 const hud = document.getElementById('hud')!;
 const overlay = document.getElementById('overlay')!;
 const btn = document.getElementById('start-btn') as HTMLButtonElement;
 
-const params = new URLSearchParams(location.search);
 /**
  * Automation mute: autopilot runs, Claude/automated tests, benchmarks and `?mute` are silent (and skip decoding
  * the ambience beds). Normal play is never muted: players get the full mix including the ambience.
@@ -50,35 +68,68 @@ const carry = takeCarry();
 Net.onRetry = (_url, attempt, wait) => loader.connection(attempt, wait);
 Net.onRecover = () => loader.connection(0);
 
-// ------------------------------------------------------------------ settings, progress
-const settings = new Settings(!automated);
+// ------------------------------------------------------------------ settings, progress, the cloud
+/** players keep progress; automated runs and dev warps do not, unless a test asks (`?saves`) */
+const persist = (!automated && !dev) || params.has('saves');
+const settings = new Settings(!automated || params.has('saves'));
 settings.onChange((s) => {
   game.audio.setLevels(s);
   game.hud.subtitlesOn = s.subtitles;
   game.input.lookScale = s.look;
   game.rig.shakeScale = s.shake;
 });
-const save: SaveData | null = automated || dev ? null : Save.load();
 /** seconds of play on floors before this session's first (Continue) — the ending card's total */
 let playTimeBefore = 0;
-game.onFloorArrive = (id) => {
-  if (automated || dev || id < 2) return;
-  Save.write({
-    floor: id, guidance: game.guidance, learned: { ...game.learned }, bestiary: [...game.bestiarySeen], deaths: game.deaths,
-    playTime: playTimeBefore + (performance.now() - game.startTime) / 1000,
-  });
-};
 game.playTimeBefore = () => playTimeBefore;
+/** a New Game in this session: its first save sets the previous journey aside (never silently lost) */
+let newRun = false;
+/** what the title's Continue offers (nothing in tests that do not keep saves) */
+const continuable = (d: SaveData | null) => (persist && d ? d : null);
 
-// ------------------------------------------------------------------ achievements (session 15)
+/**
+ * Autosave (session 16): the floor's arrival, every Blood Sigil, a boss or a cleared encounter (refreshing the last
+ * sigil's checkpoint), quitting to the title, the ending. Local at once; platform/CloudSave.ts uploads the save points.
+ */
+function writeProgress(why: string) {
+  if (!persist || !game.started) return;
+  const prev = Save.load();
+  const checkpoint = game.captureCheckpoint();
+  // Floor I without a lit sigil is not a place to continue from (that is New Game)
+  if (game.floorId === 1 && !checkpoint) return;
+  if (newRun && prev) { LocalStore.setJSON('caer-veyr-save:set-aside', { at: Date.now(), from: 'New Game', save: prev }); newRun = false; }
+  Save.write({
+    floor: game.floorId, guidance: game.guidance, learned: { ...game.learned }, bestiary: [...game.bestiarySeen], deaths: game.deaths,
+    playTime: playTimeBefore + (performance.now() - game.startTime) / 1000, finished: !!prev?.finished, checkpoint,
+  }, why);
+}
+game.onFloorArrive = (id) => { if (id >= 2 || game.captureCheckpoint()) writeProgress('floor'); };
+game.signals.on('sigil:activate', () => writeProgress('sigil'));
+game.signals.on('boss:dead', () => writeProgress('boss'));
+game.signals.on('encounter:clear', () => writeProgress('clear'));
+
+// ------------------------------------------------------------------ achievements (session 15) + Wavedash (session 16)
 /** kept across sessions for players; automated runs keep them in memory only unless `?ach` asks to persist (tests) */
 const achievements = new Achievements((!automated && !dev) || params.has('ach'));
 achievements.bind(game.signals, { floorId: () => game.floorId, hp: () => game.player.hp, now: () => performance.now() / 1000 });
 const toast = new AchievementToast(stage, () => game.audio.achievement());
+let menu: MainMenu | null = null;
 achievements.onUnlock = (a) => { toast.show(a); menu?.tally(); };
 window.setInterval(() => { if (game.started && !game.paused) achievements.update(); }, 100);
 (window as any).__ach = achievements;
 (window as any).__toast = toast;
+
+const cloud = new CloudSave({ achievements, settings, enabled: persist, inPlay: () => game.started && !game.finished });
+const stats = new WavedashStats(achievements);
+const saveMark = new SaveIndicator(hud, cloud);
+Save.onWrite((_d, why) => saveMark.saved(why));
+// the cloud copy is fetched while the floor downloads (the title waits for it at most a few seconds)
+const cloudReady = cloud.start().catch((err) => console.warn('[cloud] start failed:', err));
+cloud.onProgress = (d) => { if (!game.started) menu?.setSave(continuable(d)); };
+cloud.onConflict = (c) => {
+  // a conflict found after the title is up: ask over the title (never during play — CloudSave defers it)
+  if (menu && !game.started) void askConflict(stage, c, (k) => game.audio.ui(k)).then(() => menu?.setSave(continuable(Save.load())));
+};
+(window as any).__wave = { Wave, cloud, stats, player: wavePlayer };
 
 // ------------------------------------------------------------------ the opening film (optional module)
 /**
@@ -126,16 +177,20 @@ const firstGesture = () => {
 const GESTURES = ['pointerdown', 'pointerup', 'mousedown', 'touchend', 'keydown', 'click'] as const;
 if (!automated) for (const ev of GESTURES) window.addEventListener(ev, firstGesture, { capture: true, passive: true });
 
-const menu = quick ? null : new MainMenu(stage, {
-  settings, save,
-  onNewGame: (g) => newGame(g),
-  onContinue: () => { if (save) void continueGame(save); },
-  sound: (k) => game.audio.ui(k),
-  // a gesture on the title screen: sound is allowed now (the score was waiting for it, or is already playing)
-  onGesture: () => startScore(),
-  onLore: () => { startScore(); lore.open(1); },
-  achievements,
-});
+function createMenu(save: SaveData | null) {
+  return new MainMenu(stage, {
+    settings, save,
+    onNewGame: (g) => newGame(g),
+    onContinue: (s) => { void continueGame(s); },
+    sound: (k) => game.audio.ui(k),
+    // a gesture on the title screen: sound is allowed now (the score was waiting for it, or is already playing)
+    onGesture: () => startScore(),
+    onLore: () => { startScore(); lore.open(1); },
+    achievements,
+    player: wavePlayer,
+    cloud,
+  });
+}
 
 // ------------------------------------------------------------------ the chronicle (session 15)
 /** the narrated lore book over the title: the score keeps playing (ducked under each page), the castle stops drawing */
@@ -157,23 +212,35 @@ window.setInterval(() => {
   }
 }, 1000);
 
+const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 loader.showInitial(floor);
-game.boot(floorId, (f, label) => loader.progress(f, label)).then(() => {
+game.boot(floorId, (f, label) => { loader.progress(f, label); Wave.progress(0.02 + f * 0.94); }).then(async () => {
   // a dev ?floor=N / ?at= start gets the progression state of a real player there (and a legacy carry if stored)
   applyDevStart(game, params);
   if (floorId > 1 && carry) { game.time.charge = Math.max(game.time.charge, carry.charge); game.player.hp = Math.max(game.player.maxHp * 0.5, carry.hp); }
   loader.ready(floor.readyText);
   (window as any).__ready = true;
-  if (quick || !menu) { begin(pinnedGuide); return; }
+  if (quick) { Wave.ready(); stats.start(); begin(pinnedGuide); return; }
   // the title screen, over the castle itself
   game.menuScene(true);
   void game.loadMenuPack();
   document.documentElement.classList.add('menu-on');
-  setTimeout(() => { loader.hide(); menu.show(); }, 350);
+  // the cloud decides what Continue offers — but a slow network never holds the title hostage (CloudSave carries on)
+  await Promise.race([cloudReady, wait(7000)]);
+  // ready: Wavedash's loader steps aside (Wavedash.init — once) and the stats sync begins
+  Wave.ready();
+  stats.start();
+  // a phone or tablet chooses Portrait or Landscape once (Settings → Display changes it)
+  if (Platform.needsDisplayChoice) await askDisplay((k) => game.audio.ui(k));
+  if (cloud.conflict) await askConflict(stage, cloud.conflict, (k) => game.audio.ui(k));
+  menu = createMenu(continuable(Save.load()));
+  setTimeout(() => { loader.hide(); menu?.show(); }, 350);
   void loadIntro();
 }).catch((err) => {
   console.error(err);
-  // nothing is playable yet: TRY AGAIN reloads the page
+  // nothing is playable yet: TRY AGAIN reloads the page (Wavedash's own loader steps aside so the card is seen)
+  Wave.ready();
   loader.error('Failed to load: ' + (err?.message ?? err), () => location.reload());
   (window as any).__loadError = String(err?.stack ?? err);
 });
@@ -185,6 +252,7 @@ function startAutopilot() {
 /** Into play on the loaded floor. */
 function begin(guidance: Guidance) {
   if (game.started) return;
+  menu?.hide();
   game.menuScene(false);
   document.documentElement.classList.remove('menu-on');
   loader.hide();
@@ -200,6 +268,7 @@ btn.addEventListener('click', () => begin(pinnedGuide));
 /** New Game (inside the click: sound and full screen are allowed) → the film if it is there → Floor 1. */
 function newGame(guidance: Guidance) {
   if (game.started) return;
+  newRun = true;
   game.audio.unlock();
   if (Platform.isTouch) Platform.enterImmersive();
   menu?.hide();
@@ -237,19 +306,23 @@ async function continueGame(s: SaveData) {
 async function resumeContinue(s: SaveData) {
   const def = FLOORS[s.floor];
   try {
-    await game.transitionTo(s.floor, (f, label) => loader.progress(f, label));
+    // Floor I is already built behind the title: Continue there wakes her at her sigil without reloading it
+    if (s.floor !== game.floorId) await game.transitionTo(s.floor, (f, label) => loader.progress(f, label));
+    else loader.progress(1, def.readyText);
     Object.assign(game.learned, s.learned);
     for (const b of s.bestiary) game.bestiarySeen.add(b);
     game.deaths = s.deaths;
-    game.guidance = s.guidance;
+    // Guided on Floor I: the lessons resume only if they never ran to their end (Learned.tutorial)
+    game.setGuidance(s.guidance);
     playTimeBefore = s.playTime;
+    if (s.checkpoint && !game.resumeAt(s.checkpoint)) console.warn('[save] sigil', s.checkpoint.cid, 'is not on this floor: starting at its beginning');
     loader.ready(def.readyText);
     await loader.waitForGesture();
     if (!Platform.isTouch) lockPointer(game.renderer.domElement);
     loader.hide();
     game.audio.init();
     game.start();
-    game.hud.message(def.title, def.subtitle, 3.5);
+    game.hud.message(def.title, s.checkpoint ? 'The castle remembers you here' : def.subtitle, 3.5);
   } catch (err: any) {
     console.error(err);
     // the saved floor's files did not arrive: TRY AGAIN resumes the same load (Game.transitionTo)
@@ -281,40 +354,54 @@ game.onNextFloor = async (next) => {
 };
 (window as any).__transition = (n: number) => game.onNextFloor?.(n);
 
+/** back to the title: progress written and on its way to the cloud first (a reload would cut an upload short) */
+async function toTitle() {
+  writeProgress('quit');
+  await cloud.flush();
+  location.reload();
+}
+
 // the ending: the save remembers it, and the card offers the way back to the title
 game.onEnd = () => {
-  if (!automated && !dev) {
+  if (persist) {
     const s = Save.load();
-    if (s) Save.write({ ...s, finished: true });
+    if (s) Save.write({ ...s, finished: true }, 'ending');
   }
   const end = game.hud.endEl;
   if (!end.querySelector('.end-title')) {
     const b = document.createElement('button');
     b.className = 'mm-item end-title focus';
     b.innerHTML = '<span>Return to the title</span>';
-    b.addEventListener('click', () => location.reload());
+    b.addEventListener('click', () => { void cloud.flush().then(() => location.reload()); });
     end.appendChild(b);
   }
 };
 
 // ------------------------------------------------------------------ pause menu
-const pause = new PauseMenu(game.hud.pauseEl, settings, (k) => game.audio.ui(k), achievements);
+const pause = new PauseMenu(game.hud.pauseEl, settings, (k) => game.audio.ui(k), achievements, cloud);
 const resume = () => {
   if (!game.paused || Platform.rotateBlocked) return;
   game.togglePause(false);
   if (!Platform.isTouch) lockPointer(game.renderer.domElement);
 };
 pause.onResume = resume;
-pause.onQuit = () => location.reload();
+pause.onQuit = () => { void toTitle(); };
 game.pauseBack = () => pause.back();
 game.onPause = (on) => { document.documentElement.classList.toggle('paused', on); if (!on) pause.reset(); game.audio.music?.setPaused(on); };
-// a handheld turned sideways pauses behind the rotate overlay (turning back shows the pause menu)
+// a handheld held the wrong way for its display mode pauses behind the rotate card (turning back shows the pause menu)
 Platform.onChange(() => {
   if (Platform.rotateBlocked && game.started && !game.paused && !game.finished) game.togglePause(true);
 });
 // hidden tab / app switch: pause so nobody dies while away (players only; automation keeps running)
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && !automated && game.started && !game.paused && !game.finished) game.togglePause(true);
+});
+// Esc (or leaving fullscreen) releases the pointer before the game ever sees the key — on Wavedash and in any browser:
+// a mouse player who loses the pointer mid-play gets the pause menu, never a game running on without its camera
+document.addEventListener('pointerlockchange', () => {
+  if (document.pointerLockElement || automated || Platform.isTouch || !game.started || game.paused || game.finished || game.loading) return;
+  game.pauseKeyHold = performance.now() + 300;
+  game.togglePause(true);
 });
 window.addEventListener('keydown', (e) => {
   if (e.code === 'F9' && game.level) game.level.collision.meshes[game.time.state].visible = !game.level.collision.meshes[game.time.state].visible;

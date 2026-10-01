@@ -1,0 +1,13 @@
+# Wavedash CLI project config (https://docs.wavedash.com/cli/configuration) — Echoes of Caer Veyr.
+#
+#   npm run build:wavedash    production build into dist/ + tools/audit_dist.py
+#   npm run wavedash:dev      that build served through the Wavedash sandbox (`wavedash dev`: SDK injected, sandbox data)
+#   npm run wavedash:push     that build uploaded as a new Wavedash build (`wavedash build push`); publish it in the
+#                             Developer Portal or with `wavedash publish <BUILD_ID>`
+#
+# game_id: the game's ID from the Developer Portal (or `wavedash project list --team-id <TEAM_ID>`). It can also come
+# from the environment for one run: WAVEDASH_GAME_ID=<id> npm run wavedash:dev
+# The same dist/ is the itch.io build (npm run package:itch zips it): the game detects Wavedash at runtime.
+game_id = "YOUR_GAME_ID_HERE"
+upload_dir = "./dist"
+entrypoint = "index.html"

@@ -1572,5 +1572,16 @@ export class EnemyManager {
     this.onStateChange(this.g.time.state);
   }
 
-  clearedIds() { return [...this.encounters.values()].filter((e) => e.cleared).map((e) => e.id); }
+  clearedIds() { return [...this.encounters.values()].filter((e) => e.cleared && !e.reinforce).map((e) => e.id); }
+
+  /** Continue from a save (session 16): these encounters were cleared — their Echoes stay released (as the dev warps do). */
+  restoreCleared(ids: string[]) {
+    for (const id of ids) {
+      const enc = this.encounters.get(id);
+      if (!enc) continue;
+      enc.triggered = true;
+      enc.cleared = true;
+      for (const e of enc.enemies) e.vanish();
+    }
+  }
 }
