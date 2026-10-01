@@ -285,7 +285,7 @@ async function startArena() {
   game.arenaMode = true;
   achievements.story = false;
   const card = { ...FLOORS[3], ...ARENA_CARD };
-  loader.showTransition(card, 'THE ENDLESS ARENA');
+  loader.showTransition(card, 'CAER VEYR');
   try {
     await game.transitionTo(3, (f, label) => loader.progress(f, label.replace(FLOORS[3].loadingText, ARENA_CARD.loadingText)));
     if (game.arena) game.arena.onTitle = () => { void toTitle(); };
@@ -427,7 +427,7 @@ pause.onQuit = () => { void toTitle(); };
 game.pauseBack = () => pause.back();
 game.onPause = (on) => {
   document.documentElement.classList.toggle('paused', on);
-  if (on && game.arenaMode) pause.note('The Endless Memory keeps no journey — your best run is kept, and on Wavedash the leaderboard.');
+  if (on && game.arenaMode) pause.note('Endless Arena — your best runs are kept.');
   if (!on) pause.reset();
   game.audio.music?.setPaused(on);
 };
@@ -443,6 +443,8 @@ document.addEventListener('visibilitychange', () => {
 // a mouse player who loses the pointer mid-play gets the pause menu, never a game running on without its camera
 document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement || automated || Platform.isTouch || !game.started || game.paused || game.finished || game.loading) return;
+  // the arena's fall and its results card free the pointer themselves: not a reason to pause over them
+  if (game.arena && !game.arena.playing) return;
   game.pauseKeyHold = performance.now() + 300;
   game.togglePause(true);
 });

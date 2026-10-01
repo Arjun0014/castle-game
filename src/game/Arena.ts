@@ -95,6 +95,9 @@ export class Arena {
     g.rig.snapBehind(g.player.yaw);
     g.forceState(ARENA.firstMemory);
     g.hud.objective(null);
+    // one ring, always in view: a smaller, shorter-lived field of blood and chunks than a floor's (frame time stays flat
+    // however long the run goes)
+    g.gore.maxDecals = 56; g.gore.decalLife = 18; g.gore.maxChunks = 36;
     // the heart is gone, and what it grew with it: the four chains of its cradle and its crystal roots leaning over the
     // pillar stumps (visual only — no collision) would cross every shot of the chamber as bare orange slabs
     for (const m of [...g.level.allMeshes()]) if (m.name === 'C6_HEARTSHAREDiron_rust' || /^C6_HEART(SHARED|PRESENT|PAST)fx_root$/.test(m.name)) m.removeFromParent();
@@ -120,6 +123,8 @@ export class Arena {
 
   private note(s: string) { this.log.push(`${this.g.t.toFixed(1)} ${s}`); if (this.log.length > 80) this.log.shift(); }
   private set(p: Phase) { this.phase = p; this.phaseT = 0; }
+  /** the run is on (false while she falls and on the results card: losing the pointer then is no reason to pause) */
+  get playing() { return this.phase !== 'down' && this.phase !== 'results'; }
   memoryOf(n: number): TimeState { return n % 2 === 1 ? ARENA.firstMemory : other(ARENA.firstMemory); }
   isGuardianWave(n: number) { return n > 0 && n % ARENA.bossEvery === 0; }
 
@@ -137,7 +142,7 @@ export class Arena {
     g.player.abilities = abilitiesForFloor(3);
     g.learned.crownbreaker = true; g.learned.whirlwind = true;
     this.paintHud();
-    g.hud.message('THE ENDLESS MEMORY', 'Hold the ring. Every wave, the castle turns its memory.', 4.2);
+    g.hud.message('ENDLESS ARENA', 'Survive as long as you can', 3.6);
     this.set('intro');
     this.note('run begins');
   }
@@ -259,7 +264,7 @@ export class Arena {
   private raise(e: Enemy, at: THREE.Vector3, enc: Encounter, hpMul: number, guardian = false) {
     const em = this.g.enemies, st = this.g.time.state;
     e.maxHp = Math.round(e.arch.hp * hpMul);
-    em.revive(e, st, at, enc.id);
+    em.revive(e, st, at, enc.id, { quiet: true });
     e.owner = 'BOTH';
     e.yaw = Math.atan2(this.g.player.pos.x - at.x, this.g.player.pos.z - at.z);
     e.root.rotation.y = e.yaw;
@@ -291,6 +296,13 @@ export class Arena {
     if (guardianWave) { g.fx.slowmo(0.8, 0.35); g.hud.flash('#ffe2a8', 0.4); }
     g.enemies.boss = null;
     this.guardian = null;
+    // the wave's finished fights are forgotten (their bodies — still falling — go back to the resting ARENA fight first:
+    // every Echo's fight is looked up each frame)
+    for (const [id, enc] of g.enemies.encounters) {
+      if (!id.startsWith('AW') || !enc.cleared) continue;
+      for (const e of enc.enemies) if (e.encounter === id) e.encounter = 'ARENA';
+      g.enemies.encounters.delete(id);
+    }
     this.bump();
     this.note(`wave ${n} cleared: +${Math.round(bonus)} (score ${Math.round(this.score)})`);
     this.set('cleared');
@@ -539,13 +551,13 @@ export class Arena {
     const secs = run.seconds;
     this.resultsEl.innerHTML = `
       <div class="ar-card">
-        <small class="ar-kicker">The Endless Memory</small>
-        <h2>The memory fades</h2>
+        <small class="ar-kicker">Endless Arena</small>
+        <h2>You have fallen</h2>
         <div class="ar-rule"><i></i><b>◆</b><i></i></div>
         <div class="ar-main"><div><small>Wave</small><b>${run.wave}</b></div><div><small>Score</small><b>${fmt(run.score)}</b></div></div>
         ${best ? '<p class="ar-best">A new personal best</p>' : prev ? `<p class="ar-prev">Your best · ${fmt(prev.score)} · wave ${prev.wave}</p>` : ''}
         <p class="ar-line">Echoes released ${run.kills} · Guardians felled ${this.guardians} · ${Math.floor(secs / 60)}m ${String(secs % 60).padStart(2, '0')}s</p>
-        <div class="ar-board">${online ? '<p class="ar-wait">Consulting the chronicle of the fallen…</p>' : '<p class="ar-wait">The leaderboard waits on Wavedash — your best is kept on this device.</p>'}</div>
+        <div class="ar-board">${online ? '<h3>Top runs</h3><p class="ar-wait">Loading the leaderboard…</p>' : this.localBoard(run)}</div>
         <div class="ar-actions"><button class="ar-again" type="button">Fight again</button><button class="ar-title" type="button">Return to title</button></div>
       </div>`;
     this.resultsEl.classList.add('on');
@@ -555,6 +567,7 @@ export class Arena {
     const title = this.resultsEl.querySelector('.ar-title') as HTMLButtonElement;
     again.addEventListener('click', () => this.restart());
     title.addEventListener('click', () => this.onTitle?.());
+    this.cardAt = performance.now();
     window.addEventListener('keydown', this.onKey, true);
     g.audio.ui?.('select' as never);
     if (online) void this.board(run);
@@ -562,10 +575,13 @@ export class Arena {
   /** main.ts: back to the title */
   onTitle?: () => void;
 
+  private cardAt = 0;
+  /** Enter = FIGHT AGAIN, once the card has been up a second (keys still held from the fight never skip it); Esc and the
+   *  rest do nothing here — the way back to the title is its own button, never a stray key */
   private onKey = (e: KeyboardEvent) => {
     if (this.phase !== 'results') return;
-    if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') { e.preventDefault(); e.stopPropagation(); this.restart(); }
-    else if (e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); this.onTitle?.(); }
+    e.stopPropagation();
+    if ((e.code === 'Enter' || e.code === 'NumpadEnter') && performance.now() - this.cardAt > 1000) { e.preventDefault(); this.restart(); }
   };
 
   /** upload the run, then the top ten (and her own standing when she is not among them) */
@@ -577,12 +593,25 @@ export class Arena {
     this.last.board = top; this.last.rank = sub?.rank ?? mine?.rank ?? null;
     const host = this.resultsEl.querySelector('.ar-board') as HTMLElement | null;
     if (!host) return;
-    if (!top) { host.innerHTML = '<p class="ar-wait">The leaderboard did not answer — your best is kept on this device.</p>'; return; }
+    if (!top) { host.innerHTML = this.localBoard(run); return; }
     const meIn = top.some((r) => r.me);
     const rows = top.map((r) => `<li class="${r.me ? 'me' : ''}"><span class="r">${r.rank}</span><span class="n">${esc(r.name)}</span><span class="w">${r.wave ? 'W' + r.wave : ''}</span><span class="s">${fmt(r.score)}</span></li>`).join('');
     const rank = this.last.rank;
-    const foot = !meIn && rank ? `<p class="ar-rank">Your standing · #${rank}${sub && !sub.improved ? ` · this run #${sub.runRank}` : ''}</p>` : sub?.improved ? '<p class="ar-rank">Your standing rises on the board</p>' : '';
-    host.innerHTML = `<h3>Leaderboard</h3><ol>${rows || '<li class="empty">No one has held the ring yet.</li>'}</ol>${foot}`;
+    const foot = !meIn && rank ? `<p class="ar-rank">Your rank · #${rank}${sub && !sub.improved ? ` · this run #${sub.runRank}` : ''}</p>` : sub?.improved ? '<p class="ar-rank">A new best on the leaderboard</p>' : '';
+    host.innerHTML = `<h3>Top runs</h3><ol>${rows || '<li class="empty">No runs yet.</li>'}</ol>${foot}`;
+  }
+
+  /** this device's ten best runs, this one marked (a local game, or no answer from the leaderboard) */
+  private localBoard(run: ArenaRun) {
+    const runs = Leaderboards.localRuns();
+    let marked = false;
+    const rows = runs.map((r, i) => {
+      const me = !marked && r.score === run.score && r.wave === run.wave;
+      if (me) marked = true;
+      const when = me ? 'This run' : r.at ? new Date(r.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Run';
+      return `<li class="${me ? 'me' : ''}"><span class="r">${i + 1}</span><span class="n">${when}</span><span class="w">W${r.wave}</span><span class="s">${fmt(r.score)}</span></li>`;
+    }).join('');
+    return `<h3>Your top runs</h3><ol>${rows || '<li class="empty">No runs yet.</li>'}</ol>`;
   }
 
   /** FIGHT AGAIN: the same chamber, a fresh run */

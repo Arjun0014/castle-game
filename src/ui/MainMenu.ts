@@ -294,16 +294,15 @@ export class MainMenu {
           <button class="mm-choice" data-guide="minimal"><b>Minimal guidance</b><span>For those who know a blade. Objectives, the way forward and how the castle's two memories work — no combat lessons.</span></button>
         </div>
         <button class="mm-begin" type="button">Enter the keep</button>`)}
-      ${this.panelHTML('arena', 'The Endless Memory', `
-        <p class="mm-lead">The Crownheart’s chamber, its heart gone. Hold the ring for as long as you can.</p>
-        <ul class="mm-arena-rules">
-          <li>Every wave the castle turns its memory: the Past’s whole ring and its soldiers, the Present’s ruin — its drops into the abyss — and its monsters.</li>
-          <li>Every fifth wave a guardian comes for you; each cycle they return stronger.</li>
-          <li>Kills, finishers, Echoes cast into the void and untouched waves raise your score. Lure Echoes over the wedges in the Past, then shift.</li>
-        </ul>
-        <div class="mm-arena-best"></div>
-        <div class="mm-arena-board"></div>
-        <button class="mm-begin mm-arena-go" type="button">Enter the arena</button>`)}
+      ${this.panelHTML('arena', 'Endless Arena', `
+        <p class="mm-lead">Survive as many waves as you can. Each wave switches between the Past and the Present, and every fifth wave brings a guardian.</p>
+        <div class="mm-arena-grid">
+          <div class="mm-arena-me">
+            <div class="mm-arena-best"></div>
+            <button class="mm-begin mm-arena-go" type="button">Enter the arena</button>
+          </div>
+          <div class="mm-arena-board"></div>
+        </div>`)}
       ${this.panelHTML('controls', 'Controls', controlsHTML(Platform.isTouch))}
       ${this.panelHTML('settings', 'Settings', settingsHTML())}
       ${this.panelHTML('credits', 'Credits', creditsHTML())}
@@ -436,27 +435,45 @@ export class MainMenu {
   }
 
   /** the arena's local record: under the title's entry and in its panel */
-  private paintArenaBest() {
-    const b = Leaderboards.localBest();
+  /** the arena's record: the title entry's small line and the panel's "Your best" */
+  private paintArenaBest(mine?: { score: number; wave: number | null; rank?: number } | null) {
+    const local = Leaderboards.localBest();
+    const best = mine && (!local || mine.score >= local.score) ? { score: mine.score, wave: mine.wave ?? local?.wave ?? 0, rank: mine.rank } : local ? { score: local.score, wave: local.wave, rank: undefined } : null;
+    const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
     const sub = this.root.querySelector<HTMLElement>('.mm-arena-sub');
-    if (sub) sub.textContent = b ? `Best · wave ${b.wave} · ${Math.round(b.score).toLocaleString('en-US')}` : '';
+    if (sub) sub.textContent = best ? `Best · wave ${best.wave} · ${fmt(best.score)}` : '';
     const box = this.root.querySelector<HTMLElement>('.mm-arena-best');
-    if (box) box.innerHTML = b ? `<span>Your best</span><b>${Math.round(b.score).toLocaleString('en-US')}</b><em>wave ${b.wave} · ${b.kills} Echoes</em>` : '<span>No run yet — the ring is waiting.</span>';
+    if (box) box.innerHTML = best
+      ? `<span>Your best</span><b>${fmt(best.score)}</b><em>Wave ${best.wave}${best.rank ? ` · rank #${best.rank}` : ''}</em>`
+      : '<span>Your best</span><b>—</b><em>No runs yet</em>';
   }
 
-  /** the panel's leaderboard: the top five on Wavedash (a word instead when it cannot be reached) */
+  /**
+   * The panel's top runs: on Wavedash the leaderboard's top ten (her own row marked, and her standing under it when
+   * she is not among them); a local game lists this device's ten best runs.
+   */
   private async paintArenaBoard() {
     const host = this.root.querySelector<HTMLElement>('.mm-arena-board');
     if (!host) return;
-    if (!Leaderboards.online) { host.innerHTML = '<p class="mm-arena-wait">On Wavedash, every run goes on the leaderboard.</p>'; return; }
-    host.innerHTML = '<p class="mm-arena-wait">Consulting the chronicle of the fallen…</p>';
-    const top = await Leaderboards.top(5);
-    if (this.panel !== 'arena') return;
-    if (!top) { host.innerHTML = '<p class="mm-arena-wait">The leaderboard did not answer.</p>'; return; }
     const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
-    host.innerHTML = top.length
-      ? `<h4>Leaderboard</h4><ol>${top.map((r) => `<li class="${r.me ? 'me' : ''}"><span class="r">${r.rank}</span><span class="n">${esc(r.name)}</span><span class="w">${r.wave ? 'W' + r.wave : ''}</span><span class="s">${fmt(r.score)}</span></li>`).join('')}</ol>`
-      : '<p class="mm-arena-wait">No one has held the ring yet. Be the first.</p>';
+    const row = (rank: number, name: string, wave: number | null, score: number, me: boolean, extra = '') =>
+      `<li class="${me ? 'me' : ''} ${extra}"><span class="r">${rank}</span><span class="n">${esc(name)}</span><span class="w">${wave ? 'Wave ' + wave : ''}</span><span class="s">${fmt(score)}</span></li>`;
+    const local = () => {
+      const runs = Leaderboards.localRuns();
+      host.innerHTML = `<h4>Your top runs</h4>${runs.length
+        ? `<ol>${runs.map((r, i) => row(i + 1, r.at ? new Date(r.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Run', r.wave, r.score, false)).join('')}</ol>`
+        : '<p class="mm-arena-wait">Your best runs will be listed here.</p>'}`;
+    };
+    if (!Leaderboards.online) { local(); this.paintArenaBest(); return; }
+    host.innerHTML = '<h4>Top runs</h4><p class="mm-arena-wait">Loading the leaderboard…</p>';
+    const [top, mine] = await Promise.all([Leaderboards.top(10), Leaderboards.mine()]);
+    if (this.panel !== 'arena') return;
+    if (!top) { local(); return; }
+    this.paintArenaBest(mine);
+    const meIn = top.some((r) => r.me);
+    host.innerHTML = `<h4>Top runs</h4>${top.length
+      ? `<ol>${top.map((r) => row(r.rank, r.name, r.wave, r.score, r.me)).join('')}${!meIn && mine ? row(mine.rank, 'You', mine.wave, mine.score, true, 'gap') : ''}</ol>`
+      : '<p class="mm-arena-wait">No runs yet — be the first on the board.</p>'}`;
   }
 
   private openPanel(id: string) {

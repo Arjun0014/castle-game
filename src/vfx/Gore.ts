@@ -60,6 +60,9 @@ export class Gore {
   };
   state: TimeState = 'PRESENT';
   maxDecals = 140;
+  /** a decal's life (s, + up to 20 s); the Endless Arena keeps a smaller, shorter-lived field (one ring, all in view) */
+  decalLife = 45;
+  maxChunks = 90;
 
   constructor(private scene: THREE.Scene, private raycast: RaycastFn) {
     this.decalMats = this.tex.map((map) => new THREE.MeshStandardMaterial({
@@ -92,7 +95,7 @@ export class Gore {
     m.renderOrder = 1;
     m.receiveShadow = true;
     this.scene.add(m);
-    this.decals.push({ mesh: m, life: 45 + Math.random() * 20, state: this.state });
+    this.decals.push({ mesh: m, life: this.decalLife + Math.random() * 20, state: this.state });
     if (this.decals.length > this.maxDecals) this.kill(this.decals.shift()!);
     return true;
   }
@@ -130,7 +133,7 @@ export class Gore {
       this.scene.add(m);
       this.chunks.push({ mesh: m, v, spin: new THREE.Vector3(Math.random() * 12 - 6, Math.random() * 12 - 6, Math.random() * 12 - 6), life: 9 + Math.random() * 5, rest: 0, state: this.state, bounced: 0, splat: mat !== this.gibMats.metal && mat !== this.gibMats.bone });
     }
-    if (this.chunks.length > 90) for (const g of this.chunks.splice(0, this.chunks.length - 90)) this.kill(g);
+    if (this.chunks.length > this.maxChunks) for (const g of this.chunks.splice(0, this.chunks.length - this.maxChunks)) this.kill(g);
   }
 
   private kill(o: { mesh: THREE.Mesh }) {

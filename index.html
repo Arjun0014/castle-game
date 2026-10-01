@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background:#050404;color-scheme:dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
@@ -33,10 +33,16 @@
          connection), say so instead of leaving a blank frame. main.ts removes it (window.__booted). -->
     <div id="boot-note" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:#050404;color:#b99a62;font:13px/1.6 Georgia,serif;letter-spacing:0.28em;text-align:center;z-index:200">ECHOES OF CAER VEYR</div>
     <script>
+      // a slow connection (or a dev server compiling) first hears "still loading"; only a minute and a half without the
+      // game's code says it did not load
+      setTimeout(function () {
+        var n = document.getElementById('boot-note');
+        if (n && !window.__booted) n.textContent = 'Still loading — this can take a moment on a slow connection.';
+      }, 20000);
       setTimeout(function () {
         var n = document.getElementById('boot-note');
         if (n && !window.__booted) n.textContent = 'The game files did not load. Please reload the page.';
-      }, 25000);
+      }, 90000);
     </script>
     <script type="module" src="/src/main.ts"></script>
   </body>

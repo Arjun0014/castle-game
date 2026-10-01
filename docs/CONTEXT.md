@@ -36,7 +36,7 @@ respawn card, the opening film and the Remotion trailer) — it is no longer the
 the player's own sketch + the `wideTouch` camera; the first build's Portrait / Landscape choice is gone), the Wavedash SDK (load progress, `init()` once, player identity,
 achievements + stats mirrored from the game's own system, cloud saves `saves/main.json` with conflict safety, platform
 fullscreen) behind one facade — the same `dist/` still runs on itch as a local game. Saves now resume at Blood Sigils.
-**LIVE ON WAVEDASH (2026-10-01): https://wavedash.com/games/echoes-of-caer-veyr** — build #5 (the Endless Arena) published,
+**LIVE ON WAVEDASH (2026-10-02): https://wavedash.com/games/echoes-of-caer-veyr** — build #6 (the Endless Arena + its fixes) published,
 store page complete, mobile layout **Wide** (§10 Session 16 → "The Wavedash release", "Phones: landscape only"). Next: §8
 Session 16 (the new touch layout on a real phone, Safari, host fullscreen on a real monitor).
 **Session 17 = THE ENDLESS ARENA** (§10 Session 17), live as build #5: title → ENDLESS ARENA → endless waves in Floor III's
@@ -1087,6 +1087,36 @@ through the pool); story regressions desktop + `?wdmock&saves` **45/45**, phone 
 `mn78z803f9ck57q23pr4p55ca58fe6qw` published (release `rx77d95tvgh5jezgdqcqtg1cr18ff8dn`); the live game's title (a logged-out
 phone) reads NEW GAME | ENDLESS ARENA | LORE | ACHIEVEMENTS ….
 **Not tested**: a human playing it (balance, feel), a real phone, Safari.
+
+#### The user's first arena runs (2026-10-02) — four fixes (build #6)
+1. **"FPS drops little by little as waves go on"** — measured (scratchpad `arena_perf.mjs`: 30 waves of real-ish kills —
+   blood, gibs, finisher deaths — sampling `__perf` step / render / GPU ms, renderer.info, scene size, heap): NO leak
+   (geometries, textures, programs, heap flat), but the arena's LOAD grew: the gore field filled to its floor caps
+   (140 decals — each its own transparent, shadow-receiving draw — and 90 chunks, all inside one ring in view) while the
+   standing Echoes rose 3 → 9, and every pack's fight stayed in `encounters` (96 by wave 31). Now: `Gore.maxDecals /
+   decalLife / maxChunks` (the arena: 56 / 18 s / 36), `EnemyManager.shadowRange` (the arena: 11 m; floors 20), the
+   standing cap 8, the wave's finished fights forgotten at its clear (their falling bodies back to the resting ARENA fight
+   first — deleting them under a body re-raised the per-frame "reading 'triggered'" crash). Wave 31: render CPU 1–2 ms (was
+   2–4), draw calls 44–76 (was up to 167), encounters 2 (was 96).
+2. **Death → "a boxy image", a white screen, "The game files did not load"** (played on the local dev server): the
+   results card called `exitPointerLock`, main.ts's pointer-lock handler paused the game over it (the box: the pause
+   card), and Esc — natural to close it — was the results card's own RETURN TO TITLE shortcut → `location.reload()` →
+   the dev server's cold reload ran past index.html's 25 s boot fallback. Fixed: `Arena.playing` (false while she falls
+   and on the card) — no pause on a lost pointer there (main.ts) and no pause key (Game.frame); the card's keys are Enter
+   only, after it has been up 1 s (Esc and Space do nothing; RETURN TO TITLE is its own button); index.html paints dark
+   from the first byte (`color-scheme: dark`) and its fallback says "Still loading…" at 20 s, "did not load" only at 90 s.
+3. **"The white wave when enemies spawn looks gimmicky"** — `EnemyManager.revive(…, { quiet })`: the arena's Echoes rise
+   without the shift burst (a 0.3 s fade only, so a body never pops in). Guardians keep their entrances.
+4. **"Why does the arena say what map it is and what's removed … show top plays and your score"** — the panel is now
+   "Endless Arena": one line (survive as many waves as you can; each wave switches Past / Present; every fifth wave a
+   guardian), YOUR BEST (the leaderboard's own entry when it is higher, with its rank) + ENTER THE ARENA beside TOP RUNS —
+   the leaderboard's top ten with her row marked and her standing under it when she is not in it; a local game lists this
+   device's ten best runs (`Leaderboards.localRuns`, `caer-veyr:arena-runs`). The chapter card: CAER VEYR · ENDLESS ARENA ·
+   "Survive as long as you can"; the run opens on ENDLESS ARENA; the results card "You have fallen" with TOP RUNS (this
+   device's runs when there is no leaderboard).
+Build #6 `mn71j14q6jy3ccp4zne3g9g5bx8fe9dp` published (release `rx75bxywaeswnv49d4zw24gbjs8ffsdn`).
+Tests: story regressions desktop 45/45, phone 52/52; `dev/arenaProbe.js` 13/13; the death flow (quiet spawns — no rings; a lost pointer in the fall: no pause, the card
+up; Esc on the card: nothing, no reload; Enter after a second: a new run); the panel online (mock) / local / phone 852×393.
 
 ### Session 16 (2026-10-01) — the Wavedash version: widescreen PC game, phone Portrait / Landscape, the Wavedash SDK
 

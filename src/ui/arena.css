@@ -107,7 +107,15 @@ html.view-portrait .ar-card { padding: 20px 18px; }
 html.view-portrait .ar-main { gap: 30px; }
 html.view-portrait .ar-main b { font-size: 36px; }
 
-/* ---------------------------------------------------------------- the title's entry and its panel */
+/* ---------------------------------------------------------------- the title's entry and its panel: a line about the
+   mode, then your best + the way in beside the top runs (stacked on a narrow frame) */
+.mm-arena-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); gap: 22px; align-items: start; margin-top: 14px; }
+.mm-arena-me { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
+.mm-arena-me .mm-arena-best { flex-direction: column; align-items: center; gap: 4px; padding: 14px 0; }
+.mm-arena-me .mm-arena-go { margin: 0; width: 100%; position: static; box-shadow: none; letter-spacing: 0.2em; white-space: nowrap; padding-left: 0.6em; padding-right: 0.4em; }
+.mm-arena-me .mm-arena-best b { font-size: 1.9em; }
+.mm-arena-board li.gap { margin-top: 6px; border-top: 1px dashed rgba(216,179,106,0.3); }
+@container (max-width: 560px) { .mm-arena-grid { grid-template-columns: 1fr; } }
 .mm-item.mm-arena span { color: #f0c6a0; }
 .mm-item.mm-arena small { display: block; margin-top: 0.45em; font: italic 400 0.5em/1 'EB Garamond', Georgia, serif; letter-spacing: 0.06em; text-transform: none; color: #a8946c; }
 .mm-item.mm-arena small:empty { display: none; }
@@ -119,15 +127,10 @@ html.view-portrait .ar-main b { font-size: 36px; }
 .mm-arena-best b { font: 500 1.45em/1 'EB Garamond', Georgia, serif; color: #f1dfb2; }
 .mm-arena-best em { color: #9f927a; font-size: 0.9em; }
 .mm-arena-go { margin-top: 18px; }
-/* the panel's way in stays in reach on a short frame: pinned to the foot of the scrolling body */
-.mm-arena-go { position: sticky; bottom: 0; z-index: 1; box-shadow: 0 -14px 18px 6px rgba(14,8,7,0.92); }
 @container (max-height: 540px) {
-  .mm-arena-rules { margin: 0 0 8px; font-size: 0.9em; line-height: 1.35; }
-  .mm-arena-rules li { margin: 0.2em 0; }
-  .mm-arena-best { padding: 6px 0; }
-  .mm-arena-board { margin-top: 8px; }
+  .mm-arena-grid { margin-top: 8px; gap: 16px; }
+  .mm-arena-me .mm-arena-best { padding: 8px 0; }
   .mm-arena-board li { padding: 3px 4px; font-size: 14px; }
-  .mm-arena-go { margin-top: 10px; }
 }
 /* the end-of-run card owns the screen: the thumbs' controls step away while it is up */
 html.arena-results #touch { visibility: hidden; }

@@ -32,7 +32,7 @@ export const ARENA = {
 
 /** the wave's budget (points), the most Echoes standing at once, and the scaling of their health and blows */
 export const waveBudget = (n: number) => Math.round(4 + n * 2.1);
-export const waveCap = (n: number) => Math.min(9, 3 + Math.floor((n + 1) / 3));
+export const waveCap = (n: number) => Math.min(8, 3 + Math.floor((n + 1) / 3));
 export const hpScale = (n: number) => Math.min(3.2, 1 + (n - 1) * 0.045);
 export const damageScale = (n: number) => Math.min(2.2, 1 + (n - 1) * 0.03);
 /** a new pack rises when this many of the wave are left standing */
@@ -118,9 +118,9 @@ export const ARENA_ENV: Partial<Record<TimeState, Record<string, number | number
 
 /** the chapter card while the chamber loads, and the menu's words for the mode */
 export const ARENA_CARD = {
-  title: 'THE ENDLESS MEMORY',
-  subtitle: 'Endless Arena',
-  loadingText: 'Descending to the heart’s chamber',
-  readyText: 'The heart is gone. The chamber still remembers every battle fought for it.',
-  epigraph: 'Hold the ring. Every wave, the castle turns its memory.',
+  title: 'ENDLESS ARENA',
+  subtitle: 'Survive as long as you can',
+  loadingText: 'Preparing the arena',
+  readyText: 'The arena is ready.',
+  epigraph: 'Every wave, the castle turns between the Past and the Present.',
 };

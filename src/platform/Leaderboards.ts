@@ -17,6 +17,7 @@ import { LocalStore } from './Storage';
 /** the board's key (Developer Portal → Leaderboards: "endless_arena", shown as "Endless Arena", higher is better, number) */
 export const BOARD_NAME = 'endless_arena';
 const BEST_KEY = 'caer-veyr:arena-best';
+const RUNS_KEY = 'caer-veyr:arena-runs';
 const TIMEOUT_MS = 9000;
 
 export interface ArenaRun { score: number; wave: number; kills: number; seconds: number; at?: number }
@@ -58,11 +59,21 @@ class LeaderboardsImpl {
     const b = LocalStore.getJSON<ArenaRun>(BEST_KEY);
     return b && Number.isFinite(b.score) ? b : null;
   }
-  /** keep `run` when it beats the local record; true = a new personal best */
+  /** this device's ten best runs, best first (the arena panel's list where there is no leaderboard) */
+  localRuns(): ArenaRun[] {
+    const list = LocalStore.getJSON<ArenaRun[]>(RUNS_KEY);
+    const runs = Array.isArray(list) ? list.filter((r) => r && Number.isFinite(r.score)) : [];
+    const best = this.localBest();
+    if (best && !runs.some((r) => r.score === best.score && r.wave === best.wave)) runs.push(best);
+    return runs.sort((x, y) => y.score - x.score).slice(0, 10);
+  }
+  /** keep `run` (the ten best, and the record); true = a new personal best */
   recordLocal(run: ArenaRun): boolean {
+    const at = Date.now();
+    LocalStore.setJSON(RUNS_KEY, [...this.localRuns(), { ...run, at }].sort((x, y) => y.score - x.score).slice(0, 10));
     const b = this.localBest();
     if (b && b.score >= run.score) return false;
-    LocalStore.setJSON(BEST_KEY, { ...run, at: Date.now() });
+    LocalStore.setJSON(BEST_KEY, { ...run, at });
     return true;
   }
 

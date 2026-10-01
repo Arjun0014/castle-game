@@ -157,6 +157,7 @@ export class EnemyManager {
       this.encounters.set('ARENA', { id: 'ARENA', state: 'BOTH', box: new THREE.Box3(), enemies: [], triggered: false, cleared: true, wave: 1, optional: true, finale: false, tutorial: false, bossFight: false, surge: false });
       for (const [id, n] of arena.pool) this.arenaPool.set(id, Array.from({ length: n }, () => this.poolBody(id)));
       this.fallOnShift = true;
+      this.shadowRange = 11;
     } else {
       this.spawnFromMarkers();
       this.checkPerches();
@@ -191,6 +192,8 @@ export class EnemyManager {
    * and turning the memory is the arena's own trick.
    */
   fallOnShift = false;
+  /** Echoes nearer than this (m) cast shadows (the arena's ring is all in view: it keeps only the close ones) */
+  shadowRange = 20;
   private poolBody(id: ArchetypeId) {
     const arch = ARCHETYPES[id];
     const { model, clips } = this.instantiate(arch.asset);
@@ -947,7 +950,7 @@ export class EnemyManager {
     }
     e.lastSeen.copy(e.pos);
     // only nearby enemies cast shadows (shadow passes were the biggest per-enemy cost)
-    const cast = dp < 20 * 20;
+    const cast = dp < this.shadowRange * this.shadowRange;
     if (cast !== e.castsShadow) { e.castsShadow = cast; e.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = cast; }); }
     if (e.arch.aura && e.alive && e.root.visible && e.state !== 'hidden' && e.pos.distanceToSquared(g.player.pos) < 30 * 30) {
       g.fx.aura(e.arch.aura, e.pos, e.radius, e.height * e.arch.scale, dt, e);
@@ -1456,7 +1459,7 @@ export class EnemyManager {
    * reset, woken — a riser rises, a kneeler stands — and fades in out of the castle's memory. The floor's own bodies are
    * reused, so nothing is cloned or compiled mid-game (they were drawn in the floor's GPU warm-up).
    */
-  revive(e: Enemy, st: TimeState, at: THREE.Vector3 | null, encId: string, opts: { reinforced?: boolean } = {}) {
+  revive(e: Enemy, st: TimeState, at: THREE.Vector3 | null, encId: string, opts: { reinforced?: boolean; quiet?: boolean } = {}) {
     e.origEncounter = e.origEncounter ?? e.encounter;
     e.reset();
     if (at) { e.place(at); e.pos.copy(at); }
@@ -1467,8 +1470,9 @@ export class EnemyManager {
     e.navReset();
     e.lastHitBy = -1;
     e.activate();
-    e.appear(e.state === 'rise' ? 0.45 : 0.75);
-    this.g.fx.shiftBurst(e.pos.clone(), st);
+    // quiet (the arena): no burst of light — it is simply there (a short fade only, so a body never pops in)
+    e.appear(opts.quiet ? 0.3 : e.state === 'rise' ? 0.45 : 0.75);
+    if (!opts.quiet) this.g.fx.shiftBurst(e.pos.clone(), st);
     return e;
   }
 

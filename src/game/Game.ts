@@ -1077,7 +1077,9 @@ export class Game {
     dt = Math.min(dt, 1 / 20);
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = this.fpsN / this.fpsAcc; this.fpsAcc = 0; this.fpsN = 0; }
-    if (this.input.wasPressed('pause') && performance.now() > this.pauseKeyHold && !(this.paused && this.pauseBack?.())) this.togglePause();
+    // (the arena's fall and its results card have no pause: Esc there is nothing — the card has its own buttons)
+    const pauseOk = !this.arena || this.arena.playing || this.paused;
+    if (this.input.wasPressed('pause') && pauseOk && performance.now() > this.pauseKeyHold && !(this.paused && this.pauseBack?.())) this.togglePause();
     if (this.input.wasPressed('debug')) { this.debug = !this.debug; this.hud.debugEl.classList.toggle('on', this.debug); }
     this.perf.beginStep();
     if (!this.paused) this.step(dt);
