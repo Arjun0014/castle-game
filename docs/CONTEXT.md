@@ -31,7 +31,13 @@ Do not turn this into a diary. Keep it factual, current, and useful.
 **Game title:** ECHOES OF CAER VEYR (session 13; displayed on the title screen, boot card, tab title, credits and the final
 ending card). "The castle remembers" stays the world's creed and a recurring phrase (dialogue, loading labels, the
 respawn card, the opening film and the Remotion trailer) — it is no longer the game's name.
-**Current implementation priority:** session 15 = MAIN MENU LIFE, ACHIEVEMENTS and the LORE EXPERIENCE (§10 Session 15):
+**Current implementation priority:** session 16 = THE WAVEDASH VERSION (§10 Session 16): widescreen is the desktop default
+(HUD + menus scale with the frame, ultrawide capped), phones choose PORTRAIT or LANDSCAPE (a new two-thumb landscape touch
+layout + camera; Settings → Display; no reload), the Wavedash SDK (load progress, `init()` once, player identity,
+achievements + stats mirrored from the game's own system, cloud saves `saves/main.json` with conflict safety, platform
+fullscreen) behind one facade — the same `dist/` still runs on itch as a local game. Saves now resume at Blood Sigils.
+Next: §8 Session 16 (Wavedash CLI sign-in + game ID → `wavedash dev`, an uploaded build, a real phone).
+Session 15 = MAIN MENU LIFE, ACHIEVEMENTS and the LORE EXPERIENCE (§10 Session 15):
 the title heroine turned toward the player with a menu-idle director (the new Mixamo clips + unused Great Sword idles,
 a procedural glance), 26 achievements (toasts in play, a panel, localStorage), and the narrated 12-page chronicle
 (swipe / keys / auto-advance, Eleven v4 narration in the user's "Cthulu female" voice carried to the paid account as an
@@ -145,19 +151,22 @@ Actual animation files must be inspected before final mapping.
 
 ---
 
-## 2.1 Locked Jam Requirements (session 4)
+## 2.1 Presentation (jam session 4; session 16: the Wavedash version)
 
-- **The shipped jam build is a portrait 9:16 HTML5 game** (Three.js, static build uploaded to itch.io). Target around
-  720×1280 / 1080×1920.
-- **Portrait resolution and input method are separate axes.** `src/platform/Platform.ts`:
-  - view: `portrait` (default) or `wide` (`?view=wide`, internal only — never exposed in the UI; keeps the original
-    widescreen camera/HUD for Wavedash or a normal web platform). Same game, same systems; only camera profile + layout.
+- One build (`dist/`) serves Wavedash and itch.io; the game detects Wavedash at runtime (`src/platform/Wavedash.ts`).
+- **View and input mode are separate axes.** `src/platform/Platform.ts`:
+  - view: `wide` or `portrait`, re-evaluated on every resize, switchable while the game runs (never a reload).
+    **Desktop: `wide` by default** (Wavedash, any landscape window, 16:9 / 16:10 / 21:9); a desktop window or embed
+    clearly taller than wide (w/h < 0.8; back to wide above 0.9) gets the jam's portrait layout — itch's 720×1280 frame
+    is unchanged. **Phone / tablet: the player's choice** — PORTRAIT or LANDSCAPE, asked once (the HOW WOULD YOU LIKE TO
+    PLAY? card), kept locally and in the cloud save, Settings → Display changes it; before the choice the layout follows
+    how the device is held. `?view=wide|portrait` pins it for tests.
   - input: `kbm` or `touch`, from real device capability (coarse primary pointer + touch points = handheld → touch),
     then from what the player actually uses (a touch `pointerdown` → touch HUD; a gameplay key or a real mouse press/move
     → keyboard/mouse). Never from the aspect ratio. `?input=touch|kbm` pins it for tests.
-- Desktop/laptop jam page: portrait stage centred (pillar-boxed) in the window/iframe, keyboard + mouse, **no touch HUD**.
-- Phone: the same portrait game, full-screen stage, touch HUD. A handheld held sideways in portrait view gets the
-  "Rotate your device to portrait" overlay (game pauses). Desktops never see it; `?view=wide` never shows it.
+- Camera profiles (`CameraRig.CAM_PROFILES`): `wide` (desktop), `wideTouch` (a handheld held sideways), `portrait`.
+- A handheld held the wrong way for its chosen mode gets the rotate card ("Rotate your device to portrait / landscape",
+  a one-tap "Play in … instead"; the game pauses). Desktops never see it; nor does a handheld that has not chosen yet.
 - Automated runs stay silent (`?mute`, `?autopilot`, `?bench`, webdriver); normal play has full audio + ambience.
 - ElevenLabs stays build-time only (`.env` is git-ignored; nothing VITE_-prefixed).
 
@@ -488,6 +497,10 @@ qubodup ghost moans, JaggedStone dungeon ambience, SketchMan3 wind loop, PagDev 
 | **Lore book (s15)** | DONE, VERIFIED (flows + memory window, silent-score duck; NOT heard by a human) | `ui/LoreBook.ts`, 12 pages + 12 narrations (Eleven v4, 391 s), `data/loreManifest.json`, `tools/lore/*` |
 | **itch ZIP audit (s15)** | DONE, VERIFIED | `tools/audit_itch.py` runs in `npm run package:itch`; extracted ZIP played at 720×1280 under an itch-style sub-path |
 | **Enemy audit (s10)** | DONE, VERIFIED (`dev/auditProbe.js`, all floors) | 4 blind perched archers relocated at load (`checkPerches`), perched archers no longer slide down ramps, bats' swoop counter leak fixed, blind flyer spawns moved (`checkFlyers`), F3 respawn crash fixed; slot rotation fair in every big fight |
+| **Widescreen desktop default (s16)** | DONE, VERIFIED (Chromium 153 + Firefox 155, 1366×768 / 1920×1080 / 2560×1440 / 3440×1440) | `Platform.ts` view logic + `--uiz`, `ui/platform.css` (zoomed HUD widgets / panels / toasts / chapter card, height-based title), `CameraRig` `maxHFov` (21:9 → 100° across, no stretch), threat chevrons in every layout |
+| **Phone Portrait / Landscape (s16)** | DONE, VERIFIED (emulated phones 393×852 ↔ 852×393, tablet 1180×820) | `ui/DisplayChoice.ts`, Settings → Display, rotate card both ways, `wideTouch` camera, landscape two-thumb layout; multitouch (stick + camera, camera + attack); switching without a reload. **No real phone yet** |
+| **Wavedash SDK (s16)** | DONE, VERIFIED against `dev/wavedashMock.js` only | `platform/Wavedash.ts` (facade), `WavedashStats.ts`, `CloudSave.ts`, `data/wavedash.ts`; `wavedash.toml`. **`wavedash dev` NOT run (the CLI is not signed in; no game ID)** |
+| **Sigil saves (s16)** | DONE, VERIFIED (mock + local) | `game/Save.ts` v2 (checkpoint), `Game.captureCheckpoint / resumeAt`, `Checkpoints.capture / restore`, `EnemyManager.restoreCleared`, `Tutorial.resumeFrom` |
 
 ---
 
@@ -512,8 +525,20 @@ Audio: `npm run assets:audio` (= `python tools/build_audio.py`, needs ffmpeg + n
 
 Runtime (`src/`):
 
-- `platform/Platform.ts` — view profile (`portrait`/`wide`), input mode (`kbm`/`touch`, hybrid switching), handheld
-  detection, portrait stage layout + rotate overlay, fullscreen/orientation lock, haptics, load-time quality tier.
+- `platform/Platform.ts` — view (`wide`/`portrait`, runtime-switchable, the phone's display choice), input mode
+  (`kbm`/`touch`, hybrid switching), handheld detection, stage layout + `--uiz`, rotate card, fullscreen (Wavedash or the
+  browser) + orientation lock, haptics, load-time quality tier.
+- Session 16: `platform/Wavedash.ts` (the only module touching `window.Wavedash`), `platform/WavedashStats.ts`,
+  `platform/CloudSave.ts`, `platform/Storage.ts` (`LocalStore` per Wavedash player, `deviceId`), `data/wavedash.ts`
+  (identifiers), `ui/DisplayChoice.ts`, `ui/CloudConflict.ts`, `ui/SaveIndicator.ts`, `ui/platform.css`; `Game.applyView /
+  setFogShift / menuCamera / captureCheckpoint / resumeAt / pauseKeyHold / arriveDeaths`, `CameraRig.setProfile(id, keep)`
+  + `CamProfileId` + `maxHFov`, `Checkpoints.anchor / capture / restore`, `EnemyManager.restoreCleared`,
+  `Tutorial.resumeFrom`, `Learned.tutorial`, `Achievements.listen / adopt / adoptCounter / merge` + counters `bosses /
+  crownbreakers / whirlwinds / completions`, `Settings.updatedAt / restore`, `Save` v2 (`validateSave / saveRank /
+  saveStamp / saveLabel / Save.onWrite / Save.put`), `MainMenu.setSave` + the "Playing as" chip + Settings Display /
+  Fullscreen / cloud line, `TouchControls` landscape (`LANDSCAPE`, short-side units). Tools: `tools/wavedash/build_defs.mjs`
+  (`npm run wavedash:defs`), `tools/audit_dist.py` (`npm run build:wavedash`), `wavedash/achievements-import.json`,
+  `wavedash/cli-commands.txt`, `wavedash/icons/*.png`. Dev: `dev/wavedashMock.js` (`?wdmock`).
 - `ui/TouchControls.ts` — touch HUD (joystick, look, action arc, Shift ring, lock, interact pill, pause).
   `ui/Hints.ts` — input-aware control hints (touch wording for key-based level prompts by prompt id).
 - `game/Game.ts` — renderer, per-state environment presets (fog/hemi/sun/exposure blend), loop, game-clock
@@ -645,6 +670,17 @@ filling over the 0.28 s hold threshold once their hold move is unlocked, solid w
 over 5 s) / the Crownbreaker charges; a gold "HOLD" tag + breathing rim while its unlock tip is pending. Guard +
 Attack = bash (second finger or slide), Guard + Heavy = kick; auto-crouch; interact card at 372 u; pause top-right.
 
+**Touch, LANDSCAPE (session 16; `html.view-wide.input-touch`, `ui/platform.css` + `TouchControls.LANDSCAPE`)** — u = the
+stage's SHORT side / 400 (≈ 0.98 on an 852×393 phone, capped 1.45 on tablets), positions (r, b) from the bottom-right:
+ATTACK ⌀98 (84, 90) under the resting right thumb · HEAVY ⌀74 (196, 58) to its left · GUARD ⌀70 (204, 158) up-left
+between them (slide onto Attack = bash, onto Heavy = kick, as in portrait) · JUMP ⌀74 (72, 206) above Attack · SHIFT
+lozenge ⌀56 (162, 248) up-left of Jump. Stick zone = left 40 % below the top 28 % (floating, rim = sprint), its home ring
+at (62, 52) u from the bottom-left; everything else turns the camera (the middle band is verified button-free), the LOOK
+ring at (292, 40) u from the bottom-right. No Dodge, no lock-on (soft combat camera). The contextual button stays between
+the thumbs (30–66 % across, 18–58 % down). Swipe gain is per short side, so one thumb turns the camera the same in both
+modes. HUD: vitals top-left, PRESENT/PAST badge top-right beside the pause seal, boss bar top-centre, subtitles and the
+ability tip in the band between the thumbs, floor title 22 %, prompts 40 %, deed banner top-right under the pause seal.
+
 **Floor rewards (session 8, `combat/Abilities.ts`):** Floor 1 start: none · Floor 2: **CROWNBREAKER** · Floor 3:
 + **WHIRLWIND**. HOLD HEAVY (RMB / touch Heavy held ≥ 0.28 s) turns the opening heavy (H1) into the Crownbreaker:
 blade raised (hyper armour), charge up to 1 s while held, release (or full charge) = kneeling plunge + shockwave,
@@ -714,8 +750,15 @@ A parry staggers the attacker and grants +12 resonance.
 - **Session 8 regression suite:** `http://localhost:5173/?mute&autostart&input=touch` at 375×812, console:
   `const R = await import('/dev/regression.js'); await R.run()` → 43 PASS/FAIL rows (walks F1 → F2 → F3 in place).
   Probes: `dev/enemyProbe.js` (stall scenarios + global stall watcher), `dev/abilityProbe.js`, `dev/finisherProbe.js`.
-- **`?view=wide`** = internal widescreen build (original camera + HUD). **`?input=touch|kbm`** pins the input mode.
-  **`?quality=high|mobile`** pins the render tier. `__platform` = the Platform singleton.
+- **`?view=wide|portrait`** pins the layout (desktop default is wide; a handheld follows its display choice).
+  **`?input=touch|kbm`** pins the input mode. **`?quality=high|mobile`** pins the render tier. `__platform` = the
+  Platform singleton (`setDisplayPref('portrait'|'landscape')`, `uiScale`, `rotateBlocked`).
+- **Session 16 (Wavedash):** dev **`?wdmock`** = a scripted Wavedash SDK (`dev/wavedashMock.js`; options `&wduser= &wdname=
+  &wdslow=ms &wdportal=empty &wdoffline &wdfs`; console `__wdmock.offline(true|false) / remote() / setRemote(b) /
+  clearRemote() / stats() / reset() / calls / log`). **`?saves`** keeps saves + settings in an automated session (with
+  `?ach` for achievements). `__wave` = `{ Wave, cloud, stats, player }` (`cloud.debug()`, `stats.debug()`). A phone test
+  needs `mobile + touch` emulation (else `handheld` is false). Real sandbox: `npm run wavedash:dev` (signed-in CLI +
+  `game_id`).
 - **Phone on the LAN:** `npm run dev:lan` (Vite on 0.0.0.0:5173) → open `http://192.168.1.39:5173/` on the phone (same
   Wi-Fi; allow Node through the Windows firewall on first run). Production check: `npm run build && npm run preview:lan`
   → `http://192.168.1.39:4173/`.
@@ -736,7 +779,21 @@ A parry staggers the attacker and grants +12 resonance.
 
 # 8. Next Concrete Tasks
 
-**Session 15 follow-ups — need the user's real phone / ears (do these first):**
+**Session 16 follow-ups — need the user (do these first):**
+1. **Wavedash CLI**: `! wavedash auth login` (browser), `wavedash update` (0.1.95 installed, 0.1.98 out), put the game's ID in
+   `wavedash.toml` (`game_id`, or `WAVEDASH_GAME_ID`), import `wavedash/achievements-import.json` in the Developer Portal
+   (Achievements → Add achievement → Import JSON; icons: `wavedash/icons/<ID>.png`, or the `--image` lines in
+   `wavedash/cli-commands.txt`).
+2. **`npm run wavedash:dev`** (the sandbox): the loading bar → reveal, "Playing as" + avatar (does the CDN avatar load under
+   COEP?), `__wave.stats.debug()` ready + a deed reaching the portal, `__wave.cloud.debug()` synced, `saves/main.json` in the
+   sandbox; `wavedash clear-playtest-data --saves` + a private window = a new device restoring.
+3. **An uploaded build** (`npm run wavedash:push`, then publish or playtest): fullscreen through the host (the sandbox always
+   answers false), Esc / leaving fullscreen pausing the game once, the overlay on top, 1920×1080 and 2560×1440 on real
+   monitors, Safari (Ogg Opus audio — the docs warn Safari lacks OGG; WebKit was not tested here).
+4. **A real phone**: the HOW WOULD YOU LIKE TO PLAY? card, landscape thumbs (reach of GUARD / SHIFT, the LOOK ring's place),
+   camera feel (`wideTouch` in `CameraRig`), orientation lock / the rotate card inside Wavedash's frame, notch safe areas.
+
+**Session 15 follow-ups — need the user's real phone / ears:**
 1. **The narration by ear** (the first thing to hear): the clone vs the original "Cthulu female" timbre, the whispers under
    the score, the pacing (0.75 s between lines, 1.7 s between pages), the duck (0.5) — `DUCK / AUTO_BEAT / START_DELAY`
    in `ui/LoreBook.ts`, `LINE_PAUSE / LAST_PAUSE` in `tools/lore/build_lore.py`. A retake of one page:
@@ -952,6 +1009,167 @@ then generation + `Audio.voice(id)` hook.
 ---
 
 # 10. Latest Verified Session
+
+### Session 16 (2026-10-01) — the Wavedash version: widescreen PC game, phone Portrait / Landscape, the Wavedash SDK
+
+Commits (Arjun0014/castle-game main, as Arjun0014): `9275e21` code + tools + Wavedash definitions · this CONTEXT commit (only
+this session's hunks; session 12's uncommitted hunk of this file stays in the working tree as before). Untouched and
+uncommitted as before: `remotion-intro/`, `THE_CASTLE_REMEMBERS_LORE.md`, `docs/ELEVENLABS_NOTES.md`, `assets/music/*.mp3`,
+`assets/Echoes_of_Caer_Veyr_All_12_Pages/`.
+
+**0. What was read first.** The current Wavedash docs (fetched 2026-10-01 as Markdown: SDK overview, setup + load
+lifecycle, player identity, achievements & stats, cloud saves, fullscreen, functions / events / types references, the
+Three.js engine guide, CLI configuration / commands / auth, cross-origin isolation, best practices, upload) and the SDK
+package itself (`@wvdsh/sdk-js` 1.3.54: its `StatsManager` and `FileSystemManager` sources). Facts that shaped the code:
+- `import Wavedash from '@wvdsh/sdk-js'` **throws at import time when the host has not injected the SDK** — so the package is
+  a devDependency used for TYPES ONLY; the runtime reads `window.Wavedash` once (`Wave.attach()`), and the itch build never
+  sees the SDK. `tools/audit_dist.py` fails if the package's runtime is ever bundled.
+- Stats load in two halves; `requestStats()` can resolve first. Until both are in, `getStat` → 0 and `setStat` /
+  `setAchievement` return false and DROP the write (also for identifiers not defined in the portal). The SDK persists
+  changes on a 1 s throttle and nothing is flushed when the session ends.
+- `downloadRemoteFile(p)` writes the cloud copy into the SDK's IndexedDB store at `p`; `readLocalFile(p)` reads it;
+  `uploadRemoteFile(p)` uploads what `writeLocalFile(p)` wrote (one queued upload per file, last write wins).
+- `getUser()` = `{ id, username, avatarUrl }` (sync, before `init()`); never asked: `getUserJwt()` (no token is ever
+  touched or logged).
+- Fullscreen belongs to the host (`requestFullscreen(bool)` from a gesture, `isFullscreen()`, `FULLSCREEN_CHANGED`); under
+  `wavedash dev` both requests answer false — fullscreen can only be proven on an uploaded build. Esc leaves fullscreen and
+  releases the pointer before the game sees the key (docs: best practices).
+- Wavedash runs games cross-origin isolated (COEP require-corp): everything the game loads is same-origin (fonts bundled,
+  assets in `dist/`); the only cross-origin request is the player's avatar from Wavedash's own CDN (falls back to an
+  initial if it is blocked).
+
+**1. Widescreen, the desktop default** (`platform/Platform.ts`, `ui/platform.css`, `character/CameraRig.ts`, `game/Game.ts`).
+- The old internal `?view=wide` is now the PC game. The view is re-evaluated on every resize and switches live: desktop =
+  `wide` unless the window is clearly taller than wide (< 0.8 w/h → the jam's portrait stage; back above 0.9), so itch's
+  720×1280 embed still gets the portrait layout. `Game.applyView()` swaps the camera profile (`setProfile(id, keep)`: yaw kept,
+  pitch clamped), moves the fog with the camera distance (`setFogShift`) and re-frames the title (`menuCamera`).
+- Scale: `Platform.uiScale` → CSS `--uiz` = (height / 720)^0.85 on desktop (1366×768 1.06, 1080p 1.41, 1440p 1.80; 0.8–2.2);
+  HUD widgets, panels, pause card, toasts, the chapter card and the lore book's header / bar are `zoom`ed. Measured first in
+  Chromium 153 and Firefox 155: CSS zoom scales px but not %, and the two engines DISAGREE on container units inside a zoomed
+  element — so zoomed widgets use px / % only, and the title's wordmark and list are sized in `cqh` instead (height-based:
+  21:9 reads like 16:9). Threat chevrons (placed by code) scale by `max(1, uiScale)`.
+- Ultrawide: `CamProfile.maxHFov` (wide 100°, wideTouch 98°) narrows the vertical FOV so a 21:9 frame gets wider, not
+  fisheye (3440×1440 → vFOV 53°, hFOV 100°); the title lens is capped at 92° across.
+- Off-screen threat chevrons now in every layout (they were portrait-only); verified 3 markers with a fight behind her.
+- Audited in widescreen: title, gameplay HUD, combat, a mini-boss cinematic finisher (Gate Warden, letterbox + shot), the
+  Last Crown (boss bar, arena), achievements toast + panel, lore book, pause + settings, chapter card, the film (9:16,
+  centred in its glow), subtitles, threat markers. Paused: the floor title / prompts / subtitles / tutorial card step back
+  behind the pause card (`html.paused`).
+
+**2. Phones: PORTRAIT or LANDSCAPE** (`ui/DisplayChoice.ts`, `Platform.displayPref`, `TouchControls.ts`, `ui/platform.css`).
+- First start on a handheld (after loading, before the title): HOW WOULD YOU LIKE TO PLAY? — two cards drawn like the
+  chapter card, each showing the device with its layout (stick under the left thumb, seals under the right). The choice is
+  kept (`caer-veyr:display` + its time, and in the cloud save) and Settings → Display (handhelds only) changes it any time.
+  Before a choice the layout follows how the device is held (no rotate card before the question).
+- LANDSCAPE: the tap itself asks for fullscreen (Wavedash's `requestFullscreen` on Wavedash, the browser's elsewhere) and a
+  landscape orientation lock; refused (iframe, iOS) → the rotate card: "Rotate your device to landscape" + "Play in portrait
+  instead". The same card works the other way for a Portrait player held sideways. Turning or switching never reloads.
+- Landscape touch layout: see §7 Controls (Touch, LANDSCAPE). Camera profile `wideTouch`: distance 4.95 (combat 4.75, fight
+  pull ×0.6 up to 1.3 m), shoulder 0.26, height 1.6, pitch 0.33, slight lens shift, the portrait camera's low-ceiling care;
+  the soft combat camera (touch) frames fights.
+- PORTRAIT is the session-15 layout untouched (regression 49/49 below).
+
+**3. The Wavedash SDK** (`platform/Wavedash.ts` — the only file that touches `window.Wavedash`).
+- Lifecycle: `Wave.progress(f)` → `updateLoadProgressZeroToOne` (monotonic) from the first byte to the floor's GPU warm-up;
+  `Wave.ready()` → `init({ debug: DEV })` exactly once, when the title can show (after the cloud save is decided — at most
+  7 s), or at once on a quick start, or on a load error (so TRY AGAIN is visible). Verified with the mock: 1 init, 36
+  progress calls ending at 1.
+- Connection: BACKEND_CONNECTED / RECONNECTING / DISCONNECTED + `online` / `offline` → `Wave.online`, `onConnection`
+  (a CONNECTED always notifies: the game may have believed itself online while storage failed).
+- Outside Wavedash every call is a guarded no-op: a local / guest game. No Wavedash checks anywhere else in the game
+  (CloudSave / WavedashStats / Platform's fullscreen ask the facade).
+
+**4. Player identity.** `Wave.player()` from `getUser()` (id, username, avatarUrl). The title shows a quiet "Playing as" chip
+(top-right in widescreen, top-left in portrait): the avatar (or the name's initial in a crimson seal), the name, and the
+cloud save's state ("Cloud save · 21:14", "Saving…", "Offline · saved on this device", "Two saves disagree"). No login UI.
+Local storage keys get `:u:<player id>` on Wavedash (`platform/Storage.ts`), so two accounts in one browser never share or
+push each other's progress; outside Wavedash the jam-build keys are unchanged (itch saves carry over).
+
+**5. Achievements + stats** (`platform/WavedashStats.ts`, `data/wavedash.ts`, `game/Achievements.ts`).
+- The game's own 26 achievements stay THE system (banner, panel, local store). WavedashStats mirrors them once a probe
+  proves the stats are loaded — `setStat(id, getStat(id))`, a write that changes nothing and only succeeds when both halves
+  are in and the identifier exists (≤ 20 s; then quietly every 2 min and on reconnect). Sync = pull (an achievement Wavedash
+  has that the store lacks → `adopt`, silent; a larger stat → `adoptCounter`, goals it completes unlock silently) then push
+  (`setAchievement` for every local unlock it lacks, `setStat` where counts differ — never lower — and one `storeStats()`).
+  Live: unlocks `setAchievement(id, true)`, counts `setStat` (SDK-throttled), `storeStats()` on hide / pagehide.
+  No repeated banners: only a deed earned here toasts; the store never unlocks twice.
+- New cumulative counters (stats only): `bosses` (kills with `boss: true` + the Last Crown), `crownbreakers` (each release),
+  `whirlwinds` (each spin), `completions` (once per ending).
+- Identifiers (STABLE — `src/data/wavedash.ts`): floor1 INHERITANCE · floor2 COMPLICITY · ending THE_CROWNHEART_IS_SILENT ·
+  gate_warden THE_WARDEN_FALLS · untouched UNTOUCHED · goblin_king GUTTER_CROWN · widow_mother THE_WEEPING_MOTHER · kingsguard
+  OATH_UNSWORN · maw THE_MOUTH_BENEATH · parry TURNED_ASIDE · parries THE_UNBROKEN_GUARD · five_cuts FIVE_CUTS · finisher
+  THE_LAST_BLOW · finishers HEADSMAN_OF_VEYR · execution NO_MERCY_IN_MEMORY · crownbreaker CROWNBREAKER · whirlwind
+  THE_WHIRLWIND · released RELEASED · first_shift WHICH_MEMORY_WILL_ANSWER · shift_kill BETWEEN_TWO_BREATHS · shifts
+  TWO_MEMORIES_ONE_STONE · unremembered UNREMEMBERED · queen_letter THE_QUEENS_LETTER · traces WHAT_THE_STONES_CONFESSED ·
+  chronicle THE_CHRONICLE_OF_CAER_VEYR · patience PATIENCE_OF_STONE. Stats: ECHOES_RELEASED (kills) · FINISHERS · PARRIES ·
+  TIME_SHIFTS · BOSSES_FELLED · CROWNBREAKERS · WHIRLWINDS · MEMORY_TRACES · LORE_PAGES · GAME_COMPLETIONS.
+- Portal: `npm run wavedash:defs` → `wavedash/achievements-import.json` (26 achievements, 4 secret, 6 stat-triggered:
+  RELEASED ≥150 ECHOES_RELEASED, HEADSMAN ≥25 FINISHERS, UNBROKEN_GUARD ≥30 PARRIES, TWO_MEMORIES ≥40 TIME_SHIFTS,
+  STONES_CONFESSED ≥20 MEMORY_TRACES, CHRONICLE ≥12 LORE_PAGES; 10 stats) + `wavedash/cli-commands.txt`; 26 medal icons
+  (256², the game's own devices on the crimson seal) in `wavedash/icons/<ID>.png`.
+
+**6. Cloud saves** (`platform/CloudSave.ts`, `game/Save.ts` v2).
+- File `saves/main.json` = `{ format: 'echoes-of-caer-veyr', version: 1, savedAt, device, progress, achievements, prefs }`:
+  `progress` = Save v2 `{ v: 2, floor, guidance, learned, bestiary, deaths, playTime, finished, checkpoint, savedAt, device }`
+  with `checkpoint = { cid, state, charge, unlocked, shifts, cleared[], flags[], sigils[], traces[], yaw, arriveDeaths }`;
+  `achievements` = the store (merged by union / max in every direction); `prefs` = settings + their time, the display
+  choice + its time, the LOOK hint learned. v1 saves migrate on read (`validateSave`); unknown future fields are ignored.
+- **Sigil saves** (new): Continue now wakes her at the last Blood Sigil with that floor's memory restored (fractures,
+  cleared encounters, lit sigils, read traces, Resonance), exactly like a respawn — Floor I too, once CP1 is lit. Autosave:
+  floor arrival, every sigil, a boss, a cleared encounter (local; the cloud gathers it), quitting to the title (the
+  upload is awaited ≤ 2.5 s before the reload), the ending. A Guided Floor I resumes its lessons where she wakes (CP1 →
+  TWO MEMORIES, CP2 → CROUCH, CP3+ → done; `Learned.tutorial`). New Game warns on its panel that the saved journey is
+  replaced at its first sigil and sets the old save aside (`caer-veyr-save:set-aside`).
+- **Conflict safety**: each progress copy carries a stamp (savedAt + device); the browser remembers the stamp it last saw in
+  the cloud (`caer-veyr:cloud.base`). Same stamp → nothing; cloud still at base → upload; this device still at base →
+  adopt the cloud (Continue updates under the title); both moved on → the newer wins IF it is not behind the other (floor,
+  then sigil), else a GENUINE conflict → "TWO MEMORIES OF YOUR JOURNEY" (`ui/CloudConflict.ts`): CLOUD SAVE / THIS
+  DEVICE with floor, sigil, deaths and date; the further one is preselected; the other is set aside locally, never
+  destroyed before the choice. Every upload first re-downloads and re-checks (another device may have saved); a conflict
+  found DURING play stops uploads and waits for the title. An unreadable cloud file is kept aside locally.
+- Offline: play from the local copy, `pending` marked, retried on reconnect / `online` / every 60 s. Uploads only at save
+  points (forced: floor, sigil, boss, quit, ending, reconnect, hide; gathered: achievements / settings, ≥ 15 s apart).
+- In play a small mark says so for a moment ("Saving" → the cloud "Saved", or "Saved on this device") — never a banner.
+
+**7. Fullscreen.** Settings → Fullscreen (where the page can ask): on Wavedash `requestFullscreen(!isFullscreen())`
+through the SDK (its overlay stays on top), elsewhere the browser's own; the label follows `FULLSCREEN_CHANGED`.
+Landscape's choice tap and New Game / Continue on a handheld ask for it inside their gesture. Losing the pointer lock in play
+(Esc, leaving fullscreen) now opens the pause menu once (`Game.pauseKeyHold` stops the same Esc un-pausing it).
+
+**8. Build / tools.** `wavedash.toml` (upload_dir `./dist`, entrypoint `index.html`, `game_id = "YOUR_GAME_ID_HERE"` — the
+real ID is needed), `npm run build:wavedash` (build + `tools/audit_dist.py`: no dev / mock / SDK runtime / secrets, relative
+URLs, size: 571 files, 163.5 MB), `npm run wavedash:dev` (build + `wavedash dev`), `npm run wavedash:push` (build + `wavedash
+build push`), `npm run wavedash:defs`. The itch path is unchanged (`npm run package:itch` → 134.4 MB ZIP, audit OK).
+
+**Tests (session 16)** — all in this machine's Chromium 153 (playwright-core 1.63, real GPU via ANGLE/D3D11; the gstack
+browse daemon was stuck on a stale lock) unless noted, always `?mute`:
+- tsc; `npm run build`; `npm run build:wavedash` (dist OK); `npm run package:itch` (ZIP OK).
+- `dev/regression.js`: **portrait touch 375×812 49/49**, **desktop wide 1920×1080 + `?wdmock&saves&ach` 45/45** (the 4 touch
+  checks skip on kbm; ended on Floor 3 with the save synced), **landscape touch 852×393 49/49** (its layout checks now
+  per-layout: the middle camera band empty; Attack lower-right, Heavy left, Guard up-left within a slide).
+- `dev/tutorialProbe.js`: **portrait touch 23/23 lessons, desktop wide 24/24**. It had stalled at CP3 since before this
+  session (verified on an untouched HEAD worktree: Echoes the probe walked past made the sigil refuse); the probe now releases
+  them before kneeling.
+- Desktop: titles + play at 1366×768, 1920×1080, 2560×1440, 3440×1440 (vFOV 53 / hFOV 100); Firefox 155 at 1920×1080 (same
+  HUD rects); the widescreen audit list in §1 above.
+- Phone emulation (393×852 ↔ 852×393, DPR 2, touch): the choice card; Landscape while upright → fullscreen asked + the rotate
+  card → turned → wide title, `wideTouch` play; multitouch: stick + camera together (analog 0.43/0.57, camera turned 2.5 rad),
+  a third finger's ATTACK, the camera keeps turning after the stick lifts; pause → Settings → Portrait → rotate card →
+  turned → portrait play, 1 page load in all; first boot held sideways (no rotate card, compact boot card), Portrait chosen →
+  "Rotate your device to portrait" + "Play in landscape instead"; tablet 1180×820 landscape (UI 1.3, seals 1.45).
+- Mock Wavedash (`?wdmock`): warp autosave at CP1 → uploaded; stats probe: 31 refused probes before ready, then a parry + a
+  kill → PARRIES 1, ECHOES_RELEASED 1, TURNED_ASIDE on the "server", 1 banner; reload → title "Continue · Floor I ·
+  Inheritance · Blood Sigil 1", chip "Playing as Wanderer of Veyr · Cloud save · 17:23"; Continue → woke at CP1 (PAST, E1/E2
+  cleared, shifting on); genuine conflict (cloud Floor III older vs this device Floor I newer) → the panel, cloud
+  preselected, kept → Continue Floor III, the device copy set aside, cloud re-uploaded; another device further ahead and this
+  one unchanged → adopted silently; offline start → play → autosave kept locally → `offline(false)` → uploaded; a new
+  device (game storage wiped, cloud kept) → Continue from the cloud, the deed and its count restored silently (0 banners);
+  Settings → Fullscreen through the SDK (on / off). Guided resume: CP1 → TWO MEMORIES, CP2 → CROUCH, CP3 → no lessons.
+- Production preview (no Wavedash): local guest game, no chip, `?wdmock` ignored, widescreen title; 720×1280 frame → portrait.
+- **NOT tested**: `wavedash dev` and an uploaded Wavedash build (the CLI is not signed in and there is no game ID), the real
+  avatar CDN under COEP, host fullscreen, a real phone (landscape ergonomics, orientation lock inside Wavedash's frame, notch
+  safe areas), Safari / WebKit, pointer-lock Esc pause (headless has no pointer lock).
+**Needs the user:** §8 Session 16.
 
 ### Session 15 (2026-09-30) — the living title screen, achievements, the narrated lore book
 
