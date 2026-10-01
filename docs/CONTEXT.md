@@ -36,7 +36,7 @@ respawn card, the opening film and the Remotion trailer) — it is no longer the
 the player's own sketch + the `wideTouch` camera; the first build's Portrait / Landscape choice is gone), the Wavedash SDK (load progress, `init()` once, player identity,
 achievements + stats mirrored from the game's own system, cloud saves `saves/main.json` with conflict safety, platform
 fullscreen) behind one facade — the same `dist/` still runs on itch as a local game. Saves now resume at Blood Sigils.
-**LIVE ON WAVEDASH (2026-10-01): https://wavedash.com/games/echoes-of-caer-veyr** — build #2 (the phone fixes) published,
+**LIVE ON WAVEDASH (2026-10-01): https://wavedash.com/games/echoes-of-caer-veyr** — build #3 (the phone fixes) published,
 store page complete, mobile layout **Wide** (§10 Session 16 → "The Wavedash release", "Phones: landscape only"). Next: §8
 Session 16 (the new touch layout on a real phone, Safari, host fullscreen on a real monitor).
 Session 15 = MAIN MENU LIFE, ACHIEVEMENTS and the LORE EXPERIENCE (§10 Session 15):
@@ -1225,15 +1225,20 @@ desktop-only chrome with a 16:9 box and a Fullscreen button.)
 **Changes** (build #2 `mn74jn6byz11wrn51s11swpjt58ff0ey`, release `rx77s96ceqc1vsf98f7e0nqkbs8fe628`, published):
 - `platform/Platform.ts`: a handheld is always `wide`; `displayPref` / `setDisplayPref` / `onDisplayPref` / the choosing
   flag removed; the rotate card only asks to turn an upright phone sideways (no "play in … instead"); the orientation lock
-  asks for landscape; touch UI scale `clamp(0.66, h / 540, 1.3)` (0.73 at 393 px tall, was 0.91).
+  asks for landscape. Two scales on a phone: `uiScale` (`--uiz`, `clamp(0.82, h / 430, 1.3)` ≈ 0.91 at 393 px tall) for
+  the menus, the pause / chapter cards and the vitals, and `hintScale` (`--hintz`, `clamp(0.66, h / 540, 1.3)` ≈ 0.73)
+  for the in-play hints and info only — lesson / notice cards, spoken lines, prompts, ability reveal + tip, floor titles,
+  the shifting label, deed banners. (First cut shrank `--uiz` itself: the user found the menus tiny — "I meant the text
+  that shows up while playing, hints and infos".)
 - `ui/DisplayChoice.ts` deleted (+ its `.dc` CSS); Settings → Display keeps Fullscreen only; `CloudSave` no longer carries a
   `display` preference (an old bundle's is ignored); `index.html` / `style.css` turn card one way.
 - `ui/platform.css` + `TouchControls.ts`: the sketch's layout (§7 Touch, LANDSCAPE); stick radius 0.14 × short side.
-- Phone words: lesson card 40 % wide (14 px × uiz), spoken lines 15 px, floor title 17 px, deed banner × 0.78 uiz; the
-  move / look lessons now name the LOOK circle (`Objectives.ts`, `Tutorial.ts`).
-- Title: the wide column keeps the PC composition at phone heights (lower floors in `menu.css`: crest ≥ 24 px, name ≥ 22,
-  items ≥ 12 / 10.5 / 9.5); the closed-up layout only under 300 px tall (Wavedash's inline 221 px frame), where the
-  column widens to 52 % and the rows shrink so nothing clips; the deeds tally never wraps.
+- Phone hints (× `--hintz`): lesson card 40 % wide (14 px), spoken lines 15 px, floor title 17 px, deed banner × 0.78;
+  the move / look lessons now name the LOOK circle (`Objectives.ts`, `Tutorial.ts`).
+- Title: the wide column keeps the PC composition at phone heights — crest, ECHOES OF, CAER VEYR, rule, line, menu —
+  with the menu's readable floors kept (items 14 / 12 / 10.5 px, as before) and the GAPS closed instead
+  (`platform.css` `@container (max-height: 540px)`); the closed-up layout only under 300 px tall (Wavedash's inline
+  221 px frame), where the column widens to 52 % and the words step down so nothing clips; the deeds tally never wraps.
 - Store description's last line: "…or on your phone held sideways." (`wavedash/store/description.txt` + the portal; the
   user's own tags Action, Adventure, Strategy, Fighting, Story Rich and the Wide layout left as they set them).
 **Tests:** `npx tsc --noEmit` clean; `dev/regression.js` — phone sideways 852×393 **52/52** (new: LOOK pad in the corner, the
@@ -1244,6 +1249,11 @@ enemy timing under load — kbm, untouched by this change); Guided tutorial prob
 desktop (init, player, cloud "→ remote" + re-upload, stats ready, Continue · Blood Sigil 1, 2/26); the LIVE page as a
 phone (`wd_public_play.mjs`): Fullscreen → New Game → Minimal → the film skipped → play in `wide` / `wideTouch`, seals
 61/55/55/51/49 px, a real touch swipe on the LOOK pad turned the camera 1.67 rad, a tap on ATTACK attacked.
+**Build #3** `mn79dm7259zxwc6nsaty3j2t358ffabc` (release `rx77q3qx14s0pmk5ta9w1hreh98ffrvg`, published): the two phone scales
+(`--uiz` back for menus / cards / vitals, `--hintz` for the in-play hints) and the title's readable floors with closed
+gaps. Re-tested: tsc clean, sideways-phone regression 52/52, title at 852×393 / 740×360 / 393×221 (column inside the
+frame, items 14 / 12 / 11 px), the pause card at 0.914, hints at 0.728; the live page as a phone (hints 0.728, bars 0.914,
+LOOK swipe + ATTACK tap working).
 **Not tested:** a real phone (the user's next test), iOS Safari.
 
 ### Session 15 (2026-09-30) — the living title screen, achievements, the narrated lore book

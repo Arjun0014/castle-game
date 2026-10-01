@@ -4,7 +4,8 @@
    Imported last (main.ts), after style.css, menu.css, achievements.css and lore.css.
 
    Widescreen scale: Platform.uiScale → --uiz (1 at 720p, ≈1.41 at 1080p, ≈1.8 at 1440p; a phone held sideways ≈0.9;
-   ultrawide follows its height). Widgets laid out in px and % are zoomed (CSS zoom scales px, never %); container units
+   ultrawide follows its height). A phone's in-play hints and info use Platform.hintScale → --hintz instead (≈0.73 at
+   393 px tall): smaller than its menus, so lesson cards, spoken lines and deed banners leave the fight visible. Widgets laid out in px and % are zoomed (CSS zoom scales px, never %); container units
    (cqw / cqh) are NOT used inside zoomed widgets — Chromium zooms them, Firefox does not. Things the code places in
    stage pixels (threat chevrons, the reticle, the touch HUD) are never zoomed.
    ========================================================================================================== */
@@ -18,11 +19,23 @@ html.view-wide .lb-sub { font-size: calc(17px * var(--uiz, 1)); }
 
 /* the title's column lives in menu.css; the deed banner on the title stays clear of it (top centre) */
 html.view-wide.menu-on .ach-host { left: 0; right: 0; justify-content: center; }
+/* a phone held sideways (300-540 px tall): the PC composition, crest to credits, with the gaps closed so the menu's
+   readable sizes fit the height */
+@container (max-height: 540px) {
+  html.view-wide .mm-col { gap: 4cqh; padding: calc(var(--sat) + 2.5cqh) 0 calc(var(--sab) + 4cqh); }
+  html.view-wide .mm-crest { margin-bottom: 1.2cqh; }
+  html.view-wide .mm-rule { margin: 1.8cqh 0 1.2cqh; }
+  html.view-wide .mm-item { padding-top: 0.42em; padding-bottom: 0.42em; }
+  html.view-wide .mm-item.mm-sec, html.view-wide .mm-item.mm-min { padding-top: 0.62em; padding-bottom: 0.62em; }
+}
 /* a very short widescreen frame (Wavedash's inline player on a phone held upright, before fullscreen): the column keeps
-   the name, the rule and the menu — the crest and the line step out, the gaps close. A phone held sideways (≥300 px tall)
-   keeps the desktop composition (menu.css). */
+   the name, the rule and the menu — the crest and the line step out, the gaps close, the words step down */
 @container (max-height: 300px) {
   html.view-wide .mm-col { gap: 3.5cqh; padding: calc(var(--sat) + 3cqh) 0 calc(var(--sab) + 4cqh); width: min(100cqh, 52cqw); left: calc(var(--sal) + 3cqw); }
+  html.view-wide .mm-t-main { font-size: clamp(22px, min(11.2cqh, 6.1cqw), 40px); }
+  html.view-wide .mm-t-over { font-size: 8px; }
+  html.view-wide .mm-t-over i, html.view-wide .mm-rule i { width: 26px; }
+  html.view-wide .mm-item { font-size: 12px; }
   html.view-wide .mm-item.mm-sec { font-size: 9px; padding-left: 0.7em; padding-right: 0.7em; }
   html.view-wide .mm-item.mm-min { font-size: 8px; padding-left: 0.6em; padding-right: 0.6em; }
   html.view-wide .mm-pair { gap: 4px; }
@@ -72,7 +85,10 @@ html.view-wide.input-touch #hud .channel { top: 54%; width: 30%; }
 html.view-wide.input-touch #hud .deny { top: 62%; max-width: 50%; }
 /* the deed's banner: top-right under the pause seal, a little smaller, clear of the centred floor title and prompts */
 html.view-wide.input-touch .ach-host, html.view-wide.input-touch.menu-on .ach-host { top: calc(var(--sat) + 56px); right: calc(var(--sar) + 12px); left: auto; justify-content: flex-end; }
-html.view-wide.input-touch .ach-toast { zoom: calc(var(--uiz, 1) * 0.78); width: 330px; }
+html.view-wide.input-touch .ach-toast { zoom: calc(var(--hintz, var(--uiz, 1)) * 0.78); width: 330px; }
+/* the in-play hints and info on a phone: their own, smaller scale (the vitals, the badge, the objective, the pause card and
+   every menu keep --uiz) */
+html.view-wide.input-touch #hud :is(.channel, .prompt, .message, .deny, .subtitle, .tutorial, .gift, .gift-tip) { zoom: var(--hintz, var(--uiz, 1)); }
 
 /* the two-thumb layout (TouchControls LANDSCAPE — the playtest sketch): the right thumb rests on the LOOK pad in the
    lower-right corner (swipe it — or anywhere free on the screen — to turn the camera) and the verbs sit in an arc round

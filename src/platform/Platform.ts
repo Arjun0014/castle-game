@@ -74,6 +74,12 @@ class PlatformImpl {
    * stage height, so 1080p / 1440p / ultrawide read like the same game rather than a small HUD in a big frame.
    */
   uiScale = 1;
+  /**
+   * In-play hints and info on a phone (CSS `--hintz`): lesson and notice cards, spoken lines, prompts, ability tips, floor
+   * titles, deed banners. A phone keeps these smaller than its menus so they never cover the fight (the user's phone
+   * test: the hints were too big, the menus were right); everywhere else it equals uiScale.
+   */
+  hintScale = 1;
   /** true while a handheld is held upright in a frame that does not turn for it (game paused behind the overlay) */
   rotateBlocked = false;
   private stage: HTMLElement | null = null;
@@ -184,13 +190,16 @@ class PlatformImpl {
       s.left = Math.round((vw - w) / 2) + 'px';
       s.top = Math.round((vh - h) / 2) + 'px';
     }
-    // widescreen UI scale: desktop grows with the height (720p = 1); a phone held sideways (≈360-430 px tall) reads at
-    // ≈0.7 — the words stay legible without covering the fight (playtest: 0.9 was far too big); tablets grow to 1.3
+    // widescreen UI scale: desktop grows with the height (720p = 1); a phone held sideways stays legible (≈0.91 at 393 px
+    // tall) — menus, the pause and chapter cards, the vitals
     const z = this.view === 'portrait' ? 1
-      : this.inputMode === 'touch' ? Math.min(1.3, Math.max(0.66, h / 540))
+      : this.inputMode === 'touch' ? Math.min(1.3, Math.max(0.82, h / 430))
       : Math.min(2.2, Math.max(0.8, Math.pow(h / 720, 0.85)));
     this.uiScale = Math.round(z * 1000) / 1000;
+    // the in-play hints on a phone: ≈0.73 at 393 px tall (tablets still grow to 1.3)
+    this.hintScale = this.isTouchWide ? Math.round(Math.min(1.3, Math.max(0.66, h / 540)) * 1000) / 1000 : this.uiScale;
     document.documentElement.style.setProperty('--uiz', String(this.uiScale));
+    document.documentElement.style.setProperty('--hintz', String(this.hintScale));
     this.updateRotate(vw, vh);
     this.emit();
   }
