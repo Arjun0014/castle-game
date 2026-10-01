@@ -41,6 +41,9 @@ export interface AchView {
   now(): number;
 }
 
+/** deeds of the journey itself (never earned in the Endless Arena) */
+const STORY_DEEDS = new Set(['floor1', 'floor2', 'ending', 'gate_warden', 'untouched', 'kingsguard', 'goblin_king', 'widow_mother', 'maw', 'unremembered', 'queen_letter', 'traces', 'chronicle', 'patience']);
+
 export class Achievements {
   data: AchStore;
   onUnlock?: (a: AchievementDef) => void;
@@ -81,9 +84,15 @@ export class Achievements {
     return [Math.min(v, a.goal), a.goal];
   }
 
+  /**
+   * false in the Endless Arena (main.ts): only the combat deeds can be earned there — its guardians are not the
+   * journey's bosses, its chamber is not the end of the game
+   */
+  story = true;
   unlock(id: string) {
     const a = ACH_BY_ID.get(id);
     if (!a || this.has(id)) return false;
+    if (!this.story && STORY_DEEDS.has(id)) return false;
     this.data.unlocked[id] = Date.now();
     this.save();
     this.log.push({ id, at: Date.now() });

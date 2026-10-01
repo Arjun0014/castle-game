@@ -121,6 +121,8 @@ export class Player {
   events: PlayerEvents = {};
   private contact: CapsuleResult = { grounded: false, groundNormal: new THREE.Vector3(), hitCeiling: false, hitWall: false, push: new THREE.Vector3() };
   godMode = false;
+  /** incoming damage scale (1 in the story; the Endless Arena raises it wave by wave) */
+  damageMul = 1;
   /** floor rewards available now (Game sets it from the floor reached: combat/Abilities.ts) */
   abilities = new Set<AbilityId>();
   /** Whirlwind: seconds spun, next segment of the cycle, earliest input time a new spin may start */
@@ -915,6 +917,7 @@ export class Player {
    */
   receiveHit(damage: number, from: THREE.Vector3, opts: { heavy?: boolean; guardBreak?: boolean; knock?: number; unblockable?: boolean } = {}, now = 0): 'parry' | 'block' | 'hit' | 'ignored' {
     if (!this.alive || this.isInvulnerable) return 'ignored';
+    damage *= this.damageMul;
     const toAttacker = _v.subVectors(from, this.pos).setY(0).normalize();
     const frontal = toAttacker.dot(this.facing) > Math.cos(THREE.MathUtils.degToRad(BLOCK_ARC_DEG / 2));
     if (this.state === 'block' && frontal && !opts.unblockable) {

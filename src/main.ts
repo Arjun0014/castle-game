@@ -17,7 +17,9 @@ import { CloudSave } from './platform/CloudSave';
 import { WavedashStats } from './platform/WavedashStats';
 import { askConflict } from './ui/CloudConflict';
 import { SaveIndicator } from './ui/SaveIndicator';
+import { ARENA_CARD } from './data/arena';
 import './ui/platform.css';
+import './ui/arena.css';
 
 const params = new URLSearchParams(location.search);
 // dev server only: `?wdmock` stands a scripted Wavedash SDK in for the real one (dev/wavedashMock.js) — cloud saves,
@@ -59,7 +61,10 @@ if (automated) game.dynResEnabled = false;
 const loader = new LoadingScreen(overlay);
 // dev server only: ?floor=N / ?at=<warp> (game/DevStart.ts); production always starts at Floor 1
 const dev = devFloor(params);
-const floorId = dev ?? 1;
+/** dev server only: `?arena` boots straight into the Endless Arena (tests: `?arena&autostart&mute`) */
+const arenaDirect = import.meta.env.DEV && params.has('arena');
+const floorId = arenaDirect ? 3 : dev ?? 1;
+if (arenaDirect) game.arenaMode = true;
 const floor = FLOORS[floorId];
 const carry = takeCarry();
 (window as any).__loader = loader;
@@ -90,7 +95,8 @@ const continuable = (d: SaveData | null) => (persist && d ? d : null);
  * sigil's checkpoint), quitting to the title, the ending. Local at once; platform/CloudSave.ts uploads the save points.
  */
 function writeProgress(why: string) {
-  if (!persist || !game.started) return;
+  // the Endless Arena never touches the journey's save (its record is the arena best + the leaderboard)
+  if (!persist || !game.started || game.arenaMode) return;
   const prev = Save.load();
   const checkpoint = game.captureCheckpoint();
   // Floor I without a lit sigil is not a place to continue from (that is New Game)
@@ -109,6 +115,8 @@ game.signals.on('encounter:clear', () => writeProgress('clear'));
 // ------------------------------------------------------------------ achievements (session 15) + Wavedash (session 16)
 /** kept across sessions for players; automated runs keep them in memory only unless `?ach` asks to persist (tests) */
 const achievements = new Achievements((!automated && !dev) || params.has('ach'));
+// the arena earns the combat deeds, never the journey's (a guardian felled there is not the Gate Warden's fall)
+if (arenaDirect) achievements.story = false;
 achievements.bind(game.signals, { floorId: () => game.floorId, hp: () => game.player.hp, now: () => performance.now() / 1000 });
 const toast = new AchievementToast(stage, () => game.audio.achievement());
 let menu: MainMenu | null = null;
@@ -181,6 +189,7 @@ function createMenu(save: SaveData | null) {
     settings, save,
     onNewGame: (g) => newGame(g),
     onContinue: (s) => { void continueGame(s); },
+    onArena: () => { void startArena(); },
     sound: (k) => game.audio.ui(k),
     // a gesture on the title screen: sound is allowed now (the score was waiting for it, or is already playing)
     onGesture: () => startScore(),
@@ -218,8 +227,9 @@ game.boot(floorId, (f, label) => { loader.progress(f, label); Wave.progress(0.02
   // a dev ?floor=N / ?at= start gets the progression state of a real player there (and a legacy carry if stored)
   applyDevStart(game, params);
   if (floorId > 1 && carry) { game.time.charge = Math.max(game.time.charge, carry.charge); game.player.hp = Math.max(game.player.maxHp * 0.5, carry.hp); }
-  loader.ready(floor.readyText);
+  loader.ready(arenaDirect ? ARENA_CARD.readyText : floor.readyText);
   (window as any).__ready = true;
+  if (game.arena) game.arena.onTitle = () => { void toTitle(); };
   if (quick) { Wave.ready(); stats.start(); begin(pinnedGuide); return; }
   // the title screen, over the castle itself
   game.menuScene(true);
@@ -257,9 +267,40 @@ function begin(guidance: Guidance) {
   game.audio.init();
   game.start();
   startAutopilot();
-  if (!game.autopilot) game.hud.message(game.floor.title, game.floor.subtitle, 3.5);
+  if (!game.autopilot && !game.arena) game.hud.message(game.floor.title, game.floor.subtitle, 3.5);
 }
 (window as any).__begin = () => begin(pinnedGuide);
+
+/**
+ * The Endless Arena from the title (session 17): Floor III's chamber built for the arena behind its own chapter card
+ * (game/Game.ts arenaMode → game/Arena.ts), then a key / tap to enter. The journey's save is never written in a run.
+ */
+async function startArena() {
+  if (game.started || game.loading) return;
+  game.audio.unlock();
+  if (Platform.isTouch) Platform.enterImmersive();
+  menu?.hide();
+  game.menuScene(false);
+  document.documentElement.classList.remove('menu-on');
+  game.arenaMode = true;
+  achievements.story = false;
+  const card = { ...FLOORS[3], ...ARENA_CARD };
+  loader.showTransition(card, 'THE ENDLESS ARENA');
+  try {
+    await game.transitionTo(3, (f, label) => loader.progress(f, label.replace(FLOORS[3].loadingText, ARENA_CARD.loadingText)));
+    if (game.arena) game.arena.onTitle = () => { void toTitle(); };
+    loader.ready(ARENA_CARD.readyText);
+    await loader.waitForGesture();
+    if (!Platform.isTouch) lockPointer(game.renderer.domElement);
+    loader.hide();
+    game.audio.init();
+    game.start();
+  } catch (err: any) {
+    console.error(err);
+    loader.error('Failed to load: ' + (err?.message ?? err), () => location.reload());
+  }
+}
+(window as any).__arenaStart = () => { void startArena(); };
 btn.addEventListener('click', () => begin(pinnedGuide));
 
 /** New Game (inside the click: sound and full screen are allowed) → the film if it is there → Floor 1. */
@@ -384,7 +425,12 @@ const resume = () => {
 pause.onResume = resume;
 pause.onQuit = () => { void toTitle(); };
 game.pauseBack = () => pause.back();
-game.onPause = (on) => { document.documentElement.classList.toggle('paused', on); if (!on) pause.reset(); game.audio.music?.setPaused(on); };
+game.onPause = (on) => {
+  document.documentElement.classList.toggle('paused', on);
+  if (on && game.arenaMode) pause.note('The Endless Memory keeps no journey — your best run is kept, and on Wavedash the leaderboard.');
+  if (!on) pause.reset();
+  game.audio.music?.setPaused(on);
+};
 // a phone held upright in a frame that does not turn for it pauses behind the turn card (turning it shows the pause menu)
 Platform.onChange(() => {
   if (Platform.rotateBlocked && game.started && !game.paused && !game.finished) game.togglePause(true);

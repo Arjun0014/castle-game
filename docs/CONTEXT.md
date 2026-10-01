@@ -36,9 +36,14 @@ respawn card, the opening film and the Remotion trailer) — it is no longer the
 the player's own sketch + the `wideTouch` camera; the first build's Portrait / Landscape choice is gone), the Wavedash SDK (load progress, `init()` once, player identity,
 achievements + stats mirrored from the game's own system, cloud saves `saves/main.json` with conflict safety, platform
 fullscreen) behind one facade — the same `dist/` still runs on itch as a local game. Saves now resume at Blood Sigils.
-**LIVE ON WAVEDASH (2026-10-01): https://wavedash.com/games/echoes-of-caer-veyr** — build #4 (the phone fixes) published,
+**LIVE ON WAVEDASH (2026-10-01): https://wavedash.com/games/echoes-of-caer-veyr** — build #5 (the Endless Arena) published,
 store page complete, mobile layout **Wide** (§10 Session 16 → "The Wavedash release", "Phones: landscape only"). Next: §8
 Session 16 (the new touch layout on a real phone, Safari, host fullscreen on a real monitor).
+**Session 17 = THE ENDLESS ARENA** (§10 Session 17), live as build #5: title → ENDLESS ARENA → endless waves in Floor III's
+Crownheart chamber (its heart, chains and roots gone), the memory turning every wave (Past soldiers / Present monsters and
+the ruin's wedge-shaped drops), a guardian every fifth wave with a cinematic entrance (Gate Warden, Gutter King,
+Kingsguard, Weeping Mother, the Two Oaths, the Maw — then ASCENDANT cycles), a score, a local best and the Wavedash
+leaderboard "Endless Arena" (key `endless_arena`). Never writes the journey's save, never earns a story deed.
 Session 15 = MAIN MENU LIFE, ACHIEVEMENTS and the LORE EXPERIENCE (§10 Session 15):
 the title heroine turned toward the player with a menu-idle director (the new Mixamo clips + unused Great Sword idles,
 a procedural glance), 26 achievements (toasts in play, a panel, localStorage), and the narrated 12-page chronicle
@@ -784,6 +789,15 @@ A parry staggers the attacker and grants +12 resonance.
 
 # 8. Next Concrete Tasks
 
+**Session 17 follow-ups — the Endless Arena:**
+1. **Human play** (desktop + a real phone): difficulty curve (data/arena.ts `waveBudget / waveCap / hpScale /
+   damageScale`, guardian ×`GUARDIAN_CYCLE_HP` per cycle, escort at 55 %), the 2.4 / 1.8 / 1.6 s beats between waves, the
+   entrance timing (Arena.entrance: gather 0–1.7 s, arrival 1.7, name 2.0–5.0, control back at 5.2), whether manual shifting
+   mid-wave (Echoes over the Present's wedges fall) is discoverable — the panel's third rule says it.
+2. Optional, not started: arena achievements (wave 10 / 25, a guardian untouched) — they need Wavedash definitions + icons
+   (`src/data/achievements.ts`, `src/data/wavedash.ts`, `npm run wavedash:defs`, portal import); the Last Crown as a
+   wave-35 capstone (her fight ends the story: `onBossDefeated → endGame`, the heart, the wards — needs an arena path).
+
 **Session 16 follow-ups — need the user (do these first):**
 1. ~~Wavedash CLI, game ID, achievements import~~ — DONE (CLI 0.1.98 signed in, `game_id` in `wavedash.toml`, 26
    achievements with icons + 10 stats in the portal).
@@ -1012,6 +1026,67 @@ then generation + `Audio.voice(id)` hook.
 ---
 
 # 10. Latest Verified Session
+
+### Session 17 (2026-10-01) — THE ENDLESS ARENA
+The user: "add an endless arena mode, map can be the final boss room, just no need the Crownheart at the centre … the map
+needs to switch between Past and Present for each wave … leaderboards … each boss entrance needs to be grand".
+
+**The mode** (`src/game/Arena.ts` the run, `src/data/arena.ts` every number, `src/platform/Leaderboards.ts`, `src/ui/arena.css`).
+- Entry: the title's ENDLESS ARENA (under New Game; its small line = the local best) → a panel (THE ENDLESS MEMORY: three
+  rules, your best, the leaderboard's top five, ENTER THE ARENA pinned to its foot) → main.ts `startArena`: `game.arenaMode`,
+  `achievements.story = false`, Floor III loaded behind its own chapter card (kicker THE ENDLESS ARENA) → a key / tap →
+  `Game.start` → `Arena.begin`. Dev: `?arena&autostart&mute` boots straight in (`arenaDirect`).
+- The chamber: Floor III built with `arenaMode` — no Crownheart (Game.loadFloor), no floor Echoes (EnemyManager.build gets
+  `{ pool: POOL }`: 51 bodies of 17 archetypes built at load and drawn in the GPU warm-up; a dormant cleared `ARENA`
+  encounter is their resting fight), no lift arrival, no floor arrival / reward / save / deed (Game.start), no objectives
+  or route guide (Game.step). Arena removes the heart's four cradle chains (`C6_HEARTSHAREDiron_rust`) and its crystal roots
+  (`C6_HEART*fx_root`, visual only). The bridge out is sealed (a curtain of light + `holdInside`, r 16.45). The Present
+  is lit by the arena itself (`ARENA_ENV` via Game.envFor: on Floor III the heart owned that light).
+- Waves: memory = Past on odd waves, Present on even (`firstMemory`); budget `4 + 2.1n` points from the memory's ROSTER
+  (Past: guard, muster, remnant guard, archer from 3, royal warden from 7; Present: remnant, hollow from 2, goblin from 2,
+  bat / widowling from 4, widow from 6, crown brute from 8), at most `3 + ⌊(n+1)/3⌋` (≤ 9) standing, a new pack when ≤ 2
+  stand (bodies still in their death fade wait — never dropped); health × `hpScale(n)` (Enemy.maxHp), blows ×
+  `damageScale(n)` (Player.damageMul). Every Echo is owned by BOTH memories: a manual shift changes the ground under the
+  fight, and one over a Present wedge falls (EnemyManager.fallOnShift → the void death, ×1.4 score).
+- Between waves: "WAVE n CLEARED +bonus (· untouched)", +22 % health, Resonance ≥ 100, then the memory turns from the hero
+  (TimeSystem.setState animated; if the next memory has no floor under her she is drawn to safe stone first), the next
+  wave's name and a line.
+- Guardians (`GUARDIANS`, every 5th wave, memories alternate with the waves): 5 Gate Warden (gate), 10 Gutter King (abyss),
+  15 Kingsguard (gate), 20 Weeping Mother (abyss), 25 the Two Oaths — Warden + Kingsguard, two boss fights, the bar follows
+  whichever stands (rise), 30 the Maw (eruption); then the cycle again ×(1 + 0.55·cycle) health, "ASCENDANT" and a numeral.
+  Below 55 % a guardian calls an escort (45 % of the wave's budget).
+- The entrance (`Arena.entrance`, ≈5 s, letterboxed, the hero scripted and invulnerable): embers stream up at its spot, the
+  crown resonance, a rising roar, thunder, the ground shaking, the camera drawing back wide (0–1.7 s); it ARRIVES in a
+  blast — shockwave rings, the memory's burst, dust, a flash, the boss sting, its voice (armour crash / goblin cry / widow
+  hiss / scream / the Maw's roar); a low hero shot pushes in on it with the hero's own light swung onto it
+  (`Game.stageLight`, no new light) and the chamber flaring (`Game.flare`); its name card at the foot of the frame (WAVE n ·
+  GUARDIAN / NAME / its epithet); at 4.6 s the camera returns behind her and the fight begins. Spots stay clear of the
+  pillars (0/90/180/270°, r 11) and the camera stands back further from big bodies.
+- Score: kill by tier (weak 10, normal 25, elite 80, mini 650) × (1 + 0.08 (n−1)), ×1.5 finisher, ×1.4 void, guardians
+  ×(1 + 0.5·cycle); wave clear 100 × n (×1.5 untouched). HUD under the vitals: WAVE n · memory, the score (+chips), what
+  still stands (EB Garamond numbers — Cormorant's zero is an x-height "o").
+- The end: the hero falls → slow motion → THE MEMORY FADES: wave, score, personal best (local, `caer-veyr:arena-best`),
+  Echoes / guardians / time, the leaderboard (upload keepBest + metadata {wave, kills, secs}, then the top ten; her rank
+  when she is not in it), FIGHT AGAIN (in place: bodies back to rest, fights forgotten) / RETURN TO TITLE (reload). Two
+  columns on a phone held sideways; the touch controls hide under it.
+- Wavedash: the board was made in the Developer Portal → Leaderboards → New leaderboard (key `endless_arena`, display
+  "Endless Arena", higher is better, number, Visible) so players only ever find it. A playtest run on the real host:
+  board found (0 entries), upload rank 1, the results list — sandboxed (the live board still 0) and cleared with
+  `wavedash clear-playtest-data --leaderboards --yes`. The public page's Leaderboards tab shows "Endless Arena".
+- Story untouched: `writeProgress` returns in arena mode; `Achievements.story = false` blocks the journey's deeds (floors,
+  ending, the mini-bosses' falls, untouched, traces, chronicle, patience) — the combat deeds and the stats still count.
+
+**Engine hooks**: `Enemy.maxHp` (health fractions + reset use it), `Player.damageMul`, `EnemyManager.build(templates,
+{ pool })`, `arenaPool` / `takeArena` / `fallOnShift`, `export interface Encounter`, `Game.arenaMode / arena / stageLight /
+flare`, `Game.envFor` arena override, `LoadingScreen.showTransition(def, chapter?)`, `PauseMenu.note()`, the mock SDK's
+leaderboards (`dev/wavedashMock.js`: three seeded rivals; `&wdboardempty` for none).
+**Tests**: `dev/arenaProbe.js` **13/13** (`?arena&autostart&mute&wdmock&ach`: Past → Present, the void fall, every guardian's
+entrance + name + fight, the escort, results + board, FIGHT AGAIN, no story save); title → arena flow desktop + phone
+852×393 (menu fits: column 56–329 px of 393; panel; chapter card; play; no save after a cleared wave); wave 29 (45 Echoes
+through the pool); story regressions desktop + `?wdmock&saves` **45/45**, phone sideways **52/52**; tsc clean; build #5
+`mn78z803f9ck57q23pr4p55ca58fe6qw` published (release `rx77d95tvgh5jezgdqcqtg1cr18ff8dn`); the live game's title (a logged-out
+phone) reads NEW GAME | ENDLESS ARENA | LORE | ACHIEVEMENTS ….
+**Not tested**: a human playing it (balance, feel), a real phone, Safari.
 
 ### Session 16 (2026-10-01) — the Wavedash version: widescreen PC game, phone Portrait / Landscape, the Wavedash SDK
 

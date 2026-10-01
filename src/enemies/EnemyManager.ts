@@ -14,7 +14,7 @@ import { FEEL } from '../combat/CombatData';
 import { Platform } from '../platform/Platform';
 import type { NavGrid } from './NavGrid';
 
-interface Encounter {
+export interface Encounter {
   id: string; state: TimeState | 'BOTH'; box: THREE.Box3; enemies: Enemy[];
   triggered: boolean; cleared: boolean; wave: number; optional: boolean; finale: boolean; tutorial: boolean;
   bossFight: boolean; surge: boolean; title?: string;
@@ -148,13 +148,22 @@ export class EnemyManager {
    * Instantiate the floor's enemies from preloaded rig templates (loaded during the floor's loading screen;
    * nothing is fetched or parsed here or later in the floor). Remnants and arrows are pooled up front.
    */
-  build(templates: Map<AssetId, EnemyTemplate>) {
+  build(templates: Map<AssetId, EnemyTemplate>, arena?: { pool: [ArchetypeId, number][] }) {
     this.assets = templates;
-    this.spawnFromMarkers();
-    this.checkPerches();
-    this.checkFlyers();
-    this.spawnStaticFigures();
-    this.reinforcements = new Reinforcements(this.g);
+    if (arena) {
+      // the Endless Arena (game/Arena.ts): none of the floor's own Echoes — a pool of bodies instead, built now (drawn in
+      // the floor's GPU warm-up like any Echo) and raised wave after wave; nothing is cloned or compiled mid-run
+      // (their resting fight: a dormant, already-cleared encounter every per-Echo lookup can find)
+      this.encounters.set('ARENA', { id: 'ARENA', state: 'BOTH', box: new THREE.Box3(), enemies: [], triggered: false, cleared: true, wave: 1, optional: true, finale: false, tutorial: false, bossFight: false, surge: false });
+      for (const [id, n] of arena.pool) this.arenaPool.set(id, Array.from({ length: n }, () => this.poolBody(id)));
+      this.fallOnShift = true;
+    } else {
+      this.spawnFromMarkers();
+      this.checkPerches();
+      this.checkFlyers();
+      this.spawnStaticFigures();
+      this.reinforcements = new Reinforcements(this.g);
+    }
     if (this.enemies.some((e) => e.arch.brain)) this.monsterFx = new MonsterFX(this.g);
     if (this.g.level.markersOf('fissure').length || this.enemies.some((e) => e instanceof LastCrown)) {
       for (let i = 0; i < REMNANT_POOL; i++) this.remnantPool.push(this.makeRemnant());
@@ -172,6 +181,30 @@ export class EnemyManager {
       this.g.scene.add(m);
       this.tracers.push(m);
     }
+  }
+
+  /** the Endless Arena's bodies by archetype (empty on the story floors) */
+  arenaPool = new Map<ArchetypeId, Enemy[]>();
+  /**
+   * The arena's Echoes belong to BOTH memories: when the memory changes under one, a hole opening beneath it takes it
+   * (a fall into the abyss, not the story's rescue to an anchor) — luring Echoes onto the Present's wedges in the Past
+   * and turning the memory is the arena's own trick.
+   */
+  fallOnShift = false;
+  private poolBody(id: ArchetypeId) {
+    const arch = ARCHETYPES[id];
+    const { model, clips } = this.instantiate(arch.asset);
+    const o = { rise: true, yaw: 0 };
+    const e = makeMonster(arch, model, clips, 'ARENA', 'BOTH', 1, o, this.g) ?? new Enemy(arch, model, clips, 'ARENA', 'BOTH', 1, o);
+    e.place(this.g.player?.pos.clone() ?? new THREE.Vector3());
+    e.vanish();
+    this.g.scene.add(e.root);
+    this.enemies.push(e);
+    return e;
+  }
+  /** a resting body of `id` from the arena's pool (null: all of them are in the fight) */
+  takeArena(id: ArchetypeId): Enemy | null {
+    return this.arenaPool.get(id)?.find((e) => !e.alive && e.removed) ?? null;
   }
 
   private makeRemnant(st: TimeState = 'PRESENT') {
@@ -652,7 +685,7 @@ export class EnemyManager {
   executionTarget(from: THREE.Vector3, facing: THREE.Vector3): THREE.Vector3 | null {
     const st = this.g.time.state;
     for (const e of [...this.enemies, ...this.remnants]) {
-      if (!this.liveIn(st)(e) || e.arch.boss || e.isFlying || e.state !== 'hit' || e.stun < 0.25 || e.hp > e.arch.hp * 0.45) continue;
+      if (!this.liveIn(st)(e) || e.arch.boss || e.isFlying || e.state !== 'hit' || e.stun < 0.25 || e.hp > e.maxHp * 0.45) continue;
       const to = _a.subVectors(e.pos, from).setY(0);
       const d = to.length();
       if (d < 2.6 && Math.abs(e.pos.y - from.y) < 1 && facing.angleTo(to.normalize()) < 1.1) {
@@ -697,6 +730,8 @@ export class EnemyManager {
     const w = this.g.level.collision;
     const p = e.pos.clone();
     if (w.hasFooting(p, 3, st) && w.overlap(p, e.radius, e.height, st) < 0.3) return;
+    // the arena: a hole opened under it — it falls (flyers keep the air)
+    if (this.fallOnShift && !e.isFlying && !w.hasFooting(p, 3, st)) { e.grounded = false; return; }
     const anchor = this.g.level.markersOf('warden_anchor').find((m) => m.props.state === st || !m.props.state);
     const target = anchor ? anchor.pos.clone() : this.g.player.pos.clone().add(new THREE.Vector3(3, 0, 3));
     e.pos.copy(target);
@@ -836,7 +871,7 @@ export class EnemyManager {
       if (e10?.triggered && im.fade > 0) { im.fade = Math.max(0, im.fade - dt * 0.8); for (const m of im.mats) (m as any).opacity = 0.32 * im.fade; if (im.fade <= 0) im.obj.visible = false; }
     }
     // boss bar
-    if (this.boss && this.boss.triggered && this.boss.alive) g.hud.boss(this.bossName, this.boss.hp / this.boss.arch.hp);
+    if (this.boss && this.boss.triggered && this.boss.alive) g.hud.boss(this.bossName, this.boss.hp / this.boss.maxHp);
     else g.hud.boss(null);
     // dead remnants go back to the pool
     this.remnants = this.remnants.filter((r) => { if (r.removed) { g.scene.remove(r.root); r.reset(); this.poolEcho(r); return false; } return true; });
@@ -972,7 +1007,7 @@ export class EnemyManager {
     if (enc.wave >= maxWave) return;
     let advance = false;
     if ((enc.finale || enc.bossFight) && this.boss && enc.enemies.includes(this.boss)) {
-      const f = this.boss.hp / this.boss.arch.hp;
+      const f = this.boss.hp / this.boss.maxHp;
       advance = (enc.wave === 1 && f < 0.65) || (enc.wave === 2 && f < 0.35);
       // the next rank kneels where she can see it: it does not wait on the boss's HP for ever
       const st = this.g.time.state;

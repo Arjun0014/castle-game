@@ -39,6 +39,8 @@ import { ABILITY_FLOOR, ABILITY_INFO, HOLD_THRESHOLD, WHIRL_MAX, abilitiesForFlo
 import { Finishers } from '../combat/Finishers';
 import { Lift } from '../levels/Lift';
 import { Crownheart, AbyssEmbers } from '../vfx/Crownheart';
+import { Arena } from './Arena';
+import { POOL as ARENA_POOL, ARENA_ENV } from '../data/arena';
 import { Tutorial } from './Tutorial';
 import type { Guidance, CheckpointState } from './Save';
 import { LOOPING } from '../data/animationManifest';
@@ -144,6 +146,19 @@ export class Game {
   /** the King's lift (Floor 2 departure / Floor 3 arrival), the Crownheart, embers rising out of every abyss */
   lifts: Lift[] = [];
   heart: Crownheart | null = null;
+  /**
+   * The Endless Arena (session 17, game/Arena.ts): main.ts sets `arenaMode` before loading Floor III for it; the floor
+   * is then built without its Echoes, its Crownheart or its story beats, and the run lives in `arena`.
+   */
+  arenaMode = false;
+  arena: Arena | null = null;
+  /**
+   * A guardian's entrance (game/Arena.ts): the hero's own light swings onto it (`at`, strength `k` 0..1 — no new light,
+   * so no shader changes mid-run) and the chamber flares (`flare` 0..1 lifts the ambient and the exposure).
+   */
+  stageLight: { at: THREE.Vector3; k: number } | null = null;
+  flare = 0;
+  private flared = false;
   private embers: AbyssEmbers | null = null;
   /** this floor was reached by the lift (Floor 3 opens with the arrival shot) */
   arrivedByLift = false;
@@ -380,7 +395,7 @@ export class Game {
         throw err;
       }
       // Floor 2's lift lands at Floor 3's lift foot: the arrival shot plays when the floor starts
-      this.arrivedByLift = this.level.markersOf('lift').some((m) => m.props.role === 'arrive');
+      this.arrivedByLift = !this.arenaMode && this.level.markersOf('lift').some((m) => m.props.role === 'arrive');
       this.time.unlocked = true;
       this.time.charge = Math.max(100, carry.charge);
       this.time.shiftCount = carry.shifts;
@@ -465,7 +480,7 @@ export class Game {
     for (const k of keys) if (k.startsWith('glb:enemy:')) rigs.set(k.slice('glb:enemy:'.length), m.get(k));
     this.enemies = new EnemyManager(this);
     this.enemies.nav = new NavGrid(m.get<ArrayBuffer>('nav:' + id));
-    this.enemies.build(rigs);
+    this.enemies.build(rigs, this.arenaMode ? { pool: ARENA_POOL } : undefined);
     this.checkpoints = new Checkpoints(this);
     this.objectives = new Objectives(this, this.learned);
     this.guide = new RouteGuide(this);
@@ -473,7 +488,7 @@ export class Game {
     this.fractures = new Fractures(this);
     this.lifts = this.level.markersOf('lift').map((m) => new Lift(this, m));
     const hm = this.level.markersOf('heart')[0];
-    this.heart = hm ? new Crownheart(this, hm.pos.clone()) : null;
+    this.heart = hm && !this.arenaMode ? new Crownheart(this, hm.pos.clone()) : null;
     this.embers = new AbyssEmbers(this);
     this.collectRoots();
     this.wireEvents();
@@ -482,6 +497,8 @@ export class Game {
     this.rig.snapBehind(this.player.yaw);
     this.setEnvironment('PRESENT', true);
     this.hud.setState('PRESENT');
+    // the arena takes the chamber before the warm-up (its ward and its pool are drawn there with everything else)
+    if (this.arenaMode) this.arena = new Arena(this);
     const t2 = performance.now();
     sink(0.84, `${def.loadingText} — tempering the memories`);
     await yieldFrame();
@@ -737,7 +754,8 @@ export class Game {
   }
   /** the floor's lighting for a memory: Game's presets with the floor's overrides (FloorDef.env) */
   envFor(state: TimeState): EnvPreset {
-    const o = this.floor?.env?.[state];
+    // the arena lights the heart's chamber itself (data/arena.ts ARENA_ENV); else the floor's overrides
+    const o = (this.arenaMode ? ARENA_ENV[state] : undefined) ?? this.floor?.env?.[state];
     if (!o) return ENV[state];
     const e: EnvPreset = { ...ENV[state] };
     for (const [k, v] of Object.entries(o)) {
@@ -817,7 +835,9 @@ export class Game {
   start() {
     if (!this.started) this.startTime = performance.now();
     this.started = true;
-    if (this.announcedFloor !== this.floorId) {
+    // the arena: no arrival shot, no floor's reward or arrival (no save, no deed) — the run begins
+    if (this.arena && this.announcedFloor !== this.floorId) { this.announcedFloor = this.floorId; this.arena.begin(); }
+    else if (this.announcedFloor !== this.floorId) {
       this.announcedFloor = this.floorId;
       // a Continue mid-floor keeps the death count she had when she first came here (resumeAt)
       this.arriveDeaths = this.resumeArriveDeaths ?? this.deaths;
@@ -1157,6 +1177,7 @@ export class Game {
     this.finisher.update(dt);
     p.update(dt, this.input, this.rig, this.level.collision, this.time.state, (kind, wish) => this.assist.meleeTarget(kind, p.pos, wish, p.facing, this.t));
     this.enemies.update(dt);
+    this.arena?.update(dt);
     this.time.update(dt);
     // passive Resonance (TimeSystem.passive): slow, capped at one shift, paused in combat and during scripted scenes
     this.time.passive(dt, this.enemies.inCombat || this.player.scripted || this.finisher.active);
@@ -1164,8 +1185,7 @@ export class Game {
     for (const l of this.lifts) l.update(dt);
     this.heart?.update(dt);
     this.embers?.update(dt);
-    this.objectives.update(dt);
-    this.guide?.update(dt);
+    if (!this.arena) { this.objectives.update(dt); this.guide?.update(dt); }
     this.tutorial?.update(this.realDt);
     this.dialogue.update(this.realDt);
     this.fractures.update(dt);
@@ -1201,7 +1221,20 @@ export class Game {
     const toCam = this.camera.position.clone().sub(p.pos).setY(0).normalize();
     this.playerLight.position.copy(p.pos).addScaledVector(toCam, 1.1).setY(p.pos.y + 2.3);
     this.playerLight.intensity = this.heroLight;
+    if (this.stageLight) {
+      this.playerLight.position.lerp(this.stageLight.at, this.stageLight.k);
+      this.playerLight.intensity = this.heroLight + 22 * this.stageLight.k;
+    }
     this.applyHeartTone();
+    if (this.flare > 0.001 && this.envNow) {
+      this.flared = true;
+      this.hemi.intensity = this.envNow.hemi * (1 + 0.7 * this.flare);
+      this.renderer.toneMappingExposure = this.envNow.exposure * (1 + 0.2 * this.flare);
+    } else if (this.flared && this.envNow) {
+      this.flared = false;
+      this.hemi.intensity = this.envNow.hemi;
+      this.renderer.toneMappingExposure = this.envNow.exposure;
+    }
     this.atmo.update(dt, this.t, this.camera, p.pos, p.grounded ? p.pos.y : null, (this.scene.fog as THREE.Fog).color);
     this.level.update(dt, this.t, p.pos);
     // the Whirlwind keeps its trail for the whole spin (a longer-lived ring of light round her)
@@ -1410,6 +1443,7 @@ export class Game {
   }
 
   private onPlayerDeath() {
+    if (this.arena) { this.deaths++; this.audio.death(); this.signals.emit('hero:death', { deaths: this.deaths }); this.arena.onDeath(); return; }
     this.deaths++;
     this.signals.emit('hero:death', { deaths: this.deaths });
     this.audio.death();

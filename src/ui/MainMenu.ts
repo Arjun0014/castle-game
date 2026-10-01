@@ -1,4 +1,5 @@
 import { Platform } from '../platform/Platform';
+import { Leaderboards } from '../platform/Leaderboards';
 import { CREDITS } from '../data/credits';
 import type { Settings, SettingsData } from '../game/Settings';
 import { saveLabel, type Guidance, type SaveData } from '../game/Save';
@@ -33,6 +34,8 @@ interface MenuHooks {
   save: SaveData | null;
   onNewGame(guidance: Guidance): void;
   onContinue(save: SaveData): void;
+  /** the Endless Arena (main.ts startArena) */
+  onArena(): void;
   sound(kind: UiSound): void;
   /** first user gesture on the menu (resume the audio context for the menu's sounds) */
   onGesture(): void;
@@ -269,14 +272,15 @@ export class MainMenu {
       <nav class="mm-list">
         ${cont}
         <button class="mm-item" data-act="new" data-row="${r0}"><span>New Game</span></button>
+        <button class="mm-item mm-arena" data-act="arena" data-row="${r0 + 1}"><span>Endless Arena</span><small class="mm-arena-sub"></small></button>
         <div class="mm-pair">
-          <button class="mm-item mm-sec" data-act="lore" data-row="${r0 + 1}" data-col="0">${iconSVG('book', 'mm-dev')}<span>Lore</span></button>
-          <button class="mm-item mm-sec" data-act="achievements" data-row="${r0 + 1}" data-col="1">${iconSVG('crown', 'mm-dev')}<span>Achievements</span><small class="mm-tally"></small></button>
+          <button class="mm-item mm-sec" data-act="lore" data-row="${r0 + 2}" data-col="0">${iconSVG('book', 'mm-dev')}<span>Lore</span></button>
+          <button class="mm-item mm-sec" data-act="achievements" data-row="${r0 + 2}" data-col="1">${iconSVG('crown', 'mm-dev')}<span>Achievements</span><small class="mm-tally"></small></button>
         </div>
         <div class="mm-minor">
-          <button class="mm-item mm-min" data-act="controls" data-row="${r0 + 2}" data-col="0"><span>Controls</span></button><i>◆</i>
-          <button class="mm-item mm-min" data-act="settings" data-row="${r0 + 2}" data-col="1"><span>Settings</span></button><i>◆</i>
-          <button class="mm-item mm-min" data-act="credits" data-row="${r0 + 2}" data-col="2"><span>Credits</span></button>
+          <button class="mm-item mm-min" data-act="controls" data-row="${r0 + 3}" data-col="0"><span>Controls</span></button><i>◆</i>
+          <button class="mm-item mm-min" data-act="settings" data-row="${r0 + 3}" data-col="1"><span>Settings</span></button><i>◆</i>
+          <button class="mm-item mm-min" data-act="credits" data-row="${r0 + 3}" data-col="2"><span>Credits</span></button>
         </div>
       </nav>
       </div>
@@ -290,6 +294,16 @@ export class MainMenu {
           <button class="mm-choice" data-guide="minimal"><b>Minimal guidance</b><span>For those who know a blade. Objectives, the way forward and how the castle's two memories work — no combat lessons.</span></button>
         </div>
         <button class="mm-begin" type="button">Enter the keep</button>`)}
+      ${this.panelHTML('arena', 'The Endless Memory', `
+        <p class="mm-lead">The Crownheart’s chamber, its heart gone. Hold the ring for as long as you can.</p>
+        <ul class="mm-arena-rules">
+          <li>Every wave the castle turns its memory: the Past’s whole ring and its soldiers, the Present’s ruin — its drops into the abyss — and its monsters.</li>
+          <li>Every fifth wave a guardian comes for you; each cycle they return stronger.</li>
+          <li>Kills, finishers, Echoes cast into the void and untouched waves raise your score. Lure Echoes over the wedges in the Past, then shift.</li>
+        </ul>
+        <div class="mm-arena-best"></div>
+        <div class="mm-arena-board"></div>
+        <button class="mm-begin mm-arena-go" type="button">Enter the arena</button>`)}
       ${this.panelHTML('controls', 'Controls', controlsHTML(Platform.isTouch))}
       ${this.panelHTML('settings', 'Settings', settingsHTML())}
       ${this.panelHTML('credits', 'Credits', creditsHTML())}
@@ -322,6 +336,8 @@ export class MainMenu {
       c.addEventListener('dblclick', () => this.begin());
     });
     root.querySelector('.mm-begin')!.addEventListener('click', () => this.begin());
+    root.querySelector('.mm-arena-go')!.addEventListener('click', () => this.enterArena());
+    this.paintArenaBest();
     root.querySelectorAll<HTMLButtonElement>('.mm-back').forEach((b) => b.addEventListener('click', () => this.closePanel()));
     root.addEventListener('pointerdown', () => this.gesture(), true);
     window.addEventListener('keydown', this.onKey, true);
@@ -394,6 +410,7 @@ export class MainMenu {
     this.gesture();
     if (act === 'continue') { if (!this.save) return; this.h.sound('select'); this.h.onContinue(this.save); return; }
     if (act === 'new') { this.openPanel('guidance'); return; }
+    if (act === 'arena') { this.openPanel('arena'); void this.paintArenaBoard(); return; }
     if (act === 'lore') { this.h.sound('select'); this.h.onLore(); return; }
     if (act === 'achievements') this.renderAch();
     this.openPanel(act);
@@ -410,6 +427,36 @@ export class MainMenu {
     this.gesture();
     this.h.sound('select');
     this.h.onNewGame(this.guidance);
+  }
+
+  private enterArena() {
+    this.gesture();
+    this.h.sound('select');
+    this.h.onArena();
+  }
+
+  /** the arena's local record: under the title's entry and in its panel */
+  private paintArenaBest() {
+    const b = Leaderboards.localBest();
+    const sub = this.root.querySelector<HTMLElement>('.mm-arena-sub');
+    if (sub) sub.textContent = b ? `Best · wave ${b.wave} · ${Math.round(b.score).toLocaleString('en-US')}` : '';
+    const box = this.root.querySelector<HTMLElement>('.mm-arena-best');
+    if (box) box.innerHTML = b ? `<span>Your best</span><b>${Math.round(b.score).toLocaleString('en-US')}</b><em>wave ${b.wave} · ${b.kills} Echoes</em>` : '<span>No run yet — the ring is waiting.</span>';
+  }
+
+  /** the panel's leaderboard: the top five on Wavedash (a word instead when it cannot be reached) */
+  private async paintArenaBoard() {
+    const host = this.root.querySelector<HTMLElement>('.mm-arena-board');
+    if (!host) return;
+    if (!Leaderboards.online) { host.innerHTML = '<p class="mm-arena-wait">On Wavedash, every run goes on the leaderboard.</p>'; return; }
+    host.innerHTML = '<p class="mm-arena-wait">Consulting the chronicle of the fallen…</p>';
+    const top = await Leaderboards.top(5);
+    if (this.panel !== 'arena') return;
+    if (!top) { host.innerHTML = '<p class="mm-arena-wait">The leaderboard did not answer.</p>'; return; }
+    const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
+    host.innerHTML = top.length
+      ? `<h4>Leaderboard</h4><ol>${top.map((r) => `<li class="${r.me ? 'me' : ''}"><span class="r">${r.rank}</span><span class="n">${esc(r.name)}</span><span class="w">${r.wave ? 'W' + r.wave : ''}</span><span class="s">${fmt(r.score)}</span></li>`).join('')}</ol>`
+      : '<p class="mm-arena-wait">No one has held the ring yet. Be the first.</p>';
   }
 
   private openPanel(id: string) {
@@ -445,6 +492,7 @@ export class MainMenu {
     this.gesture();
     if (this.panel) {
       if (k === 'Escape') { this.closePanel(); return; }
+      if (this.panel === 'arena' && (k === 'Enter' || k === 'NumpadEnter' || k === 'Space')) { this.enterArena(); return; }
       if (this.panel === 'guidance') {
         if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'KeyA' || k === 'KeyW') { this.setGuidance('guided'); this.h.sound('move'); }
         else if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'KeyD' || k === 'KeyS') { this.setGuidance('minimal'); this.h.sound('move'); }
@@ -483,6 +531,8 @@ export class PauseMenu {
   private panel: string | null = null;
   onResume?: () => void;
   onQuit?: () => void;
+  /** replace the card's line under the menu (the Endless Arena keeps no journey) */
+  note(text: string) { const p = this.root.querySelector('.pm-note'); if (p) p.textContent = text; }
 
   private renderAch: () => void;
   constructor(host: HTMLElement, settings: Settings, private sound: (k: UiSound) => void, achievements: Achievements, cloud?: CloudSave) {

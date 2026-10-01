@@ -56,6 +56,8 @@ export class Enemy {
   vel = new THREE.Vector3();
   yaw = 0;
   hp: number;
+  /** full health: the archetype's, unless the Endless Arena scales it for the wave (game/Arena.ts) */
+  maxHp: number;
   poise: number;
   /** Guided tutorial (game/Tutorial.ts): a teacher closes in and waits without striking; `minHp` > 0 = cannot die */
   tutorialPassive = false;
@@ -207,6 +209,7 @@ export class Enemy {
     const root = this.root, updateAll = root.updateMatrixWorld;
     root.updateMatrixWorld = function (force?: boolean) { if (this.visible) updateAll.call(this, force); };
     this.hp = arch.hp;
+    this.maxHp = arch.hp;
     this.poise = arch.poise;
     this.root.add(model);
     model.scale.multiplyScalar(arch.scale);
@@ -1303,7 +1306,7 @@ export class Enemy {
 
   /** Reset for checkpoint respawn. */
   reset() {
-    this.hp = this.arch.hp;
+    this.hp = this.maxHp;
     this.poise = this.arch.poise;
     this.pos.copy(this.home);
     this.vel.set(0, 0, 0);

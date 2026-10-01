@@ -151,6 +151,52 @@ const W = {
   async deleteRemoteFile(path) { const c = LS.get('cloud:' + userId, {}); delete c[path]; LS.set('cloud:' + userId, c); return ok(path); },
   // ---- fullscreen (under `wavedash dev` both requests answer false; `&wdfs` behaves like wavedash.com)
   _fs: false,
+  // leaderboards (session 17: the Endless Arena) — one shared board per name in this origin's storage, a few rivals
+  LeaderboardSortOrder: { ASC: 0, DESC: 1 },
+  LeaderboardDisplayType: { NUMERIC: 0, TIME_SECONDS: 1, TIME_MILLISECONDS: 2, TIME_GAME_TICKS: 3 },
+  async getOrCreateLeaderboard(name, sort, display) {
+    calls.push(['getOrCreateLeaderboard', name]);
+    await new Promise((r) => setTimeout(r, 120));
+    if (offline) return { success: false, data: null, message: 'offline (mock)' };
+    const boards = LS.get('boards', {});
+    if (!boards[name]) boards[name] = { id: 'lb_' + name.replace(/\W+/g, '_').toLowerCase(), sort, display, entries: P.has('wdboardempty') ? [] : [
+      { userId: 'rival-1', username: 'Aldric of the Marches', score: 41250, metadata: { wave: 22, kills: 260, secs: 1500 } },
+      { userId: 'rival-2', username: 'nightwatch_07', score: 18800, metadata: { wave: 13, kills: 140, secs: 820 } },
+      { userId: 'rival-3', username: 'Sera', score: 6400, metadata: { wave: 7, kills: 61, secs: 390 } },
+    ] };
+    LS.set('boards', boards);
+    const bd = boards[name];
+    return { success: true, data: { id: bd.id, name, totalEntries: bd.entries.length, created: false } };
+  },
+  _board(id) { const boards = LS.get('boards', {}); const name = Object.keys(boards).find((k) => boards[k].id === id); return name ? { boards, name, bd: boards[name] } : null; },
+  _ranked(bd) { return [...bd.entries].sort((a, b) => (bd.sort === 0 ? a.score - b.score : b.score - a.score)).map((e, i) => ({ ...e, globalRank: i + 1, timestamp: Date.now() })); },
+  async uploadLeaderboardScore(id, score, keepBest, ugcId, metadata) {
+    calls.push(['uploadLeaderboardScore', score, keepBest, metadata]);
+    await new Promise((r) => setTimeout(r, 200));
+    if (offline) return { success: false, data: null, message: 'offline (mock)' };
+    const b = W._board(id);
+    if (!b) return { success: false, data: null, message: 'no such leaderboard (mock)' };
+    const better = (x, y) => (b.bd.sort === 0 ? x < y : x > y);
+    let mine = b.bd.entries.find((e) => e.userId === user.id);
+    let changed = false;
+    if (!mine) { mine = { userId: user.id, username: user.username, score, metadata }; b.bd.entries.push(mine); changed = true; }
+    else if (!keepBest || better(score, mine.score)) { mine.score = score; mine.metadata = metadata; changed = true; }
+    LS.set('boards', b.boards);
+    const ranked = W._ranked(b.bd);
+    const me = ranked.find((e) => e.userId === user.id);
+    const runRank = ranked.filter((e) => e.userId !== user.id && better(e.score, score)).length + 1;
+    return { success: true, data: { entryId: 'e_' + user.id, score: me.score, scoreChanged: changed, globalRank: me.globalRank, submittedScore: score, submittedRank: runRank, timestamp: Date.now(), metadata: me.metadata, userId: user.id, username: user.username } };
+  },
+  async listLeaderboardEntries(id, offset, limit) {
+    await new Promise((r) => setTimeout(r, 150));
+    if (offline) return { success: false, data: null, message: 'offline (mock)' };
+    const b = W._board(id);
+    return b ? { success: true, data: W._ranked(b.bd).slice(offset, offset + limit) } : { success: false, data: null, message: 'no such leaderboard (mock)' };
+  },
+  async getMyLeaderboardEntries(id) {
+    const b = W._board(id);
+    return b ? { success: true, data: W._ranked(b.bd).filter((e) => e.userId === user.id) } : { success: false, data: null, message: 'no such leaderboard (mock)' };
+  },
   isFullscreen() { return W._fs; },
   async requestFullscreen(on) { calls.push(['requestFullscreen', on]); if (!P.has('wdfs')) return false; W._fs = !!on; emit(Events.FULLSCREEN_CHANGED, { isFullscreen: W._fs }); return true; },
   async toggleFullscreen() { return W.requestFullscreen(!W._fs); },
@@ -173,6 +219,7 @@ window.__wdmock = {
   },
   clearRemote() { LS.del('cloud:' + userId); },
   stats() { return { server: server(), local: { stats: Object.fromEntries(local.stats), ach: [...local.ach], loaded: { ...local.loaded } } }; },
-  reset() { for (const k of ['stats:', 'cloud:', 'vfs:']) LS.del(k + userId); },
+  reset() { for (const k of ['stats:', 'cloud:', 'vfs:']) LS.del(k + userId); LS.del('boards'); },
+  boards() { return LS.get('boards', {}); },
 };
 console.info('[wdmock] a mock Wavedash SDK stands in (user', userId + (offline ? ', offline' : '') + (portalEmpty ? ', empty portal' : '') + ')');

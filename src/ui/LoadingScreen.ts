@@ -122,8 +122,8 @@ export class LoadingScreen {
   }
 
   /** A chapter card: the floor that is loading (a floor transition, or Continue from the menu). */
-  showTransition(floor: FloorDef) {
-    this.chapter.textContent = `FLOOR ${NUMERAL[floor.id] ?? floor.id}`;
+  showTransition(floor: FloorDef, chapter?: string) {
+    this.chapter.textContent = chapter ?? `FLOOR ${NUMERAL[floor.id] ?? floor.id}`;
     this.title.textContent = floor.title;
     this.sub.textContent = floor.subtitle.replace(/^Floor [IVX]+ — /, '');
     this.epigraph.textContent = floor.epigraph ?? '';
